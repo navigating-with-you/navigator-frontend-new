@@ -30,7 +30,7 @@ import {
     DropdownMenuContent,
     DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { type Category, type CategoryEmployee, type CategoryFile } from "@/data/mockCategories";
+import { type Category, type CategoryEmployee, type CategoryFile } from "@/types/category";
 import { cn } from "@/lib/utils";
 import AddEmployeesDialog from "./AddEmployeesDialog";
 

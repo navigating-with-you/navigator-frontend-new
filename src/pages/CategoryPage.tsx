@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { cn } from "@/lib/utils";
 
-import { type Category } from "@/data/mockCategories";
+import { type Category } from "@/types/category";
 import CategoryTable from "@/components/category/CategoryTable";
 import CategoryDrawer from "@/components/category/CategoryDrawer";
 import FilterDropdown from "@/components/FilterDropdown";

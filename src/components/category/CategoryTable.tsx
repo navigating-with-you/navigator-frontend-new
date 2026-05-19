@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { type Category } from "@/data/mockCategories";
+import { type Category } from "@/types/category";
 
 type RowMenuProps = {
     category: Category;
