@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Plus, Download, Upload, RefreshCw, Search } from "lucide-react";
+import { Plus, Download, Upload, RefreshCw, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -360,8 +360,18 @@ export default function EmployeesPage() {
                             setSearch(e.target.value)
                         }
                         placeholder="Search employees by name or email..."
-                        className="h-10 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-blue-500/20"
+                        className="h-10 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 pr-10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-blue-500/20"
                     />
+                    {search && (
+                        <button
+                            type="button"
+                            onClick={() => setSearch("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                            aria-label="Clear search"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
                 </div>
 
                 {/* Filters - Fixed */}
@@ -442,7 +452,7 @@ export default function EmployeesPage() {
                         <div className="flex-1 flex flex-col pt-4">
                             <div className="flex flex-1 min-h-[220px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-700 bg-zinc-50/30 dark:bg-zinc-900/30 px-6 py-8 text-center my-2">
                                 <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                                    No employees match your search or filters.
+                                    No results found {search ? `for "${search}"` : "with current filters"}
                                 </p>
                                 <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
                                     Try adjusting your filters or search terms.

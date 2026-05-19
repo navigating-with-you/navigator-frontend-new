@@ -8,6 +8,9 @@ import {
     Trash2,
     ChevronLeft,
     ChevronRight,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -144,16 +147,51 @@ export default function CategoryTable({
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [rowsPerPage, setRowsPerPage] = useState<number>(50);
     const [page, setPage] = useState<number>(1);
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
 
     const total = categories.length;
+
+    const sortedCategories = useMemo(() => {
+        if (!sortConfig) return categories;
+        return [...categories].sort((a, b) => {
+            let aVal: any = a[sortConfig.key as keyof Category];
+            let bVal: any = b[sortConfig.key as keyof Category];
+            if (aVal === undefined || aVal === null) aVal = "";
+            if (bVal === undefined || bVal === null) bVal = "";
+            if (typeof aVal === "number" && typeof bVal === "number") {
+                return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
+            }
+            if (typeof aVal === "string" && typeof bVal === "string") {
+                return sortConfig.direction === "asc"
+                    ? aVal.localeCompare(bVal)
+                    : bVal.localeCompare(aVal);
+            }
+            return 0;
+        });
+    }, [categories, sortConfig]);
+
     const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
     const startIdx = (page - 1) * rowsPerPage;
     const endIdx = Math.min(startIdx + rowsPerPage, total);
 
     const pageRows = useMemo(
-        () => categories.slice(startIdx, endIdx),
-        [categories, startIdx, endIdx]
+        () => sortedCategories.slice(startIdx, endIdx),
+        [sortedCategories, startIdx, endIdx]
     );
+
+    const handleSort = (key: string) => {
+        let direction: "asc" | "desc" = "asc";
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+            direction = "desc";
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const SortIcon = ({ columnKey }: { columnKey: string }) => {
+        if (sortConfig?.key !== columnKey) return <ArrowUpDown className="ml-1 h-3 w-3 inline" />;
+        if (sortConfig.direction === "asc") return <ArrowUp className="ml-1 h-3 w-3 inline" />;
+        return <ArrowDown className="ml-1 h-3 w-3 inline" />;
+    };
 
     const toggleAll = (checked: boolean | "indeterminate"): void => {
         if (checked) {
@@ -183,16 +221,10 @@ export default function CategoryTable({
             className="overflow-hidden rounded-2xl border border-zinc-150 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col h-full"
             data-testid="teams-table"
         >
-            <div className="bg-zinc-50/80 dark:bg-zinc-800/60 border-b border-zinc-150 dark:border-zinc-800 px-4 py-2 flex items-center justify-between md:hidden text-xs text-zinc-600 dark:text-zinc-400 font-medium shrink-0">
-                <span>Swipe left/right to view more columns</span>
-                <span className="flex items-center gap-1 font-semibold text-blue-600">
-                    Scroll <ChevronRight className="h-3.5 w-3.5" />
-                </span>
-            </div>
-            <div className="w-full overflow-x-auto flex-1 flex flex-col min-h-0">
-                <div className="min-w-[800px] flex-1 flex flex-col min-h-0">
+            <div className="w-full flex-1 flex flex-col min-h-0">
+                <div className="w-full flex-1 flex flex-col min-h-0">
                     {/* Header */}
-                    <div className="grid grid-cols-[48px_2.5fr_2fr_1.5fr_1.5fr_56px] items-center gap-4 border-b border-zinc-150 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/80 px-6 py-4 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none">
+                    <div className="hidden md:grid grid-cols-[48px_2.5fr_2fr_1.8fr_1.5fr_56px] items-center gap-4 border-b border-zinc-150 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/80 px-6 py-4 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none">
                         <div>
                             <Checkbox
                                 checked={allChecked}
@@ -200,17 +232,17 @@ export default function CategoryTable({
                                 data-testid="team-select-all"
                             />
                         </div>
-                        <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold">
-                            Team Name
+                        <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("name")}>
+                            Team Name <SortIcon columnKey="name" />
                         </div>
-                        <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold">
-                            Manager
+                        <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("managerName")}>
+                            Manager <SortIcon columnKey="managerName" />
                         </div>
-                        <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold">
-                            No. Of Knowledge Base
+                        <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 whitespace-nowrap" onClick={() => handleSort("kbCount")}>
+                            No. Of Knowledge Base <SortIcon columnKey="kbCount" />
                         </div>
-                        <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold">
-                            No. Of Employees
+                        <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 whitespace-nowrap" onClick={() => handleSort("employeeCount")}>
+                            No. Of Employees <SortIcon columnKey="employeeCount" />
                         </div>
                         <div />
                     </div>
@@ -222,52 +254,76 @@ export default function CategoryTable({
                                 key={cat.id}
                                 onClick={() => onView(cat)}
                                 className={cn(
-                                    "grid grid-cols-[48px_2.5fr_2fr_1.5fr_1.5fr_56px] items-center gap-4 border-b border-zinc-50 dark:border-zinc-850 px-6 py-5 transition-all hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 cursor-pointer group",
+                                    "flex flex-col md:grid md:grid-cols-[48px_2.5fr_2fr_1.8fr_1.5fr_56px] items-start md:items-center gap-3 md:gap-4 border-b border-zinc-50 dark:border-zinc-850 px-6 py-5 transition-all hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 cursor-pointer group relative",
                                     cat.isArchived && "opacity-60 bg-zinc-50/30 dark:bg-zinc-900/30"
                                 )}
                                 data-testid={`team-row-${cat.id}`}
                             >
-                                <div onClick={(e) => e.stopPropagation()}>
-                                    <Checkbox
-                                        checked={selected.has(cat.id)}
-                                        onCheckedChange={() => toggleOne(cat.id)}
-                                        data-testid={`team-select-row-${cat.id}`}
-                                    />
+                                <div className="absolute top-5 right-5 md:static md:block" onClick={(e) => e.stopPropagation()}>
+                                    <div className="hidden md:block">
+                                        <Checkbox
+                                            checked={selected.has(cat.id)}
+                                            onCheckedChange={() => toggleOne(cat.id)}
+                                            data-testid={`team-select-row-${cat.id}`}
+                                        />
+                                    </div>
+                                    <div className="md:hidden">
+                                        <RowMenu
+                                            category={cat}
+                                            onDelete={(id) => setConfirmDeleteId(id)}
+                                            onEdit={onEdit}
+                                            onView={onView}
+                                            onAddEmployees={onAddEmployees}
+                                            onArchive={onArchive}
+                                        />
+                                    </div>
                                 </div>
 
-                                <div className="truncate min-w-0">
-                                    <TooltipProvider delayDuration={200}>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate group-hover:text-blue-600 transition-colors">
+                                <div className="truncate min-w-0 w-full md:w-auto flex items-center gap-3">
+                                    <div className="md:hidden">
+                                        <Checkbox
+                                            checked={selected.has(cat.id)}
+                                            onCheckedChange={() => toggleOne(cat.id)}
+                                            data-testid={`team-select-row-mobile-${cat.id}`}
+                                        />
+                                    </div>
+                                    <div className="truncate">
+                                        <TooltipProvider delayDuration={200}>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate group-hover:text-blue-600 transition-colors">
+                                                        {cat.name}
+                                                    </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top" className="text-xs">
                                                     {cat.name}
-                                                </div>
-                                            </TooltipTrigger>
-                                            <TooltipContent side="top" className="text-xs">
-                                                {cat.name}
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-                                    {cat.isArchived && (
-                                        <span className="inline-flex mt-1 text-[10px] font-bold text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded uppercase">
-                                            Archived
-                                        </span>
-                                    )}
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                        {cat.isArchived && (
+                                            <span className="inline-flex mt-1 text-[10px] font-bold text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded uppercase">
+                                                Archived
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
-                                <div className="text-sm text-zinc-700 dark:text-zinc-300 truncate">
+                                <div className="flex justify-between w-full md:block md:w-auto md:min-w-0 text-sm text-zinc-700 dark:text-zinc-300 truncate">
+                                    <span className="md:hidden text-zinc-500 font-medium mr-2">Manager:</span>
                                     {cat.managerName || "-"}
                                 </div>
 
-                                <div className="text-sm text-zinc-700 dark:text-zinc-300 pl-4 font-mono font-medium">
+                                <div className="flex justify-between w-full md:block md:w-auto md:min-w-0 text-sm text-zinc-700 dark:text-zinc-300 font-mono font-medium">
+                                    <span className="md:hidden text-zinc-500 font-sans mr-2">No. Of Knowledge Base:</span>
                                     {cat.kbCount !== undefined ? String(cat.kbCount).padStart(2, "0") : "-"}
                                 </div>
 
-                                <div className="text-sm text-zinc-700 dark:text-zinc-300 pl-4 font-mono font-medium">
+                                <div className="flex justify-between w-full md:block md:w-auto md:min-w-0 text-sm text-zinc-700 dark:text-zinc-300 font-mono font-medium">
+                                    <span className="md:hidden text-zinc-500 font-sans mr-2">No. Of Employees:</span>
                                     {cat.employeeCount !== undefined ? String(cat.employeeCount).padStart(2, "0") : "-"}
                                 </div>
 
-                                <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                                <div className="hidden md:flex justify-end" onClick={(e) => e.stopPropagation()}>
                                     <RowMenu
                                         category={cat}
                                         onDelete={(id) => setConfirmDeleteId(id)}
@@ -365,8 +421,17 @@ export default function CategoryTable({
                             value={page}
                             onChange={(e) => {
                                 const val = parseInt(e.target.value, 10);
-                                if (!isNaN(val) && val >= 1 && val <= totalPages) {
-                                    setPage(val);
+                                if (!isNaN(val)) {
+                                    if (val >= 1 && val <= totalPages) {
+                                        setPage(val);
+                                        e.target.style.borderColor = "";
+                                    } else {
+                                        e.target.style.borderColor = "red";
+                                        setTimeout(() => {
+                                            setPage(Math.min(Math.max(1, val), totalPages));
+                                            e.target.style.borderColor = "";
+                                        }, 800);
+                                    }
                                 }
                             }}
                             className="h-8 w-14 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2 text-center text-sm text-zinc-700 dark:text-zinc-200 font-medium focus:border-zinc-900 dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900"

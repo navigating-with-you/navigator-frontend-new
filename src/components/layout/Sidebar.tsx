@@ -49,6 +49,7 @@ type NavItemProps = NavItemType & {
 
 type SidebarProps = {
     open: boolean;
+    onSearchClick?: () => void;
 };
 
 const mainNav: NavItemType[] = [
@@ -256,6 +257,7 @@ function NavItem({
 
 export default function Sidebar({
     open,
+    onSearchClick,
 }: SidebarProps): JSX.Element {
     const collapsed = !open;
     const navigate = useNavigate();
@@ -314,20 +316,30 @@ export default function Sidebar({
                             <TooltipProvider key={item.to} delayDuration={100}>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <NavLink
-                                            to={item.to}
-                                            data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                                            className={({ isActive }) =>
-                                                cn(
-                                                    "mx-auto flex items-center justify-center h-10 w-10 rounded-xl transition-all",
-                                                    isActive
-                                                        ? "bg-white text-zinc-900 shadow-sm"
-                                                        : "text-zinc-500 hover:bg-white hover:text-zinc-800"
-                                                )
-                                            }
-                                        >
-                                            <item.icon className="h-[18px] w-[18px]" />
-                                        </NavLink>
+                                        {item.to === "chatsearch" ? (
+                                            <button
+                                                type="button"
+                                                onClick={onSearchClick}
+                                                className="mx-auto flex items-center justify-center h-10 w-10 rounded-xl transition-all text-zinc-500 hover:bg-white hover:text-zinc-800 cursor-pointer"
+                                            >
+                                                <item.icon className="h-[18px] w-[18px]" />
+                                            </button>
+                                        ) : (
+                                            <NavLink
+                                                to={item.to}
+                                                data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                                                className={({ isActive }) =>
+                                                    cn(
+                                                        "mx-auto flex items-center justify-center h-10 w-10 rounded-xl transition-all",
+                                                        isActive
+                                                            ? "bg-white text-zinc-900 shadow-sm"
+                                                            : "text-zinc-500 hover:bg-white hover:text-zinc-800"
+                                                    )
+                                                }
+                                            >
+                                                <item.icon className="h-[18px] w-[18px]" />
+                                            </NavLink>
+                                        )}
                                     </TooltipTrigger>
                                     <TooltipContent side="right" className="text-xs">
                                         {item.label}
@@ -396,12 +408,29 @@ export default function Sidebar({
             </div>
 
             <nav className="flex flex-col gap-1 px-2 shrink-0">
-                {chatNav.map((item) => (
-                    <NavItem
-                        key={item.to}
-                        {...item}
-                    />
-                ))}
+                {chatNav.map((item) => {
+                    if (item.to === "chatsearch") {
+                        return (
+                            <button
+                                key={item.to}
+                                type="button"
+                                onClick={onSearchClick}
+                                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 cursor-pointer text-left w-full"
+                            >
+                                <div className="flex h-5 w-5 items-center justify-center shrink-0">
+                                    <item.icon className="h-5 w-5" />
+                                </div>
+                                <span>{item.label}</span>
+                            </button>
+                        );
+                    }
+                    return (
+                        <NavItem
+                            key={item.to}
+                            {...item}
+                        />
+                    );
+                })}
             </nav>
 
             <div className="my-2 border-t border-zinc-100 shrink-0" />

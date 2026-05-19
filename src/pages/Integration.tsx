@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { RotateCw, Search, ToyBrick as Plug } from "lucide-react";
+import { RotateCw, Search, ToyBrick as Plug, X } from "lucide-react";
 import IntegrationCard from "@/components/integration/IntegrationCard";
 import UnifiedEmptyState from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
 
 const SlackIcon = () => (
     <img src="/Slack.svg" alt="Slack" className="h-7 w-7 object-contain" />
@@ -73,72 +74,81 @@ const Integration: React.FC<IntegrationProps> = ({ variant = "populated" }) => {
     return (
         <section
             data-testid="integration-screen"
-            className="w-full bg-[#FAFAF7] dark:bg-zinc-950 px-4 sm:px-8 py-8 md:px-12 md:py-10 h-full overflow-y-auto"
+            className="flex flex-col h-full w-full overflow-hidden bg-[#FAFAF7] dark:bg-zinc-950"
         >
-            {/* Title row */}
-            <div className="flex flex-col gap-1">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <h1
-                        data-testid="integration-title"
-                        className="text-[26px] font-semibold tracking-tight text-neutral-900 dark:text-zinc-100"
-                    >
-                        Integration
-                    </h1>
+            <div className="px-4 sm:px-8 py-6 md:px-12 md:py-10 flex flex-col h-full overflow-y-auto custom-scrollbar w-full min-w-0">
+                {/* Title row */}
+                <div className="flex flex-col gap-1 shrink-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <h1
+                            data-testid="integration-title"
+                            className="text-[26px] font-semibold tracking-tight text-neutral-900 dark:text-zinc-100"
+                        >
+                            Integration
+                        </h1>
 
-                    <button
-                        type="button"
-                        data-testid="integration-refresh-btn"
-                        className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-neutral-700 dark:text-zinc-300 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors hover:bg-neutral-50 dark:hover:bg-zinc-700 hover:text-neutral-900 dark:hover:text-zinc-100 focus:outline-none"
-                    >
-                        <RotateCw className="h-4 w-4" />
-                        Refresh
-                    </button>
-                </div>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    Connect your existing work tools and external apps to sync data.
-                </p>
-            </div>
-
-            {/* Search */}
-            <div className="mt-5 relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-
-                <input
-                    type="text"
-                    value={query}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setQuery(e.target.value)
-                    }
-                    placeholder="Search integrations by name or description..."
-                    aria-label="Search integrations"
-                    data-testid="integration-search-input"
-                    disabled={isEmpty}
-                    className="block h-12 w-full rounded-xl border border-neutral-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 pl-11 pr-4 text-sm text-neutral-900 dark:text-zinc-100 placeholder:text-neutral-400 dark:placeholder:text-zinc-500 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors focus:border-neutral-400 dark:focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-zinc-700 disabled:opacity-70"
-                />
-            </div>
-
-            {/* Body */}
-            <div className="mt-6">
-                {isEmpty || filtered.length === 0 ? (
-                    <UnifiedEmptyState
-                        title="No Data Found"
-                        description="No integrations have been added yet."
-                        icon={<EmptyPlugIcon className="h-8 w-8 text-neutral-600" />}
-                        testId="integration-empty-state"
-                    />
-                ) : (
-                    <div
-                        data-testid="integration-grid"
-                        className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                    >
-                        {filtered.map((integration) => (
-                            <IntegrationCard
-                                key={integration.id}
-                                integration={integration}
-                            />
-                        ))}
+                        <button
+                            type="button"
+                            data-testid="integration-refresh-btn"
+                            className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-neutral-700 dark:text-zinc-300 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors hover:bg-neutral-50 dark:hover:bg-zinc-700 hover:text-neutral-900 dark:hover:text-zinc-100 focus:outline-none"
+                        >
+                            <RotateCw className="h-4 w-4" />
+                            Refresh
+                        </button>
                     </div>
-                )}
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                        Connect your existing work tools and external apps to sync data.
+                    </p>
+                </div>
+
+                {/* Search */}
+                <div className="relative mt-5 shrink-0">
+                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+                    <Input
+                        value={query}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            setQuery(e.target.value)
+                        }
+                        placeholder="Search integrations by name or description..."
+                        data-testid="integration-search-input"
+                        disabled={isEmpty}
+                        className="h-10 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 pr-10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-blue-500/20"
+                    />
+                    {query && !isEmpty && (
+                        <button
+                            type="button"
+                            onClick={() => setQuery("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                            aria-label="Clear search"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
+                </div>
+
+                {/* Body */}
+                <div className="mt-6 flex-1 min-h-0">
+                    {isEmpty || filtered.length === 0 ? (
+                        <UnifiedEmptyState
+                            title={isEmpty ? "No Integrations Available" : `No results found for "${query}"`}
+                            description={isEmpty ? "No integrations have been added yet." : "Try adjusting your search terms."}
+                            icon={<EmptyPlugIcon className="h-8 w-8 text-neutral-600" />}
+                            testId="integration-empty-state"
+                        />
+                    ) : (
+                        <div
+                            data-testid="integration-grid"
+                            className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4 sm:gap-6 w-full"
+                        >
+                            {filtered.map((integration) => (
+                                <IntegrationCard
+                                    key={integration.id}
+                                    integration={integration}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         </section>
     );

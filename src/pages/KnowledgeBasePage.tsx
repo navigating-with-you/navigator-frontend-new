@@ -8,6 +8,8 @@ import {
     RefreshCw,
     Search,
     Sparkles,
+    Info,
+    X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -407,7 +409,10 @@ export default function KnowledgeBasePage() {
             if (!token) return;
             if (type === "file") {
                 toast.loading("Removing document...", { id: "del-doc" });
-                await deleteFiles([id], token);
+                const res = await deleteFiles([id], token);
+                if (res.errors && res.errors.length > 0) {
+                    throw new Error(res.errors[0].error || "Failed to remove document");
+                }
                 toast.success("Document removed successfully", { id: "del-doc" });
             } else {
                 toast.loading("Deleting folder...", { id: "del-folder" });
@@ -416,7 +421,8 @@ export default function KnowledgeBasePage() {
             }
             await fetchContents(currentFolderId);
         } catch (error: any) {
-            toast.error(error.message || "Failed to delete item");
+            const toastId = type === "file" ? "del-doc" : "del-folder";
+            toast.error(error.message || "Failed to delete item", { id: toastId });
         }
     };
 
@@ -459,6 +465,23 @@ export default function KnowledgeBasePage() {
                                         <span className="text-zinc-900 dark:text-zinc-100 font-bold">
                                             {item.name}
                                         </span>
+                                        <button
+                                            onClick={() => {
+                                                setDetailEntry({
+                                                    id: item.id,
+                                                    name: item.name,
+                                                    type: "folder",
+                                                    folder: "",
+                                                    owner: "",
+                                                    createdDate: "",
+                                                });
+                                                setDetailOpen(true);
+                                            }}
+                                            className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+                                            title="Folder Details"
+                                        >
+                                            <Info className="h-4 w-4" />
+                                        </button>
                                     </div>
                                 );
                             }
@@ -555,9 +578,19 @@ export default function KnowledgeBasePage() {
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder={currentFolderId ? "Search folders and files..." : "Search folders..."}
-                        className="h-10 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-blue-500/20"
+                        className="h-10 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 pr-10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-blue-500/20"
                         data-testid="kb-search-input"
                     />
+                    {search && (
+                        <button
+                            type="button"
+                            onClick={() => setSearch("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                            aria-label="Clear search"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -621,6 +654,10 @@ export default function KnowledgeBasePage() {
                             handleDelete(id, entry?.type ?? "file");
                         }}
                         onView={handleView}
+                        onViewFolderDetails={(entry) => {
+                            setDetailEntry(entry);
+                            setDetailOpen(true);
+                        }}
                         isInsideFolder={!!currentFolderId}
                     />
                 )}

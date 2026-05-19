@@ -105,8 +105,16 @@ export async function deleteFiles(fileIds: string[], token: string) {
     return apiClient.delete<any>("/files/", { file_ids: fileIds }, { token });
 }
 
+export async function getFile(fileId: string, token: string) {
+    return apiClient.get<any>(`/files/${fileId}`, { token, cache: false });
+}
+
 export async function getFileDownloadUrl(fileId: string, token: string, expiration = 3600) {
     return apiClient.get<any>(`/files/${fileId}/download?expiration=${expiration}`, { token, cache: false });
+}
+
+export async function extractFileText(fileId: string, token: string) {
+    return apiClient.post<any>(`/ocr/extract/${fileId}`, undefined, { token });
 }
 
 // ── OCR / Vector Search ───────────────────────────────────────────────────────

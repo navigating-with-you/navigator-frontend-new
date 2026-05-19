@@ -6,6 +6,7 @@ import PlaceholderPage from "./pages/PlaceholderPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import CategoryPage from "./pages/CategoryPage";
 import Integration from "./pages/Integration";
+import NewChatPage from "./pages/NewChatPage";
 import LandingPage from "./pages/LandingPage";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AuthInitializer from "@/components/auth/AuthInitializer";
@@ -69,12 +70,12 @@ function AppRoutes(): JSX.Element {
 
                     <Route
                         path="/chatnew"
-                        element={<PlaceholderPage title="New Chat" />}
+                        element={<NewChatPage />}
                     />
 
                     <Route
                         path="/chatsearch"
-                        element={<PlaceholderPage title="Search Chats" />}
+                        element={<Navigate to="/chatnew" replace />}
                     />
                 </Route>
             </Route>

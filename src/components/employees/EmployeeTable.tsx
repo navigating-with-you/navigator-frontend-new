@@ -10,6 +10,9 @@ import {
     Trash2,
     ChevronLeft,
     ChevronRight,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown,
 } from "lucide-react";
 
 import {
@@ -212,6 +215,7 @@ export default function EmployeeTable({
 }: EmployeeTableProps): JSX.Element {
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
 
     const [rowsPerPage, setRowsPerPage] =
         useState<number>(50);
@@ -220,6 +224,25 @@ export default function EmployeeTable({
         useState<number>(1);
 
     const total = employees.length;
+
+    const sortedEmployees = useMemo(() => {
+        if (!sortConfig) return employees;
+        return [...employees].sort((a, b) => {
+            let aVal: any = a[sortConfig.key as keyof Employee];
+            let bVal: any = b[sortConfig.key as keyof Employee];
+            if (aVal === "-" || aVal === undefined) aVal = "";
+            if (bVal === "-" || bVal === undefined) bVal = "";
+            if (typeof aVal === "number" && typeof bVal === "number") {
+                return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
+            }
+            if (typeof aVal === "string" && typeof bVal === "string") {
+                return sortConfig.direction === "asc"
+                    ? aVal.localeCompare(bVal)
+                    : bVal.localeCompare(aVal);
+            }
+            return 0;
+        });
+    }, [employees, sortConfig]);
 
     const totalPages = Math.max(
         1,
@@ -234,37 +257,47 @@ export default function EmployeeTable({
     );
 
     const pageRows = useMemo(
-        () => employees.slice(startIdx, endIdx),
-        [employees, startIdx, endIdx]
+        () => sortedEmployees.slice(startIdx, endIdx),
+        [sortedEmployees, startIdx, endIdx]
     );
+
+    const handleSort = (key: string) => {
+        let direction: "asc" | "desc" = "asc";
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+            direction = "desc";
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const SortIcon = ({ columnKey }: { columnKey: string }) => {
+        if (sortConfig?.key !== columnKey) return <ArrowUpDown className="ml-1 h-3 w-3 inline" />;
+        if (sortConfig.direction === "asc") return <ArrowUp className="ml-1 h-3 w-3 inline" />;
+        return <ArrowDown className="ml-1 h-3 w-3 inline" />;
+    };
 
     return (
         <div
             className="overflow-hidden rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col h-full"
             data-testid="employees-table"
         >
-            <div className="bg-zinc-50/80 dark:bg-zinc-800/60 border-b border-zinc-100 dark:border-zinc-800 px-4 py-2 flex items-center justify-between md:hidden text-xs text-zinc-600 dark:text-zinc-400 font-medium shrink-0">
-                <span>Swipe left/right to view more columns</span>
-                <span className="flex items-center gap-1 font-semibold text-blue-600">Scroll <ChevronRight className="h-3.5 w-3.5" /></span>
-            </div>
-            <div className="w-full overflow-x-auto flex-1 flex flex-col min-h-0">
-                <div className="min-w-[800px] flex-1 flex flex-col min-h-0">
+            <div className="w-full flex-1 flex flex-col min-h-0">
+                <div className="w-full flex-1 flex flex-col min-h-0">
                     {/* Header */}
-                    <div className="grid grid-cols-[2.5fr_1.5fr_1.5fr_1.5fr_56px] items-center gap-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/80 px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0">
-                        <div className="text-sm normal-case tracking-normal text-zinc-600">
-                            Employee Name
+                    <div className="hidden md:grid grid-cols-[2.5fr_1.5fr_1.5fr_1.5fr_56px] items-center gap-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/80 px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none">
+                        <div className="text-sm normal-case tracking-normal text-zinc-600 cursor-pointer hover:text-zinc-900" onClick={() => handleSort("name")}>
+                            Employee Name <SortIcon columnKey="name" />
                         </div>
 
-                        <div className="text-sm normal-case tracking-normal text-zinc-600">
-                            No. Of KB Files
+                        <div className="text-sm normal-case tracking-normal text-zinc-600 cursor-pointer hover:text-zinc-900" onClick={() => handleSort("kbFiles")}>
+                            No. Of KB Files <SortIcon columnKey="kbFiles" />
                         </div>
 
-                        <div className="text-sm normal-case tracking-normal text-zinc-600">
-                            Simple Interaction
+                        <div className="text-sm normal-case tracking-normal text-zinc-600 cursor-pointer hover:text-zinc-900" onClick={() => handleSort("simpleInteraction")}>
+                            Simple Interaction <SortIcon columnKey="simpleInteraction" />
                         </div>
 
-                        <div className="text-sm normal-case tracking-normal text-zinc-600">
-                            Complex Interaction
+                        <div className="text-sm normal-case tracking-normal text-zinc-600 cursor-pointer hover:text-zinc-900" onClick={() => handleSort("complexInteraction")}>
+                            Complex Interaction <SortIcon columnKey="complexInteraction" />
                         </div>
 
                         <div />
@@ -276,11 +309,11 @@ export default function EmployeeTable({
                             <div
                                 key={emp.id}
                                 onClick={() => onView(emp)}
-                                className="grid grid-cols-[2.5fr_1.5fr_1.5fr_1.5fr_56px] items-center gap-2 border-b border-zinc-50 dark:border-zinc-800 px-5 py-4 transition-all hover:bg-zinc-50/80 dark:hover:bg-zinc-800/60 hover:shadow-2xs cursor-pointer group"
+                                className="flex flex-col md:grid md:grid-cols-[2.5fr_1.5fr_1.5fr_1.5fr_56px] items-start md:items-center gap-3 md:gap-2 border-b border-zinc-50 dark:border-zinc-800 px-5 py-4 transition-all hover:bg-zinc-50/80 dark:hover:bg-zinc-800/60 hover:shadow-2xs cursor-pointer group"
                                 data-testid={`employee-row-${emp.id}`}
                             >
 
-                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div className="flex items-center gap-3 min-w-0 w-full md:w-auto flex-1">
                                     <div className="relative shrink-0">
                                         <Avatar className="h-9 w-9">
                                             <AvatarImage
@@ -299,7 +332,6 @@ export default function EmployeeTable({
                                                     : "EMP"}
                                             </AvatarFallback>
                                         </Avatar>
-
                                         <StatusDot status={emp.status} />
                                     </div>
 
@@ -330,21 +362,35 @@ export default function EmployeeTable({
                                             </Tooltip>
                                         </TooltipProvider>
                                     </div>
+
+                                    <div className="md:hidden ml-auto">
+                                        <RowMenu
+                                            employee={emp}
+                                            onDelete={(id) => setConfirmDeleteId(id)}
+                                            onView={onView}
+                                            onResendInvite={onResendInvite}
+                                            onRevokeInvite={(id) => setConfirmRevokeId(id)}
+                                            currentUserEmail={currentUserEmail}
+                                        />
+                                    </div>
                                 </div>
 
-                                <div className="text-sm text-zinc-700 truncate">
+                                <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 truncate">
+                                    <span className="md:hidden text-zinc-500">No. Of KB Files:</span>
                                     {emp.kbFiles ?? "-"}
                                 </div>
 
-                                <div className="text-sm text-zinc-700 truncate">
+                                <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 truncate">
+                                    <span className="md:hidden text-zinc-500">Simple Inter.:</span>
                                     {emp.simpleInteraction ?? "-"}
                                 </div>
 
-                                <div className="text-sm text-zinc-700 truncate">
+                                <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 truncate">
+                                    <span className="md:hidden text-zinc-500">Complex Inter.:</span>
                                     {emp.complexInteraction ?? "-"}
                                 </div>
 
-                                <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                                <div className="hidden md:flex justify-end" onClick={(e) => e.stopPropagation()}>
                                     <RowMenu
                                         employee={emp}
                                         onDelete={(id) => setConfirmDeleteId(id)}
@@ -469,8 +515,17 @@ export default function EmployeeTable({
                             value={page}
                             onChange={(e) => {
                                 const val = parseInt(e.target.value, 10);
-                                if (!isNaN(val) && val >= 1 && val <= totalPages) {
-                                    setPage(val);
+                                if (!isNaN(val)) {
+                                    if (val >= 1 && val <= totalPages) {
+                                        setPage(val);
+                                        e.target.style.borderColor = "";
+                                    } else {
+                                        e.target.style.borderColor = "red";
+                                        setTimeout(() => {
+                                            setPage(Math.min(Math.max(1, val), totalPages));
+                                            e.target.style.borderColor = "";
+                                        }, 800);
+                                    }
                                 }
                             }}
                             className="h-8 w-14 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2 text-center text-sm text-zinc-700 dark:text-zinc-200 font-medium focus:border-zinc-900 dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-400"

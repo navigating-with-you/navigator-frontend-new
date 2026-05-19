@@ -9,6 +9,7 @@ import {
     FileText,
     ChevronLeft,
     ChevronRight,
+    ChevronDown,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -17,19 +18,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-    Select,
-    SelectTrigger,
-    SelectContent,
-    SelectItem,
-    SelectValue,
-} from "@/components/ui/select";
+// Removed unused Select imports
 import {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { type Category, type CategoryEmployee, type CategoryFile } from "@/types/category";
 import { cn } from "@/lib/utils";
 import AddEmployeesDialog from "./AddEmployeesDialog";
@@ -61,6 +57,8 @@ export default function CategoryDrawer({
     const [managerId, setManagerId] = useState("");
     const [selectedEmployees, setSelectedEmployees] = useState<CategoryEmployee[]>([]);
     const [selectedFiles, setSelectedFiles] = useState<CategoryFile[]>([]);
+    const [managerSearch, setManagerSearch] = useState("");
+    const [managerOpen, setManagerOpen] = useState(false);
 
     // UI state
     const [activeTab, setActiveTab] = useState<"files" | "employees">("employees");
@@ -92,6 +90,8 @@ export default function CategoryDrawer({
             setActiveTab("employees");
             setEmployeeSearch("");
             setFileSearch("");
+            setManagerSearch("");
+            setManagerOpen(false);
             setEmpPage(1);
             setFilePage(1);
         }
@@ -303,36 +303,61 @@ export default function CategoryDrawer({
                         </div>
 
                         {/* Manager */}
-                        <div className="space-y-1.5">
+                        <div className="space-y-1.5 flex flex-col">
                             <Label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
                                 Manager <span className="text-red-500 ml-0.5">*</span>
                             </Label>
-                            <Select
-                                value={managerId}
-                                onValueChange={(v) => {
-                                    setManagerId(v);
-                                    setTouched((p) => ({ ...p, managerId: true }));
-                                }}
-                                disabled={isReadOnly}
-                            >
-                                <SelectTrigger
-                                    className="h-11 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                                    data-testid="team-manager-select"
-                                >
-                                    <SelectValue placeholder="Select manager from the employee list" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 max-h-56">
-                                    {managerOptions.map((emp) => (
-                                        <SelectItem
-                                            key={emp.id}
-                                            value={emp.id}
-                                            className="text-zinc-900 dark:text-zinc-100 focus:bg-zinc-100 dark:focus:bg-zinc-700 cursor-pointer"
-                                        >
-                                            {emp.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Popover open={managerOpen} onOpenChange={setManagerOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={managerOpen}
+                                        disabled={isReadOnly}
+                                        className={cn("h-11 justify-between w-full rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-normal hover:bg-zinc-50 dark:hover:bg-zinc-700",
+                                            !managerId && "text-zinc-400"
+                                        )}
+                                    >
+                                        {managerId
+                                            ? managerOptions.find((m) => m.id === managerId)?.name
+                                            : "Select manager..."}
+                                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 shadow-md">
+                                    <div className="flex flex-col">
+                                        <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-700">
+                                            <Input 
+                                                value={managerSearch}
+                                                onChange={(e) => setManagerSearch(e.target.value)}
+                                                placeholder="Search manager..." 
+                                                className="h-8 border-none focus-visible:ring-0 px-0 rounded-none shadow-none text-sm bg-transparent placeholder:text-zinc-400 text-zinc-900 dark:text-zinc-100"
+                                            />
+                                        </div>
+                                        <div className="max-h-56 overflow-y-auto py-1">
+                                            {managerOptions.filter(m => m.name.toLowerCase().includes(managerSearch.toLowerCase())).map((emp) => (
+                                                <div
+                                                    key={emp.id}
+                                                    className="px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center justify-between"
+                                                    onClick={() => {
+                                                        setManagerId(emp.id);
+                                                        setManagerOpen(false);
+                                                        setManagerSearch("");
+                                                        setTouched((p) => ({ ...p, managerId: true }));
+                                                    }}
+                                                >
+                                                    {emp.name}
+                                                </div>
+                                            ))}
+                                            {managerOptions.filter(m => m.name.toLowerCase().includes(managerSearch.toLowerCase())).length === 0 && (
+                                                <div className="px-3 py-4 text-center text-sm text-zinc-500">
+                                                    No results found.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
                             {touched.managerId && !isManagerValid && (
                                 <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
                                     <AlertCircle className="h-3.5 w-3.5" />
@@ -346,29 +371,20 @@ export default function CategoryDrawer({
                     <div className="w-full md:w-1/2 flex flex-col bg-white dark:bg-zinc-900 min-h-0">
                         {/* Tabs Bar */}
                         <div className="flex items-center justify-between border-b border-zinc-150 dark:border-zinc-800 px-8 py-4 shrink-0 select-none bg-white dark:bg-zinc-900">
-                            <div className="flex bg-zinc-100/80 dark:bg-zinc-800 p-0.5 rounded-lg border border-zinc-200/50 dark:border-zinc-700/50">
+                            <div className="flex bg-zinc-100/80 dark:bg-zinc-800 p-0.5 rounded-lg border border-zinc-200/50 dark:border-zinc-700/50" role="tablist">
                                 <button
                                     type="button"
-                                    onClick={() => setActiveTab("files")}
-                                    className={cn(
-                                        "px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5",
-                                        activeTab === "files"
-                                            ? "bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shadow-xs"
-                                            : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 hover:bg-zinc-100/50"
-                                    )}
-                                    data-testid="tab-files-btn"
-                                >
-                                    Files
-                                    <span className={cn(
-                                        "px-1.5 py-0.5 rounded font-mono font-medium scale-90",
-                                        activeTab === "files" ? "bg-blue-100 dark:bg-blue-900/60" : "bg-zinc-200 dark:bg-zinc-800"
-                                    )}>
-                                        {selectedFiles.length}
-                                    </span>
-                                </button>
-                                <button
-                                    type="button"
+                                    id="tab-employees-btn"
+                                    role="tab"
+                                    aria-selected={activeTab === "employees"}
+                                    aria-controls="employees-panel"
                                     onClick={() => setActiveTab("employees")}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "ArrowRight") {
+                                            setActiveTab("files");
+                                            document.getElementById("tab-files-btn")?.focus();
+                                        }
+                                    }}
                                     className={cn(
                                         "px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5",
                                         activeTab === "employees"
@@ -383,6 +399,35 @@ export default function CategoryDrawer({
                                         activeTab === "employees" ? "bg-blue-100 dark:bg-blue-900/60" : "bg-zinc-200 dark:bg-zinc-800"
                                     )}>
                                         {selectedEmployees.length}
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    id="tab-files-btn"
+                                    role="tab"
+                                    aria-selected={activeTab === "files"}
+                                    aria-controls="files-panel"
+                                    onClick={() => setActiveTab("files")}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "ArrowLeft") {
+                                            setActiveTab("employees");
+                                            document.getElementById("tab-employees-btn")?.focus();
+                                        }
+                                    }}
+                                    className={cn(
+                                        "px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5",
+                                        activeTab === "files"
+                                            ? "bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shadow-xs"
+                                            : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 hover:bg-zinc-100/50"
+                                    )}
+                                    data-testid="tab-files-btn"
+                                >
+                                    Files
+                                    <span className={cn(
+                                        "px-1.5 py-0.5 rounded font-mono font-medium scale-90",
+                                        activeTab === "files" ? "bg-blue-100 dark:bg-blue-900/60" : "bg-zinc-200 dark:bg-zinc-800"
+                                    )}>
+                                        {selectedFiles.length}
                                     </span>
                                 </button>
                             </div>
@@ -466,7 +511,7 @@ export default function CategoryDrawer({
                         </div>
 
                         {/* Active list container */}
-                        <div className="flex-1 overflow-y-auto bg-white dark:bg-zinc-900 min-h-0 flex flex-col">
+                        <div className="flex-1 overflow-y-auto bg-white dark:bg-zinc-900 min-h-0 flex flex-col" role="tabpanel" id={activeTab === "employees" ? "employees-panel" : "files-panel"} aria-labelledby={activeTab === "employees" ? "tab-employees-btn" : "tab-files-btn"}>
                             {activeTab === "employees" ? (
                                 paginatedEmployees.length === 0 ? (
                                     /* Employees Empty State */
@@ -521,6 +566,7 @@ export default function CategoryDrawer({
                                                                 onClick={() => handleRemoveEmployee(emp.id)}
                                                                 className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 ml-4 shrink-0 transition-colors"
                                                                 title="Remove employee"
+                                                                aria-label={`Remove employee ${emp.name}`}
                                                             >
                                                                 <MinusCircle className="h-5 w-5" strokeWidth={1.5} />
                                                             </button>
@@ -579,6 +625,7 @@ export default function CategoryDrawer({
                                                                 onClick={() => handleRemoveFile(file.id)}
                                                                 className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 ml-4 shrink-0 transition-colors"
                                                                 title="Remove file"
+                                                                aria-label={`Remove file ${file.name}`}
                                                             >
                                                                 <MinusCircle className="h-5 w-5" strokeWidth={1.5} />
                                                             </button>

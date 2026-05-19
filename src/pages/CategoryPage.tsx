@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Plus, Download, Upload, RefreshCw, Search, FolderClosed } from "lucide-react";
+import { Plus, Download, Upload, RefreshCw, Search, FolderClosed, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -64,10 +64,12 @@ export default function CategoryPage() {
                     };
                 });
                 setEmployeesList(mapped);
+                return mapped;
             }
         } catch (err) {
             console.error("Failed to load employees for category manager matching:", err);
         }
+        return [];
     };
 
     // Populate files list from API if available
@@ -95,7 +97,7 @@ export default function CategoryPage() {
                 const token = await getToken();
                 if (token) {
                     // Pre-fetch organization employees & files for mapping
-                    await fetchEmployeesList(token);
+                    const currentEmployees = await fetchEmployeesList(token);
                     await fetchFilesList(token);
 
                     const groupsData = await listGroups(token);
@@ -108,13 +110,15 @@ export default function CategoryPage() {
                                 try {
                                     const details = await getGroup(g.id, token);
                                     const members = details?.members || [];
-                                    const managerName = details?.created_by || "Administrator";
+                                    const rawManagerId = g.created_by || details?.created_by || "";
+                                    const matchedEmp = currentEmployees.find((emp: any) => emp.id === rawManagerId);
+                                    const managerName = matchedEmp ? matchedEmp.name : (rawManagerId || "Administrator");
 
                                     return {
                                         id: g.id,
                                         name: g.name,
                                         description: g.description || "",
-                                        managerId: g.created_by || "",
+                                        managerId: rawManagerId,
                                         managerName: managerName,
                                         kbCount: 0, // In the future, this can be linked to folder sharing APIs
                                         employeeCount: members.length,
@@ -138,18 +142,21 @@ export default function CategoryPage() {
                                         isArchived: false
                                     };
                                 } catch (err) {
+                                    const rawManagerId = g.created_by || "";
+                                    const matchedEmp = currentEmployees.find((emp: any) => emp.id === rawManagerId);
+                                    const managerName = matchedEmp ? matchedEmp.name : (rawManagerId || "Administrator");
                                     return {
                                         id: g.id,
                                         name: g.name,
                                         description: g.description || "",
-                                        managerId: g.created_by || "",
-                                        managerName: "Administrator",
+                                        managerId: rawManagerId,
+                                        managerName: managerName,
                                         kbCount: 0,
                                         employeeCount: g.member_count || 0,
                                         employees: [],
                                         files: [],
                                         type: "Department",
-                                        createdBy: "Administrator",
+                                        createdBy: managerName,
                                         createdDate: new Date(g.created_at || Date.now()).toLocaleDateString("en-GB", {
                                             day: "numeric",
                                             month: "long",
@@ -437,9 +444,19 @@ export default function CategoryPage() {
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Search teams..."
-                        className="h-10 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 text-sm placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500/20"
+                        className="h-10 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 pr-10 text-sm placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500/20"
                         data-testid="team-search-input"
                     />
+                    {search && (
+                        <button
+                            type="button"
+                            onClick={() => setSearch("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                            aria-label="Clear search"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
                 </div>
 
                 {/* Filter Dropdowns */}
@@ -481,7 +498,7 @@ export default function CategoryPage() {
                 <div className="mt-6 flex-1 flex flex-col min-h-0 animate-fade-in">
                     {isLoading ? (
                         <SkeletonTable
-                            gridCols="[48px_2.5fr_2fr_1.5fr_1.5fr_56px]"
+                            gridCols="[48px_2.5fr_2fr_1.8fr_1.5fr_56px]"
                             headers={[
                                 <div className="h-4 w-4 rounded bg-zinc-200 dark:bg-zinc-700 animate-pulse" />,
                                 "Team Name",
@@ -522,7 +539,7 @@ export default function CategoryPage() {
                         /* Search No Results State */
                         <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-zinc-200 dark:border-zinc-700 rounded-2xl bg-zinc-50/20 dark:bg-zinc-900/10 min-h-[260px] text-center mt-2 px-6">
                             <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
-                                No teams match your search query or active filters.
+                                No teams match your search {search ? `"${search}"` : "query"} or active filters.
                             </p>
                             <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">
                                 Try adjusting your filters or clearing search parameters.

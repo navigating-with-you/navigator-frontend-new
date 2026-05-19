@@ -11,6 +11,10 @@ import {
     CheckCircle2,
     XCircle,
     Clock,
+    Info,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown,
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -41,6 +45,7 @@ interface KnowledgeBaseTableProps {
     entries: KBEntry[];
     onDelete: (id: string) => void;
     onView: (entry: KBEntry) => void;
+    onViewFolderDetails?: (entry: KBEntry) => void;
     isInsideFolder?: boolean;
 }
 
@@ -96,17 +101,53 @@ export default function KnowledgeBaseTable({
     entries,
     onDelete,
     onView,
+    onViewFolderDetails,
     isInsideFolder = false,
 }: KnowledgeBaseTableProps) {
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState(50);
     const [page, setPage] = useState(1);
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
 
     const total = entries.length;
+
+    const sortedEntries = useMemo(() => {
+        if (!sortConfig) return entries;
+        return [...entries].sort((a, b) => {
+            let aVal: any = a[sortConfig.key as keyof KBEntry];
+            let bVal: any = b[sortConfig.key as keyof KBEntry];
+            if (aVal === undefined || aVal === null) aVal = "";
+            if (bVal === undefined || bVal === null) bVal = "";
+            if (typeof aVal === "number" && typeof bVal === "number") {
+                return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
+            }
+            if (typeof aVal === "string" && typeof bVal === "string") {
+                return sortConfig.direction === "asc"
+                    ? aVal.localeCompare(bVal)
+                    : bVal.localeCompare(aVal);
+            }
+            return 0;
+        });
+    }, [entries, sortConfig]);
+
     const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
     const startIdx = (page - 1) * rowsPerPage;
     const endIdx = Math.min(startIdx + rowsPerPage, total);
-    const pageRows = useMemo(() => entries.slice(startIdx, endIdx), [entries, startIdx, endIdx]);
+    const pageRows = useMemo(() => sortedEntries.slice(startIdx, endIdx), [sortedEntries, startIdx, endIdx]);
+
+    const handleSort = (key: string) => {
+        let direction: "asc" | "desc" = "asc";
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+            direction = "desc";
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const SortIcon = ({ columnKey }: { columnKey: string }) => {
+        if (sortConfig?.key !== columnKey) return <ArrowUpDown className="ml-1 h-3 w-3 inline" />;
+        if (sortConfig.direction === "asc") return <ArrowUp className="ml-1 h-3 w-3 inline" />;
+        return <ArrowDown className="ml-1 h-3 w-3 inline" />;
+    };
 
     // Column header labels swap based on context
     const col2Label = isInsideFolder ? "Size / Description" : "Description";
@@ -117,21 +158,19 @@ export default function KnowledgeBaseTable({
             className="overflow-hidden rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col h-full"
             data-testid="kb-table"
         >
-            {/* Mobile hint */}
-            <div className="bg-zinc-50/80 dark:bg-zinc-800/60 border-b border-zinc-100 dark:border-zinc-800 px-4 py-2 flex items-center justify-between md:hidden text-xs text-zinc-600 dark:text-zinc-400 font-medium shrink-0">
-                <span>Swipe left/right to view more columns</span>
-                <span className="flex items-center gap-1 font-semibold text-blue-600">
-                    Scroll <ChevronRight className="h-3.5 w-3.5" />
-                </span>
-            </div>
-
-            <div className="w-full overflow-x-auto flex-1 flex flex-col min-h-0">
-                <div className="min-w-[700px] flex-1 flex flex-col min-h-0">
+            <div className="w-full flex-1 flex flex-col min-h-0">
+                <div className="w-full flex-1 flex flex-col min-h-0">
                     {/* Header */}
-                    <div className="grid grid-cols-[1fr_56px] md:grid-cols-[2fr_1fr_1fr_56px] gap-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/80 px-5 py-3 text-sm text-zinc-600 dark:text-zinc-400 shrink-0">
-                        <div>Knowledge Base Name</div>
-                        <div className="hidden md:block">{col2Label}</div>
-                        <div className="hidden md:block">{col3Label}</div>
+                    <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_56px] gap-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/80 px-5 py-3 text-sm text-zinc-600 dark:text-zinc-400 shrink-0 select-none">
+                        <div className="cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("name")}>
+                            Knowledge Base Name <SortIcon columnKey="name" />
+                        </div>
+                        <div className="cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("folder")}>
+                            {col2Label} <SortIcon columnKey="folder" />
+                        </div>
+                        <div className="cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("owner")}>
+                            {col3Label} <SortIcon columnKey="owner" />
+                        </div>
                         <div />
                     </div>
 
@@ -142,46 +181,10 @@ export default function KnowledgeBaseTable({
                                 key={kb.id}
                                 data-testid={`kb-row-${kb.id}`}
                                 onClick={() => onView(kb)}
-                                className="grid grid-cols-[1fr_56px] md:grid-cols-[2fr_1fr_1fr_56px] items-center gap-2 px-5 py-4 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/60 cursor-pointer"
+                                className="flex flex-col md:grid md:grid-cols-[2fr_1fr_1fr_56px] items-start md:items-center gap-3 md:gap-2 px-5 py-4 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/60 cursor-pointer relative"
                             >
-                                {/* Col 1: Icon + Name */}
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                                        <TypeIcon type={kb.type} />
-                                    </div>
-                                    <div className="truncate">
-                                        <div className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                                            {kb.name}
-                                        </div>
-                                        <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                                            {kb.createdDate}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Col 2: Size / Description */}
-                                <div className="hidden md:flex items-center gap-2 truncate">
-                                    {kb.type === "file" ? (
-                                        <div className="flex flex-col gap-0.5">
-                                            <span className="text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                                {kb.folder}
-                                            </span>
-                                            <OcrStatusBadge status={kb.ocr_status} />
-                                        </div>
-                                    ) : (
-                                        <span className="text-sm text-zinc-500 dark:text-zinc-400 truncate italic">
-                                            {kb.description || kb.folder || <span className="not-italic">—</span>}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Col 3: Creator */}
-                                <div className="hidden md:block text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                    {kb.owner}
-                                </div>
-
-                                {/* Col 4: Actions */}
-                                <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                                {/* Actions on Mobile */}
+                                <div className="absolute top-5 right-5 md:hidden" onClick={(e) => e.stopPropagation()}>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <button
@@ -205,6 +208,111 @@ export default function KnowledgeBaseTable({
                                                 <Eye className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                                 {kb.type === "folder" ? "Open Folder" : "View Details"}
                                             </DropdownMenuItem>
+
+                                            {kb.type === "folder" && onViewFolderDetails && (
+                                                <DropdownMenuItem
+                                                    className="dark:text-zinc-200 dark:focus:bg-zinc-800"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onViewFolderDetails(kb);
+                                                    }}
+                                                >
+                                                    <Info className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                                    Folder Details
+                                                </DropdownMenuItem>
+                                            )}
+
+                                            <DropdownMenuItem
+                                                className="text-red-600 focus:text-red-600 cursor-pointer dark:focus:bg-zinc-800"
+                                                data-testid={`kb-delete-${kb.id}`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setConfirmDeleteId(kb.id);
+                                                }}
+                                            >
+                                                <Trash2 className="h-4 w-4 text-red-600" />
+                                                Delete
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+
+                                {/* Col 1: Icon + Name */}
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800">
+                                        <TypeIcon type={kb.type} />
+                                    </div>
+                                    <div className="truncate">
+                                        <div className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                                            {kb.name}
+                                        </div>
+                                        <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                                            {kb.createdDate}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Col 2: Size / Description */}
+                                <div className="flex w-full md:w-auto items-center justify-between md:justify-start gap-2 truncate">
+                                    <span className="md:hidden text-sm text-zinc-500 font-medium">{col2Label}:</span>
+                                    {kb.type === "file" ? (
+                                        <div className="flex items-center md:flex-col md:items-start gap-2 md:gap-0.5">
+                                            <span className="text-sm text-zinc-700 dark:text-zinc-300 truncate">
+                                                {kb.folder}
+                                            </span>
+                                            <OcrStatusBadge status={kb.ocr_status} />
+                                        </div>
+                                    ) : (
+                                        <span className="text-sm text-zinc-500 dark:text-zinc-400 truncate italic">
+                                            {kb.description || kb.folder || <span className="not-italic">—</span>}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Col 3: Creator */}
+                                <div className="flex w-full md:w-auto justify-between md:justify-start text-sm text-zinc-700 dark:text-zinc-300 truncate">
+                                    <span className="md:hidden text-zinc-500 font-medium">{col3Label}:</span>
+                                    {kb.owner}
+                                </div>
+
+                                {/* Col 4: Actions Desktop */}
+                                <div className="hidden md:flex justify-end" onClick={(e) => e.stopPropagation()}>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <button
+                                                data-testid={`kb-row-menu-${kb.id}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"
+                                                aria-label="Row actions"
+                                            >
+                                                <MoreVertical className="h-4 w-4" />
+                                            </button>
+                                        </DropdownMenuTrigger>
+
+                                        <DropdownMenuContent align="end" className="w-44 dark:bg-zinc-900 dark:border-zinc-800">
+                                            <DropdownMenuItem
+                                                className="dark:text-zinc-200 dark:focus:bg-zinc-800"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onView(kb);
+                                                }}
+                                            >
+                                                <Eye className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                                {kb.type === "folder" ? "Open Folder" : "View Details"}
+                                            </DropdownMenuItem>
+
+                                            {kb.type === "folder" && onViewFolderDetails && (
+                                                <DropdownMenuItem
+                                                    className="dark:text-zinc-200 dark:focus:bg-zinc-800"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onViewFolderDetails(kb);
+                                                    }}
+                                                >
+                                                    <Info className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                                    Folder Details
+                                                </DropdownMenuItem>
+                                            )}
 
                                             <DropdownMenuItem
                                                 className="text-red-600 focus:text-red-600 cursor-pointer dark:focus:bg-zinc-800"
@@ -303,7 +411,18 @@ export default function KnowledgeBaseTable({
                             value={page}
                             onChange={(e) => {
                                 const val = parseInt(e.target.value, 10);
-                                if (!isNaN(val) && val >= 1 && val <= totalPages) setPage(val);
+                                if (!isNaN(val)) {
+                                    if (val >= 1 && val <= totalPages) {
+                                        setPage(val);
+                                        e.target.style.borderColor = "";
+                                    } else {
+                                        e.target.style.borderColor = "red";
+                                        setTimeout(() => {
+                                            setPage(Math.min(Math.max(1, val), totalPages));
+                                            e.target.style.borderColor = "";
+                                        }, 800);
+                                    }
+                                }
                             }}
                             className="h-8 w-14 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2 text-center text-sm text-zinc-700 dark:text-zinc-200 font-medium focus:border-zinc-900 dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-400"
                             aria-label="Go to page"
