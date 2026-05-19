@@ -27,13 +27,12 @@ import {
 
 export default function CategoryPage() {
     const { getToken, isAuthenticated } = useKindeAuth();
-    
+
     const [categories, setCategories] = useState<Category[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [search, setSearch] = useState<string>("");
     const [employeesList, setEmployeesList] = useState<any[]>([]);
     const [filesList, setFilesList] = useState<any[]>([]);
-    
     // Drawer open/edit states
     const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
     const [drawerMode, setDrawerMode] = useState<"add" | "edit" | "view">("add");
@@ -101,7 +100,7 @@ export default function CategoryPage() {
 
                     const groupsData = await listGroups(token);
                     const groupsList = Array.isArray(groupsData) ? groupsData : (groupsData?.groups || []);
-                    
+
                     if (groupsList.length > 0) {
                         // Fetch detailed members list for each group
                         const categoriesData: Category[] = await Promise.all(
@@ -110,7 +109,7 @@ export default function CategoryPage() {
                                     const details = await getGroup(g.id, token);
                                     const members = details?.members || [];
                                     const managerName = details?.created_by || "Administrator";
-                                    
+
                                     return {
                                         id: g.id,
                                         name: g.name,
@@ -221,12 +220,12 @@ export default function CategoryPage() {
                 const searchString = `${cat.name} ${cat.managerName} ${cat.description} ${cat.id}`.toLowerCase();
                 if (!searchString.includes(query)) return false;
             }
-            
+
             // Dropdown Filters
             if (filters.type && cat.type !== filters.type) return false;
             if (filters.creator && cat.createdBy !== filters.creator) return false;
             if (filters.manager && cat.managerName !== filters.manager) return false;
-            
+
             if (filters.kbFiles) {
                 const count = cat.kbCount;
                 if (filters.kbFiles === "0-10 Files" && (count < 0 || count > 10)) return false;
@@ -258,8 +257,8 @@ export default function CategoryPage() {
 
                         // 2. Sync members
                         const original = categories.find((c) => c.id === newCat.id);
-                        const originalIds = new Set(original?.employees.map(e => e.id) || []);
-                        const currentIds = new Set(newCat.employees.map(e => e.id));
+                        const originalIds = new Set<string>(original?.employees.map((e: any) => e.id) || []);
+                        const currentIds = new Set<string>(newCat.employees.map((e: any) => e.id));
 
                         const addedIds = Array.from(currentIds).filter(id => !originalIds.has(id));
                         const removedIds = Array.from(originalIds).filter(id => !currentIds.has(id));
@@ -278,9 +277,9 @@ export default function CategoryPage() {
                             name: newCat.name,
                             description: newCat.description
                         }, token);
-                        
+
                         const newGroupId = response.id;
-                        const currentIds = newCat.employees.map(e => e.id);
+                        const currentIds = newCat.employees.map((e: any) => e.id);
 
                         // 2. Add selected members
                         if (currentIds.length > 0) {
@@ -289,7 +288,7 @@ export default function CategoryPage() {
 
                         toast.success(`Team "${newCat.name}" created successfully`);
                     }
-                    
+
                     await loadCategories();
                     setDrawerOpen(false);
                 }
@@ -369,7 +368,7 @@ export default function CategoryPage() {
     return (
         <div className="flex flex-col h-full overflow-hidden bg-zinc-50/20 dark:bg-zinc-950/20" data-testid="teams-page">
             <div className="px-4 sm:px-8 py-6 flex flex-col h-full overflow-y-auto hover-scrollbar">
-                
+
                 {/* Header */}
                 <div className="shrink-0 flex flex-col gap-1">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -504,7 +503,7 @@ export default function CategoryPage() {
                         /* Empty State */
                         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center border border-dashed border-zinc-200 dark:border-zinc-700 rounded-2xl bg-zinc-50/20 dark:bg-zinc-900/10 min-h-[300px] mt-2">
                             <div className="h-16 w-16 rounded-full bg-blue-55/80 dark:bg-blue-955 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4 shadow-xs">
-                                <FolderClosed className="h-8 w-8 animate-bounce" />
+                                <FolderClosed className="h-8 w-8" />
                             </div>
                             <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
                                 No Teams Found

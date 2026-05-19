@@ -18,8 +18,6 @@ import {
     AvatarFallback,
 } from "@/components/ui/avatar";
 
-import { Checkbox } from "@/components/ui/checkbox";
-
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -54,9 +52,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-import { type Employee } from "@/data/mockEmployees";
-
-type EmployeeStatus = Employee["status"];
+import { type Employee, type EmployeeStatus } from "@/types/employee";
 
 type StatusDotProps = {
     status: EmployeeStatus;
@@ -217,9 +213,6 @@ export default function EmployeeTable({
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
 
-    const [selected, setSelected] =
-        useState<Set<string>>(new Set());
-
     const [rowsPerPage, setRowsPerPage] =
         useState<number>(50);
 
@@ -245,40 +238,6 @@ export default function EmployeeTable({
         [employees, startIdx, endIdx]
     );
 
-    const toggleAll = (
-        checked: boolean | "indeterminate"
-    ): void => {
-        if (checked) {
-            setSelected(
-                new Set(pageRows.map((r) => r.id))
-            );
-        } else {
-            setSelected(new Set());
-        }
-    };
-
-    const toggleOne = (
-        id: string
-    ): void => {
-        setSelected((prev) => {
-            const next = new Set(prev);
-
-            if (next.has(id)) {
-                next.delete(id);
-            } else {
-                next.add(id);
-            }
-
-            return next;
-        });
-    };
-
-    const allChecked =
-        pageRows.length > 0 &&
-        pageRows.every((r) =>
-            selected.has(r.id)
-        );
-
     return (
         <div
             className="overflow-hidden rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col h-full"
@@ -291,15 +250,7 @@ export default function EmployeeTable({
             <div className="w-full overflow-x-auto flex-1 flex flex-col min-h-0">
                 <div className="min-w-[800px] flex-1 flex flex-col min-h-0">
                     {/* Header */}
-                    <div className="grid grid-cols-[48px_2fr_1fr_1fr_1fr_56px] items-center gap-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/80 px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0">
-                        <div>
-                            <Checkbox
-                                checked={allChecked}
-                                onCheckedChange={toggleAll}
-                                data-testid="select-all-checkbox"
-                            />
-                        </div>
-
+                    <div className="grid grid-cols-[2.5fr_1.5fr_1.5fr_1.5fr_56px] items-center gap-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/80 px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0">
                         <div className="text-sm normal-case tracking-normal text-zinc-600">
                             Employee Name
                         </div>
@@ -325,18 +276,9 @@ export default function EmployeeTable({
                             <div
                                 key={emp.id}
                                 onClick={() => onView(emp)}
-                                className="grid grid-cols-[48px_2fr_1fr_1fr_1fr_56px] items-center gap-2 border-b border-zinc-50 dark:border-zinc-800 px-5 py-4 transition-all hover:bg-zinc-50/80 dark:hover:bg-zinc-800/60 hover:shadow-2xs cursor-pointer group"
+                                className="grid grid-cols-[2.5fr_1.5fr_1.5fr_1.5fr_56px] items-center gap-2 border-b border-zinc-50 dark:border-zinc-800 px-5 py-4 transition-all hover:bg-zinc-50/80 dark:hover:bg-zinc-800/60 hover:shadow-2xs cursor-pointer group"
                                 data-testid={`employee-row-${emp.id}`}
                             >
-                                <div onClick={(e) => e.stopPropagation()}>
-                                    <Checkbox
-                                        checked={selected.has(emp.id)}
-                                        onCheckedChange={() =>
-                                            toggleOne(emp.id)
-                                        }
-                                        data-testid={`select-row-${emp.id}`}
-                                    />
-                                </div>
 
                                 <div className="flex items-center gap-3 min-w-0 flex-1">
                                     <div className="relative shrink-0">
@@ -351,7 +293,7 @@ export default function EmployeeTable({
                                                     ? emp.name
                                                         .split(" ")
                                                         .filter(Boolean)
-                                                        .map((n) => n[0])
+                                                        .map((n: string) => n[0])
                                                         .join("")
                                                         .slice(0, 2)
                                                     : "EMP"}

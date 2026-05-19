@@ -283,7 +283,7 @@ export default function EmployeesPage() {
 
     const isNoResults = !isEmpty && filteredEmployees.length === 0;
 
-    const handleAddEmployee = (newEmp: any, invite: boolean) => {
+    const handleAddEmployee = (_newEmp: any, _invite: boolean) => {
         // Trigger list refresh to load the newly invited user from the backend
         fetchEmployees();
         setDrawerOpen(false);
@@ -407,9 +407,8 @@ export default function EmployeesPage() {
                 <div className="mt-6 flex-1 flex flex-col min-h-0">
                     {isLoading ? (
                         <SkeletonTable
-                            gridCols="[48px_2fr_1fr_1fr_1fr_56px]"
+                            gridCols="[2.5fr_1.5fr_1.5fr_1.5fr_56px]"
                             headers={[
-                                <div className="h-4 w-4 rounded bg-zinc-200 dark:bg-zinc-700 animate-pulse" />,
                                 "Employee Name",
                                 "No. Of KB Files",
                                 "Simple Interaction",
@@ -417,7 +416,6 @@ export default function EmployeesPage() {
                                 "",
                             ]}
                             columns={[
-                                { width: "w-4", render: () => <div className="h-4 w-4 rounded bg-zinc-100 dark:bg-zinc-800 animate-pulse" /> },
                                 {
                                     width: "w-40",
                                     render: () => (
@@ -462,7 +460,6 @@ export default function EmployeesPage() {
                             onResendInvite={handleResendInvite}
                             onRevokeInvite={handleRevokeInvite}
                             currentUserEmail={user?.email ?? undefined}
-                            currentUserRole={undefined}
                         />
                     )}
                 </div>

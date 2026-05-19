@@ -18,4 +18,6 @@ export interface Employee {
     kbFiles: number | null;
     simpleInteraction: string | null;
     complexInteraction: string | null;
+    inviteId?: string;
+    isActive?: boolean;
 }
