@@ -85,7 +85,7 @@ function RowMenu({
 
             <DropdownMenuContent
                 align="end"
-                className="w-44 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-850"
+                className="w-44 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
             >
                 <DropdownMenuItem
                     data-testid={`view-details-${category.id}`}
@@ -218,13 +218,13 @@ export default function CategoryTable({
 
     return (
         <div
-            className="overflow-hidden rounded-2xl border border-zinc-150 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col h-full"
+            className="overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col h-full"
             data-testid="teams-table"
         >
             <div className="w-full flex-1 flex flex-col min-h-0">
                 <div className="w-full flex-1 flex flex-col min-h-0">
                     {/* Header */}
-                    <div className="hidden md:grid grid-cols-[48px_2.5fr_2fr_1.8fr_1.5fr_56px] items-center gap-4 border-b border-zinc-150 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/80 px-6 py-4 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none">
+                    <div className="hidden md:grid grid-cols-[48px_2.5fr_2fr_1.8fr_1.5fr_56px] items-center gap-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/80 px-6 py-4 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none">
                         <div>
                             <Checkbox
                                 checked={allChecked}
@@ -254,7 +254,7 @@ export default function CategoryTable({
                                 key={cat.id}
                                 onClick={() => onView(cat)}
                                 className={cn(
-                                    "flex flex-col md:grid md:grid-cols-[48px_2.5fr_2fr_1.8fr_1.5fr_56px] items-start md:items-center gap-3 md:gap-4 border-b border-zinc-50 dark:border-zinc-850 px-6 py-5 transition-all hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 cursor-pointer group relative",
+                                    "flex flex-col md:grid md:grid-cols-[48px_2.5fr_2fr_1.8fr_1.5fr_56px] items-start md:items-center gap-3 md:gap-4 border-b border-zinc-50 dark:border-zinc-800 px-6 py-5 transition-all hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 cursor-pointer group relative",
                                     cat.isArchived && "opacity-60 bg-zinc-50/30 dark:bg-zinc-900/30"
                                 )}
                                 data-testid={`team-row-${cat.id}`}
@@ -340,7 +340,7 @@ export default function CategoryTable({
             </div>
 
             {/* Pagination Footer */}
-            <div className="flex items-center justify-end gap-6 px-5 py-3 text-sm text-zinc-600 dark:text-zinc-400 shrink-0 border-t border-zinc-150 dark:border-zinc-800 bg-white dark:bg-zinc-900 select-none">
+            <div className="flex items-center justify-end gap-6 px-5 py-3 text-sm text-zinc-600 dark:text-zinc-400 shrink-0 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 select-none">
                 <div className="flex items-center gap-2">
                     <span>Rows per Page</span>
                     <Select
@@ -446,7 +446,7 @@ export default function CategoryTable({
                 open={!!confirmDeleteId}
                 onOpenChange={(open) => !open && setConfirmDeleteId(null)}
             >
-                <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md border border-zinc-150 dark:border-zinc-850 shadow-xl p-6">
+                <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md border border-zinc-200 dark:border-zinc-800 shadow-xl p-6">
                     <DialogHeader>
                         <DialogTitle className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">
                             Delete Team

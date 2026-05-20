@@ -95,14 +95,6 @@ export default function CreateFolderDrawer({
 
                 <div className="flex items-center justify-end gap-3 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
                     <Button
-                        variant="ghost"
-                        onClick={() => onOpenChange(false)}
-                        data-testid="cancel-folder-btn"
-                        className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                    >
-                        Cancel
-                    </Button>
-                    <Button
                         onClick={() => onSubmit({ name: name.trim(), description: description.trim() || undefined })}
                         disabled={!canCreate}
                         data-testid="create-folder-submit-btn"

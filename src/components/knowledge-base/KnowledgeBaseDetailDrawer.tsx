@@ -622,16 +622,6 @@ export default function KnowledgeBaseDetailDrawer({
                 {entry.type !== "file" && mode === "edit" && (
                     <div className="flex items-center justify-end gap-3 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/40 px-8 py-4">
                         <Button
-                            variant="ghost"
-                            onClick={() => {
-                                setMode("view");
-                                fetchFolderFiles();
-                            }}
-                            className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-sm font-semibold h-10 px-5"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
                             onClick={handleSave}
                             disabled={isLoading || nameDraft.trim().length === 0}
                             className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold h-10 px-6 shadow-sm disabled:opacity-50"

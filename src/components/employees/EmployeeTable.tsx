@@ -59,6 +59,7 @@ import { type Employee, type EmployeeStatus } from "@/types/employee";
 
 type StatusDotProps = {
     status: EmployeeStatus;
+    isActive?: boolean;
 };
 
 type RowMenuProps = {
@@ -81,6 +82,7 @@ type EmployeeTableProps = {
 
 function StatusDot({
     status,
+    isActive = true,
 }: StatusDotProps): JSX.Element {
     const color =
         status === "online"
@@ -90,12 +92,21 @@ function StatusDot({
                 : "bg-zinc-300";
 
     return (
-        <span
-            className={cn(
-                "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-white",
-                color
-            )}
-        />
+        <TooltipProvider delayDuration={200}>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span
+                        className={cn(
+                            "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-white dark:ring-zinc-900 cursor-pointer",
+                            color
+                        )}
+                    />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                    {isActive ? "Active" : "Inactive"}
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     );
 }
 
@@ -332,7 +343,7 @@ export default function EmployeeTable({
                                                     : "EMP"}
                                             </AvatarFallback>
                                         </Avatar>
-                                        <StatusDot status={emp.status} />
+                                        <StatusDot status={emp.status} isActive={emp.isActive !== false} />
                                     </div>
 
                                     <div className="truncate min-w-0 flex-1">

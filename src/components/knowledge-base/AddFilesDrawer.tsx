@@ -308,15 +308,6 @@ export default function AddFilesDrawer({
                 {/* Footer */}
                 <div className="flex items-center justify-end gap-3 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
                     <Button
-                        variant="ghost"
-                        disabled={isUploading}
-                        onClick={() => onOpenChange(false)}
-                        data-testid="cancel-add-files-btn"
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-transparent rounded-lg font-medium"
-                    >
-                        Cancel
-                    </Button>
-                    <Button
                         disabled={!canAdd}
                         onClick={handleSubmit}
                         data-testid="add-files-submit-btn"

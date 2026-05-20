@@ -56,7 +56,7 @@ export async function listFolders(token: string) {
  * Uses the hierarchical root-folder API.
  */
 export async function getRootContents(token: string) {
-    return apiClient.get<any>("/api/root-folder/contents", { token, cache: false });
+    return apiClient.get<any>("/api/root-folder/contents", { token, cacheTTL: 300000 });
 }
 
 /**
@@ -64,7 +64,7 @@ export async function getRootContents(token: string) {
  * Uses the hierarchical root-folder API.
  */
 export async function getFolderContents(folderId: string, token: string) {
-    return apiClient.get<any>(`/api/root-folder/folders/${folderId}/contents`, { token, cache: false });
+    return apiClient.get<any>(`/api/root-folder/folders/${folderId}/contents`, { token, cacheTTL: 300000 });
 }
 
 export async function createFolder(payload: { name: string; description?: string }, token: string) {
@@ -153,7 +153,7 @@ export async function getOcrStats(token: string) {
 // ── Groups / Categories ───────────────────────────────────────────────────────
 
 export async function listGroups(token: string) {
-    return apiClient.get<any>("/groups/", { token, cache: false });
+    return apiClient.get<any>("/groups/", { token, cacheTTL: 300000 });
 }
 
 export async function createGroup(payload: { name: string; description?: string }, token: string) {
@@ -161,7 +161,7 @@ export async function createGroup(payload: { name: string; description?: string 
 }
 
 export async function getGroup(groupId: string, token: string) {
-    return apiClient.get<any>(`/groups/${groupId}`, { token, cache: false });
+    return apiClient.get<any>(`/groups/${groupId}`, { token, cacheTTL: 300000 });
 }
 
 export async function updateGroup(groupId: string, payload: { name?: string; description?: string }, token: string) {

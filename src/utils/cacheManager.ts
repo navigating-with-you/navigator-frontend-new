@@ -18,30 +18,50 @@ class CacheManager {
         });
     }
 
+    /**
+     * Get data only if it is not expired.
+     * Do NOT delete here so we can still use the ETag for revalidation.
+     */
     get(key: string): any | null {
         const entry = this.cache.get(key);
         if (!entry) return null;
 
         // Check if expired
         if (Date.now() - entry.timestamp > entry.ttl) {
-            this.cache.delete(key);
             return null;
         }
 
         return entry.data;
     }
 
+    /**
+     * Get cached data regardless of whether it is expired.
+     * Useful when the server returns 304 Not Modified.
+     */
+    getExpired(key: string): any | null {
+        const entry = this.cache.get(key);
+        return entry ? entry.data : null;
+    }
+
+    /**
+     * Get ETag regardless of expiration to use for revalidation.
+     */
     getETag(key: string): string | null {
         const entry = this.cache.get(key);
-        if (!entry) return null;
+        return entry ? entry.etag : null;
+    }
 
-        // Check if expired
-        if (Date.now() - entry.timestamp > entry.ttl) {
-            this.cache.delete(key);
-            return null;
+    /**
+     * Refresh the timestamp of an existing cache entry.
+     */
+    refresh(key: string, ttl?: number) {
+        const entry = this.cache.get(key);
+        if (entry) {
+            entry.timestamp = Date.now();
+            if (ttl !== undefined) {
+                entry.ttl = ttl;
+            }
         }
-
-        return entry.etag;
     }
 
     invalidate(key: string) {

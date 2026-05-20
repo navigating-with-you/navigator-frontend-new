@@ -74,8 +74,9 @@ class ApiClient {
             // 304 Not Modified - use cached data
             if (response.status === 304) {
                 console.log(`[Cache 304] ${endpoint}`);
-                const cachedData = cacheManager.get(cacheKey);
+                const cachedData = cacheManager.getExpired(cacheKey);
                 if (cachedData) {
+                    cacheManager.refresh(cacheKey, cacheTTL);
                     return cachedData;
                 }
             }
@@ -212,10 +213,15 @@ class ApiClient {
         // Invalidate caches for related endpoints
         if (endpoint.includes("/folders")) {
             cacheManager.invalidatePattern("/folders");
+            cacheManager.invalidatePattern("/api/root-folder");
         }
         if (endpoint.includes("/files")) {
             cacheManager.invalidatePattern("/files");
             cacheManager.invalidatePattern("/folders");
+            cacheManager.invalidatePattern("/api/root-folder");
+        }
+        if (endpoint.includes("/groups")) {
+            cacheManager.invalidatePattern("/groups");
         }
         if (endpoint.includes("/rbac")) {
             cacheManager.invalidatePattern("/rbac");

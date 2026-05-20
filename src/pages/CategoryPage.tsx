@@ -23,6 +23,7 @@ import {
     removeGroupMembers,
     listEmployees,
     getRootContents,
+    listRoles,
 } from "@/lib/api";
 
 export default function CategoryPage() {
@@ -99,6 +100,11 @@ export default function CategoryPage() {
                     // Pre-fetch organization employees & files for mapping
                     const currentEmployees = await fetchEmployeesList(token);
                     await fetchFilesList(token);
+                    const rolesData = await listRoles(token).catch(err => {
+                        console.error("Error fetching roles in CategoryPage:", err);
+                        return [];
+                    });
+                    const rolesList = Array.isArray(rolesData) ? rolesData : [];
 
                     const groupsData = await listGroups(token);
                     const groupsList = Array.isArray(groupsData) ? groupsData : (groupsData?.groups || []);
@@ -123,11 +129,30 @@ export default function CategoryPage() {
                                         kbCount: 0, // In the future, this can be linked to folder sharing APIs
                                         employeeCount: members.length,
                                         employees: members.map((m: any) => {
-                                            const nameParts = m.display_name || m.email?.split("@")[0] || "Unknown";
+                                            const matchedEmp = currentEmployees.find((emp: any) => emp.id === m.id);
+                                            const nameParts = matchedEmp ? matchedEmp.name : (m.display_name || m.email?.split("@")[0] || "Unknown");
+                                            
+                                            let rawRole = "member";
+                                            if (matchedEmp && matchedEmp.role) {
+                                                rawRole = matchedEmp.role;
+                                            } else if (m.role_id) {
+                                                const foundRole = rolesList.find((r: any) => r.id === m.role_id);
+                                                if (foundRole) {
+                                                    rawRole = foundRole.name;
+                                                } else if (m.role_name) {
+                                                    rawRole = m.role_name;
+                                                } else {
+                                                    rawRole = m.role_id;
+                                                }
+                                            }
+
+                                            const isUuid = (val: string) => /^[0-9a-fA-F-]{36}$/.test(val);
+                                            const finalRole = isUuid(rawRole) ? "Member" : (rawRole === "super_admin" ? "Super Admin" : rawRole.charAt(0).toUpperCase() + rawRole.slice(1));
+
                                             return {
                                                 id: m.id,
                                                 name: nameParts,
-                                                role: m.role_id || "Member",
+                                                role: finalRole,
                                                 avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(nameParts)}&background=random`
                                             };
                                         }),

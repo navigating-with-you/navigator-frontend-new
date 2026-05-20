@@ -113,7 +113,6 @@ export default function EmployeeDetailsDrawer({
                             value={employee.name}
                             testId="details-name"
                         />
-                        <Field label="Employee ID" value={employee.id} testId="details-id" />
                         <Field
                             label="Email"
                             value={employee.email}

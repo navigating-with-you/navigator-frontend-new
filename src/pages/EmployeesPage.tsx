@@ -11,7 +11,7 @@ import AddEmployeeDrawer from "@/components/employees/AddEmployeeDrawer";
 import EmployeeDetailsDrawer from "@/components/employees/EmployeeDrawer";
 import FilterDropdown from "@/components/FilterDropdown";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-import { listEmployees, listInvites, resendInvite, revokeInvite, listRoles, deleteEmployee } from "@/lib/api";
+import { listEmployees, listInvites, resendInvite, revokeInvite, listRoles, deleteEmployee, listGroups } from "@/lib/api";
 import { cacheWebSocket } from "@/utils/cacheWebSocket";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
 
@@ -27,6 +27,7 @@ export default function EmployeesPage() {
     const { getToken, isAuthenticated, user } = useKindeAuth();
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [teams, setTeams] = useState<string[]>([]);
 
     const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
     const [detailDrawerOpen, setDetailDrawerOpen] = useState<boolean>(false);
@@ -52,8 +53,8 @@ export default function EmployeesPage() {
                 return;
             }
 
-            // Fetch active employee list, pending invites, and RBAC roles in parallel
-            const [empData, inviteData, rolesData] = await Promise.all([
+            // Fetch active employee list, pending invites, RBAC roles, and Teams/Groups in parallel
+            const [empData, inviteData, rolesData, groupsData] = await Promise.all([
                 listEmployees(token).catch(err => {
                     console.error("Error fetching employees:", err);
                     return { employees: [] };
@@ -65,12 +66,19 @@ export default function EmployeesPage() {
                 listRoles(token).catch(err => {
                     console.error("Error fetching roles:", err);
                     return [];
+                }),
+                listGroups(token).catch(err => {
+                    console.error("Error fetching groups/teams:", err);
+                    return [];
                 })
             ]);
 
             const employeeList = empData?.employees || (Array.isArray(empData) ? empData : []);
             const inviteList = empData?.pending_invites || (Array.isArray(inviteData) ? inviteData : ((inviteData as any)?.invites || []));
             const rolesList = Array.isArray(rolesData) ? (rolesData as any) : [];
+            const groupsList = Array.isArray(groupsData) ? groupsData : (groupsData?.groups || []);
+            const groupNames = groupsList.map((g: any) => g.name);
+            setTeams(groupNames);
 
             const mappedEmployees: Employee[] = employeeList.map((emp: any) => {
                 const firstName = emp.first_name || emp.given_name || "";
@@ -105,7 +113,7 @@ export default function EmployeesPage() {
                     simpleInteraction: emp.simple_interaction !== undefined && emp.simple_interaction !== null ? emp.simple_interaction : "-",
                     complexInteraction: emp.complex_interaction !== undefined && emp.complex_interaction !== null ? emp.complex_interaction : "-",
                     email: emp.email || "-",
-                    createdBy: emp.created_by || emp.createdBy || "-",
+                    createdBy: emp.created_by || emp.createdBy || "Admin",
                     createdDate: emp.created_at
                         ? new Date(emp.created_at).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })
                         : "-",
@@ -148,7 +156,7 @@ export default function EmployeesPage() {
                         simpleInteraction: "-",
                         complexInteraction: "-",
                         email: inv.email || "-",
-                        createdBy: "-",
+                        createdBy: "Admin",
                         createdDate: inv.invited_at || inv.created_at
                             ? new Date(inv.invited_at || inv.created_at).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })
                             : "-",
@@ -266,10 +274,10 @@ export default function EmployeesPage() {
 
         return employees.filter((emp) => {
             // Filters (check first as they're faster)
-            if (status && emp.status.toLowerCase() !== status.toLowerCase()) return false;
-            if (role && emp.role !== role) return false;
-            if (category && emp.category !== category) return false;
-            if (creator && emp.createdBy !== creator) return false;
+            if (status && (emp.status || "").trim().toLowerCase() !== status.trim().toLowerCase()) return false;
+            if (role && (emp.role || "").trim().toLowerCase() !== role.trim().toLowerCase()) return false;
+            if (category && (emp.category || "").trim().toLowerCase() !== category.trim().toLowerCase()) return false;
+            if (creator && (emp.createdBy || "").trim().toLowerCase() !== creator.trim().toLowerCase()) return false;
 
             // Search
             if (query) {
@@ -397,7 +405,7 @@ export default function EmployeesPage() {
                     <FilterDropdown
                         label="Team"
                         value={filters.category}
-                        options={uniqueCategories.length > 0 ? uniqueCategories : ["Engineering", "Marketing", "Sales", "HR"]}
+                        options={teams.length > 0 ? teams : (uniqueCategories.length > 0 ? uniqueCategories : ["Engineering", "Marketing", "Sales", "HR"])}
                         onChange={(v: string) =>
                             setFilters((f) => ({ ...f, category: v }))
                         }

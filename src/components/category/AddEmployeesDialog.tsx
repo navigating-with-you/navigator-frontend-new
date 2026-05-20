@@ -113,7 +113,7 @@ export default function AddEmployeesDialog({
                                     setSearch(e.target.value);
                                     setPage(1);
                                 }}
-                                placeholder="Search Employee Name or ID..."
+                                placeholder="Search Employee Name..."
                                 className="h-10 w-full rounded-lg border-zinc-200 dark:border-zinc-700 pl-10 text-sm focus:ring-blue-500/20"
                             />
                         </div>

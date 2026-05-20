@@ -8,17 +8,7 @@ interface Entry {
     owner: string;
 }
 
-// Mock knowledge base entries — used to demonstrate the populated state.
-const ENTRIES: Entry[] = [
-    { name: "HR Policies", type: "folder", folder: "", owner: "William Jones" },
-    { name: "Onboarding Checklist", type: "file", folder: "HR Policies", owner: "Emma Johnson" },
-    { name: "Engineering Handbook", type: "folder", folder: "", owner: "Oliver Roberts" },
-    { name: "Cloud Architecture", type: "file", folder: "Engineering Handbook", owner: "Isabella Byrne" },
-    { name: "Information Security Policy", type: "file", folder: "Engineering Handbook", owner: "Daniel Carter" },
-    { name: "Customer Onboarding", type: "folder", folder: "", owner: "Ryan Mitchell" },
-    { name: "Pricing FAQ", type: "url", folder: "Customer Onboarding", owner: "Sophia Turner" },
-    { name: "Code of Conduct", type: "file", folder: "HR Policies", owner: "William Jones" },
-];
+const ENTRIES: Entry[] = [];
 
 export interface KnowledgeBaseItem extends Entry {
     id: string;

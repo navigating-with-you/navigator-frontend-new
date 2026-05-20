@@ -165,15 +165,6 @@ export default function AddTextDrawer({
                 {/* Footer */}
                 <div className="flex items-center justify-end gap-3 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
                     <Button
-                        variant="ghost"
-                        onClick={() => onOpenChange(false)}
-                        disabled={isSubmitting}
-                        data-testid="cancel-add-text-btn"
-                        className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg"
-                    >
-                        Cancel
-                    </Button>
-                    <Button
                         disabled={!canSave}
                         onClick={handleSubmit}
                         data-testid="add-text-submit-btn"

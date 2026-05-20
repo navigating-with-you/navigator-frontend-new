@@ -216,7 +216,7 @@ export default function CategoryDrawer({
             employees: selectedEmployees,
             files: selectedFiles,
             type: category?.type || "Department",
-            createdBy: category?.createdBy || "William Jones",
+            createdBy: category?.createdBy || "Admin",
             createdDate: category?.createdDate || new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
             isArchived: category?.isArchived ?? false,
         };
@@ -501,7 +501,7 @@ export default function CategoryDrawer({
                                     }}
                                     placeholder={
                                         activeTab === "employees"
-                                            ? "Search Employee Name or ID."
+                                            ? "Search Employee Name..."
                                             : "Search File Name."
                                     }
                                     className="h-9 w-full rounded-lg border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800 pl-9 text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:ring-1 focus:ring-blue-500/20"
@@ -659,7 +659,7 @@ export default function CategoryDrawer({
                                         >
                                             <ChevronLeft className="h-3.5 w-3.5" />
                                         </button>
-                                        <span className="h-5 w-5 flex items-center justify-center rounded font-semibold text-zinc-850 dark:text-zinc-100">
+                                        <span className="h-5 w-5 flex items-center justify-center rounded font-semibold text-zinc-800 dark:text-zinc-100">
                                             {empPage}
                                         </span>
                                         <button
@@ -694,7 +694,7 @@ export default function CategoryDrawer({
                                         >
                                             <ChevronLeft className="h-3.5 w-3.5" />
                                         </button>
-                                        <span className="h-5 w-5 flex items-center justify-center rounded font-semibold text-zinc-850 dark:text-zinc-100">
+                                        <span className="h-5 w-5 flex items-center justify-center rounded font-semibold text-zinc-800 dark:text-zinc-100">
                                             {filePage}
                                         </span>
                                         <button
@@ -713,16 +713,8 @@ export default function CategoryDrawer({
                 </div>
 
                 {/* Footer buttons */}
-                <div className="flex items-center justify-end gap-3 border-t border-zinc-150 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-8 py-4 shrink-0 select-none">
-                    <Button
-                        variant="ghost"
-                        onClick={() => onOpenChange(false)}
-                        data-testid="cancel-team-btn"
-                        className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-sm font-semibold h-10 px-5"
-                    >
-                        {isReadOnly ? "Close" : "Cancel"}
-                    </Button>
-                    {!isReadOnly && (
+                {!isReadOnly && (
+                    <div className="flex items-center justify-end gap-3 border-t border-zinc-150 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-8 py-4 shrink-0 select-none">
                         <Button
                             disabled={!canSave}
                             onClick={handleSave}
@@ -731,8 +723,8 @@ export default function CategoryDrawer({
                         >
                             Save
                         </Button>
-                    )}
-                </div>
+                    </div>
+                )}
             </SheetContent>
 
             {/* Sub-Dialogs mounted outside the sheet content to avoid z-index and portal nesting issues */}

@@ -99,11 +99,11 @@ export default function AppLayout(): JSX.Element {
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Search Input Header */}
-                        <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-850 px-4 py-3.5">
+                        <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 px-4 py-3.5">
                             <input
                                 type="text"
                                 placeholder="Search chats.."
-                                className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-sm text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 py-1"
+                                className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-sm text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 py-1"
                                 autoFocus
                             />
                             <button 
@@ -138,7 +138,7 @@ export default function AppLayout(): JSX.Element {
                                         <button
                                             key={label}
                                             onClick={() => handleSelectHistoryItem(label)}
-                                            className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-zinc-650 dark:text-zinc-355 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-xl transition-colors font-medium"
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-xl transition-colors font-medium"
                                         >
                                             <MessageSquare className="h-4 w-4 text-zinc-400" />
                                             <span>{label}</span>
@@ -155,7 +155,7 @@ export default function AppLayout(): JSX.Element {
                                         <button
                                             key={label}
                                             onClick={() => handleSelectHistoryItem(label)}
-                                            className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-zinc-650 dark:text-zinc-355 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-xl transition-colors font-medium"
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-xl transition-colors font-medium"
                                         >
                                             <MessageSquare className="h-4 w-4 text-zinc-400" />
                                             <span>{label}</span>

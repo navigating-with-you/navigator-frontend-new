@@ -85,6 +85,7 @@ class CacheWebSocketManager {
             case "folder:updated":
             case "folder:deleted":
                 cacheManager.invalidatePattern("/folders");
+                cacheManager.invalidatePattern("/api/root-folder");
                 break;
 
             case "file:created":
@@ -92,6 +93,7 @@ class CacheWebSocketManager {
             case "file:deleted":
                 cacheManager.invalidatePattern("/files");
                 cacheManager.invalidatePattern("/folders");
+                cacheManager.invalidatePattern("/api/root-folder");
                 break;
 
             case "user:added":
