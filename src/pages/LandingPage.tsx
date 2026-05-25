@@ -16,9 +16,12 @@ export default function LandingPage() {
         <div className="flex min-h-screen w-full flex-col bg-white">
             {/* Header */}
             <header className="flex items-center justify-between px-8 py-6 border-b border-zinc-100">
-                <div className="flex items-center gap-2.5">
-                    <img src="/logo.svg" alt="Navigator" className="h-6 w-6" />
-                    <span className="text-xl font-semibold tracking-tight text-blue-600">Navigator</span>
+                <div className="flex items-center">
+                    <img 
+                        src="/navigator-logo.svg" 
+                        alt="Navigator" 
+                        className="h-7 w-auto object-contain block" 
+                    />
                 </div>
                 <Button
                     variant="ghost"

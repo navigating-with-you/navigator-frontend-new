@@ -233,6 +233,9 @@ class ApiClient {
         if (endpoint.includes("/ocr")) {
             cacheManager.invalidatePattern("/ocr");
         }
+        if (endpoint.includes("/chat")) {
+            cacheManager.invalidatePattern("/chat");
+        }
     }
 }
 

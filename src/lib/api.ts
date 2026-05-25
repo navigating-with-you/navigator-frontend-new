@@ -51,18 +51,10 @@ export async function listFolders(token: string) {
     return apiClient.get<any>("/folders/", { token, cacheTTL: 300000 });
 }
 
-/**
- * Get the root-level contents (child folders + files) of the org root folder.
- * Uses the hierarchical root-folder API.
- */
 export async function getRootContents(token: string) {
     return apiClient.get<any>("/api/root-folder/contents", { token, cacheTTL: 300000 });
 }
 
-/**
- * Get the contents (child sub-folders + files) of any folder by ID.
- * Uses the hierarchical root-folder API.
- */
 export async function getFolderContents(folderId: string, token: string) {
     return apiClient.get<any>(`/api/root-folder/folders/${folderId}/contents`, { token, cacheTTL: 300000 });
 }
@@ -119,33 +111,27 @@ export async function extractFileText(fileId: string, token: string) {
 
 // ── OCR / Vector Search ───────────────────────────────────────────────────────
 
-/** Search in a specific folder's vector namespace */
 export async function vectorSearch(folderId: string, query: string, token: string, topK = 10) {
     return apiClient.post<any>(`/ocr/search/${folderId}`, { query, top_k: topK }, { token });
 }
 
-/** Get the OCR job for a specific file */
 export async function getFileOcrJob(fileId: string, token: string) {
     return apiClient.get<any>(`/ocr/jobs/file/${fileId}`, { token, cache: false });
 }
 
-/** List all OCR jobs for a folder */
 export async function listFolderOcrJobs(folderId: string, token: string, statusFilter?: string) {
     const qs = statusFilter ? `?status_filter=${statusFilter}` : "";
     return apiClient.get<any>(`/ocr/jobs/folder/${folderId}${qs}`, { token, cache: false });
 }
 
-/** Get a specific OCR job by ID */
 export async function getOcrJob(jobId: string, token: string) {
     return apiClient.get<any>(`/ocr/jobs/${jobId}`, { token, cache: false });
 }
 
-/** Retry a failed OCR job */
 export async function retryOcrJob(jobId: string, token: string) {
     return apiClient.post<any>(`/ocr/jobs/${jobId}/retry`, undefined, { token });
 }
 
-/** Get org-level OCR statistics */
 export async function getOcrStats(token: string) {
     return apiClient.get<any>("/ocr/stats", { token, cache: false });
 }
@@ -179,3 +165,214 @@ export async function addGroupMembers(groupId: string, userIds: string[], token:
 export async function removeGroupMembers(groupId: string, userIds: string[], token: string) {
     return apiClient.delete<any>(`/groups/${groupId}/members`, { user_ids: userIds }, { token });
 }
+
+// ── Chat / RAG ────────────────────────────────────────────────────────────────
+
+export interface ChatQueryPayload {
+    query: string;
+    conversation_id?: string;
+    folder_id?: string;
+    max_iterations?: number;
+}
+
+/** A citation from the backend SSE stream */
+export interface Citation {
+    file_id?: string;
+    filename: string;
+    chunk_id?: number;
+    heading_path?: string;
+    relevance_score?: number;
+    content_preview?: string;
+}
+
+export interface ThinkingStep {
+    step: string;
+    message: string;
+    timestamp: string;
+    duration_ms?: number;
+}
+
+/** A chat message as returned from the conversation history API */
+export interface ChatMessage {
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    created_at: string;
+    citations?: Citation[];
+    thinking_steps?: ThinkingStep[];
+    tokens_used?: number;
+}
+
+export interface Conversation {
+    id: string;
+    organization_id: string;
+    user_id: string;
+    title: string;
+    created_at: string;
+    updated_at: string;
+    message_count: number;
+}
+
+export interface ConversationDetail extends Conversation {
+    messages: ChatMessage[];
+}
+
+export interface ConversationListResponse {
+    conversations: Conversation[];
+    total: number;
+}
+
+/** SSE streaming callbacks for sendChatQueryStream */
+export interface ChatStreamCallbacks {
+    onThinking?: (step: string, message: string) => void;
+    onToken: (token: string) => void;
+    onCitation?: (citation: Citation) => void;
+    onDone: (data: { conversation_id: string; message_id: string }) => void;
+    onError?: (error: string) => void;
+}
+
+/**
+ * Send a chat query via SSE streaming.
+ * The backend emits: thinking | token | citation | done | error
+ */
+export async function sendChatQueryStream(
+    payload: ChatQueryPayload,
+    token: string,
+    callbacks: ChatStreamCallbacks,
+    signal?: AbortSignal
+): Promise<void> {
+    const baseURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
+    const response = await fetch(`${baseURL}/chat/query`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            Accept: "text/event-stream",
+        },
+        body: JSON.stringify(payload),
+        signal,
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const msg =
+            errorData?.detail
+                ? typeof errorData.detail === "string"
+                    ? errorData.detail
+                    : JSON.stringify(errorData.detail)
+                : `Server error: ${response.status}`;
+        throw new Error(msg);
+    }
+
+    if (!response.body) throw new Error("No response body");
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            // SSE messages are separated by double newlines
+            const parts = buffer.split("\n\n");
+            buffer = parts.pop() ?? "";
+
+            for (const part of parts) {
+                if (!part.trim()) continue;
+
+                let eventType = "";
+                let dataStr = "";
+
+                for (const line of part.split("\n")) {
+                    if (line.startsWith("event: ")) {
+                        eventType = line.slice(7).trim();
+                    } else if (line.startsWith("data: ")) {
+                        dataStr = line.slice(6).trim();
+                    }
+                }
+
+                if (!eventType || !dataStr) continue;
+
+                try {
+                    const data = JSON.parse(dataStr);
+                    switch (eventType) {
+                        case "thinking":
+                            callbacks.onThinking?.(data.step ?? "", data.message ?? "");
+                            break;
+                        case "token":
+                            callbacks.onToken(data.content ?? "");
+                            break;
+                        case "citation":
+                            callbacks.onCitation?.(data.citation as Citation);
+                            break;
+                        case "done":
+                            callbacks.onDone({
+                                conversation_id: data.conversation_id,
+                                message_id: data.message_id,
+                            });
+                            break;
+                        case "error":
+                            callbacks.onError?.(data.error ?? "Unknown error");
+                            break;
+                    }
+                } catch {
+                    // Ignore malformed JSON lines
+                }
+            }
+        }
+    } finally {
+        reader.releaseLock();
+    }
+}
+
+/** Create a new conversation */
+export async function createConversation(title: string, token: string): Promise<Conversation> {
+    return apiClient.post<Conversation>(`/chat/conversations?title=${encodeURIComponent(title)}`, undefined, { token });
+}
+
+/** List conversations (paginated) */
+export async function listConversations(token: string, limit = 50, offset = 0): Promise<ConversationListResponse> {
+    return apiClient.get<ConversationListResponse>(
+        `/chat/conversations?limit=${limit}&offset=${offset}`,
+        { token, cache: false }
+    );
+}
+
+/** Get a conversation with all its messages */
+export async function getConversation(conversationId: string, token: string): Promise<ConversationDetail> {
+    return apiClient.get<ConversationDetail>(`/chat/conversations/${conversationId}`, { token, cache: false });
+}
+
+/** Delete a conversation */
+export async function deleteConversation(conversationId: string, token: string) {
+    return apiClient.delete<any>(`/chat/conversations/${conversationId}`, undefined, { token });
+}
+
+/** Update a conversation (e.g. rename title) */
+export async function updateConversation(conversationId: string, payload: { title: string }, token: string) {
+    return apiClient.patch<any>(`/chat/conversations/${conversationId}`, payload, { token });
+}
+
+/** Create a new organization */
+export async function createOrganization(
+    payload: {
+        name: string;
+        billing_address?: {
+            line1: string;
+            line2?: string;
+            city: string;
+            state: string;
+            postal_code: string;
+            country: string;
+        };
+    },
+    token: string
+) {
+    return apiClient.post<any>("/org/", payload, { token });
+}
+

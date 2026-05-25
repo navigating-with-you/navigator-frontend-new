@@ -74,6 +74,7 @@ const Integration: React.FC<IntegrationProps> = ({ variant = "populated" }) => {
     return (
         <section
             data-testid="integration-screen"
+            data-tour="integration-page"
             className="flex flex-col h-full w-full overflow-hidden bg-[#FAFAF7] dark:bg-zinc-950"
         >
             <div className="px-4 sm:px-8 py-6 md:px-12 md:py-10 flex flex-col h-full overflow-y-auto custom-scrollbar w-full min-w-0">

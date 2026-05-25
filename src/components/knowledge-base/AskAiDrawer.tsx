@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, X } from "lucide-react";
+import { Send, Bot, User, Sparkles, X, FileText } from "lucide-react";
 import { 
     Sheet, 
     SheetContent, 
@@ -8,13 +8,17 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { vectorSearch } from "@/lib/api";
+import { sendChatQueryStream, type Citation } from "@/lib/api";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { toast } from "sonner";
 
 type Message = {
     id: string;
     role: "user" | "assistant";
     content: string;
+    citations?: Citation[];
+    isStreaming?: boolean;
+    thinkingLabel?: string;
 };
 
 type AskAiDrawerProps = {
@@ -29,12 +33,14 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
         {
             id: "1",
             role: "assistant",
-            content: "Hello! I can search through your knowledge base and answer questions. What would you like to know?",
+            content: "Hello! I can search through your knowledge base and answer questions using AI. What would you like to know?",
         },
     ]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [conversationId, setConversationId] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -42,51 +48,155 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
         }
     }, [messages]);
 
+    // Reset conversation when drawer closes
+    useEffect(() => {
+        if (!open) {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+                abortControllerRef.current = null;
+            }
+            setMessages([
+                {
+                    id: "1",
+                    role: "assistant",
+                    content: "Hello! I can search through your knowledge base and answer questions using AI. What would you like to know?",
+                },
+            ]);
+            setConversationId(null);
+            setInput("");
+            setIsLoading(false);
+        }
+    }, [open]);
+
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;
 
+        const text = input.trim();
         const userMsg: Message = {
             id: Date.now().toString(),
             role: "user",
-            content: input,
+            content: text,
         };
 
-        setMessages(prev => [...prev, userMsg]);
+        setMessages((prev) => [...prev, userMsg]);
         setInput("");
         setIsLoading(true);
 
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        const streamingId = "streaming-" + Date.now();
+        const initialAssistantMsg: Message = {
+            id: streamingId,
+            role: "assistant",
+            content: "",
+            isStreaming: true,
+            thinkingLabel: "Analyzing request...",
+        };
+        setMessages((prev) => [...prev, initialAssistantMsg]);
+
         try {
             const token = await getToken();
-            if (!token) throw new Error("No token");
+            if (!token) throw new Error("Not authenticated");
 
-            // 1. Vector Search
-            // For now, we search in the provided folder or globally if no folderId
-            // The API requires folder_id, so we'll use a placeholder or handle null
-            const searchResults = folderId 
-                ? await vectorSearch(folderId, input, token)
-                : { results: [] };
+            let accumulatedContent = "";
+            const citations: Citation[] = [];
 
-            // 2. Simulate AI response based on search results
-            setTimeout(() => {
-                const assistantMsg: Message = {
-                    id: (Date.now() + 1).toString(),
-                    role: "assistant",
-                    content: searchResults.results.length > 0
-                        ? `Based on your search, I found ${searchResults.results.length} relevant documents. Here's what I found: ...`
-                        : "I couldn't find any specific information in your knowledge base regarding that. Would you like me to try a broader search?",
-                };
-                setMessages(prev => [...prev, assistantMsg]);
-                setIsLoading(false);
-            }, 1000);
+            await sendChatQueryStream(
+                {
+                    query: text,
+                    conversation_id: conversationId ?? undefined,
+                    folder_id: folderId ?? undefined,
+                },
+                token,
+                {
+                    onThinking: (step, message) => {
+                        const stepLabels: Record<string, string> = {
+                            understanding: "Analyzing request...",
+                            planning: "Planning steps...",
+                            decomposing: "Decomposing problem...",
+                            searching: "Searching documents...",
+                            evaluating: "Evaluating search results...",
+                            reranking: "Reranking documents...",
+                            refining: "Refining details...",
+                            synthesizing: "Synthesizing answer...",
+                            answering: "Formulating response...",
+                        };
+                        const label = stepLabels[step] ?? message ?? "Thinking...";
+                        setMessages((prev) =>
+                            prev.map((m) =>
+                                m.id === streamingId
+                                    ? { ...m, thinkingLabel: label }
+                                    : m
+                            )
+                        );
+                    },
+                    onToken: (token) => {
+                        accumulatedContent += token;
+                        const snapshot = accumulatedContent;
+                        setMessages((prev) =>
+                            prev.map((m) =>
+                                m.id === streamingId
+                                    ? { ...m, content: snapshot }
+                                    : m
+                            )
+                        );
+                    },
+                    onCitation: (citation) => {
+                        citations.push(citation);
+                    },
+                    onDone: (data) => {
+                        if (!conversationId) {
+                            setConversationId(data.conversation_id);
+                        }
+                        setMessages((prev) =>
+                            prev.map((m) =>
+                                m.id === streamingId
+                                    ? {
+                                          ...m,
+                                          id: data.message_id || streamingId,
+                                          content: accumulatedContent,
+                                          isStreaming: false,
+                                          citations: citations.length > 0 ? citations : undefined,
+                                          thinkingLabel: undefined,
+                                      }
+                                    : m
+                            )
+                        );
+                        setIsLoading(false);
+                        abortControllerRef.current = null;
+                    },
+                    onError: (err) => {
+                        throw new Error(err);
+                    },
+                },
+                controller.signal
+            );
+        } catch (error: any) {
+            if (error.name === "AbortError") return;
 
-        } catch (error) {
             console.error("AI Error:", error);
-            setMessages(prev => [...prev, {
-                id: "err",
+
+            // Remove the streaming placeholder message
+            setMessages((prev) => prev.filter((m) => m.id !== streamingId));
+
+            const errMsg: Message = {
+                id: "err-" + Date.now(),
                 role: "assistant",
-                content: "Sorry, I encountered an error while searching your knowledge base.",
-            }]);
+                content:
+                    error.message?.includes("404") || error.message?.includes("No folder")
+                        ? "I couldn't find any relevant documents in this knowledge base. Please make sure documents have been uploaded and processed."
+                        : "Sorry, I encountered an error while searching your knowledge base. Please try again.",
+            };
+            setMessages((prev) => [...prev, errMsg]);
+            if (!error.message?.includes("404")) {
+                toast.error(error.message || "Failed to get AI response");
+            }
             setIsLoading(false);
+            abortControllerRef.current = null;
         }
     };
 
@@ -100,7 +210,9 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
                         </div>
                         <div>
                             <SheetTitle className="text-base font-semibold">Ask Navigator AI</SheetTitle>
-                            <p className="text-xs text-zinc-500">Querying your Knowledge Base</p>
+                            <p className="text-xs text-zinc-500">
+                                {folderId ? "Querying this folder's documents" : "Querying your Knowledge Base"}
+                            </p>
                         </div>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="rounded-full h-8 w-8">
@@ -117,26 +229,58 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
                             )}>
                                 {m.role === "assistant" ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
                             </div>
-                            <div className={cn(
-                                "rounded-2xl px-4 py-2.5 text-sm leading-relaxed max-w-[85%] shadow-sm",
-                                m.role === "user" ? "bg-blue-600 text-white" : "bg-white text-zinc-900 border border-zinc-100"
-                            )}>
-                                {m.content}
+                            <div className="flex flex-col gap-1.5 max-w-[85%]">
+                                {/* Thinking Step Label */}
+                                {m.isStreaming && !m.content && m.thinkingLabel && (
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 border border-zinc-200/40 rounded-xl text-[11px] text-zinc-500">
+                                        <div className="flex gap-1 items-center shrink-0">
+                                            <span className="h-1 w-1 rounded-full bg-zinc-400 animate-bounce" />
+                                            <span className="h-1 w-1 rounded-full bg-zinc-400 animate-bounce [animation-delay:0.2s]" />
+                                            <span className="h-1 w-1 rounded-full bg-zinc-400 animate-bounce [animation-delay:0.4s]" />
+                                        </div>
+                                        <span>{m.thinkingLabel}</span>
+                                    </div>
+                                )}
+
+                                {/* Message bubble */}
+                                {(m.content || (m.isStreaming && !m.thinkingLabel)) && (
+                                    <div className={cn(
+                                        "rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm",
+                                        m.role === "user" ? "bg-blue-600 text-white" : "bg-white text-zinc-900 border border-zinc-100"
+                                    )}>
+                                        {m.content ? (
+                                            <div className="whitespace-pre-wrap">{m.content}</div>
+                                        ) : (
+                                            <div className="flex gap-1 items-center py-1">
+                                                <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce" />
+                                                <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce [animation-delay:0.2s]" />
+                                                <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce [animation-delay:0.4s]" />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Citations */}
+                                {m.citations && m.citations.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 px-1 mt-1">
+                                        {m.citations.map((c, idx) => (
+                                            <div
+                                                key={idx}
+                                                className="flex items-center gap-1 px-2 py-0.5 bg-zinc-100 rounded-md text-[10px] text-zinc-500 font-medium border border-zinc-200/60"
+                                                title={c.content_preview}
+                                            >
+                                                <FileText className="h-3 w-3 shrink-0" />
+                                                <span className="truncate max-w-[140px]">{c.filename}</span>
+                                                {c.relevance_score !== undefined && c.relevance_score > 0 && (
+                                                    <span className="text-zinc-400 ml-0.5">{Math.round(c.relevance_score * 100)}%</span>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}
-                    {isLoading && (
-                        <div className="flex gap-3">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-blue-50 text-blue-600 border-blue-100">
-                                <Bot className="h-4 w-4" />
-                            </div>
-                            <div className="bg-white border border-zinc-100 rounded-2xl px-4 py-2.5 flex gap-1 items-center shadow-sm">
-                                <div className="h-1.5 w-1.5 rounded-full bg-zinc-300 animate-bounce" />
-                                <div className="h-1.5 w-1.5 rounded-full bg-zinc-300 animate-bounce [animation-delay:0.2s]" />
-                                <div className="h-1.5 w-1.5 rounded-full bg-zinc-300 animate-bounce [animation-delay:0.4s]" />
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 <div className="p-4 border-t border-zinc-100 bg-white">
@@ -163,6 +307,9 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
                             <Send className="h-3.5 w-3.5" />
                         </Button>
                     </div>
+                    <p className="text-[10px] text-zinc-400 mt-2 text-center">
+                        Powered by RAG — responses are grounded in your uploaded documents
+                    </p>
                 </div>
             </SheetContent>
         </Sheet>

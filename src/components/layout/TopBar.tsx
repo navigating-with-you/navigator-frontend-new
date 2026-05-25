@@ -33,6 +33,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 
+
 type TopBarProps = {
     onToggleSidebar: () => void;
 };
@@ -44,6 +45,7 @@ export default function TopBar({
     const [profile, setProfile] = useState<any>(null);
     const navigate = useNavigate();
     const { theme, toggleTheme } = useTheme();
+
 
     useEffect(() => {
         const stored = localStorage.getItem("navigator_user_profile");
@@ -81,7 +83,7 @@ export default function TopBar({
                 <PanelLeft className="h-5 w-5 text-zinc-700" />
             </Button>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3" data-tour="topbar-actions">
                 {/* Theme Toggle */}
                 <TooltipProvider delayDuration={200}>
                     <Tooltip>
@@ -92,6 +94,7 @@ export default function TopBar({
                                 className="rounded-full p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-700 transition-colors"
                                 data-testid="theme-toggle-btn"
                                 aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+                                data-tour="theme-toggle"
                             >
                                 {theme === "light" ? (
                                     <Moon className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
@@ -114,6 +117,7 @@ export default function TopBar({
                             className="relative rounded-full p-2 hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-200"
                             data-testid="notification-btn"
                             aria-label="Notifications"
+                            data-tour="notifications"
                         >
                             <Bell className="h-5 w-5 text-zinc-700" />
                             <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
@@ -146,6 +150,7 @@ export default function TopBar({
                     className="rounded-full p-2 hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-200 cursor-pointer"
                     data-testid="settings-btn"
                     aria-label="Settings"
+                    data-tour="settings"
                 >
                     <Settings className="h-5 w-5 text-zinc-700" />
                 </button>
@@ -157,6 +162,7 @@ export default function TopBar({
                             type="button"
                             className="ml-1 flex items-center gap-2.5 outline-none hover:opacity-85 transition-opacity rounded-full p-0.5 cursor-pointer"
                             data-testid="user-profile"
+                            data-tour="profile"
                         >
                             <Avatar className="h-9 w-9">
                                 {user?.picture ? (
@@ -198,6 +204,7 @@ export default function TopBar({
                             </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-zinc-100 my-1.5" />
+
                         <DropdownMenuItem 
                             onClick={() => logout()}
                             className="text-red-600 focus:text-red-600 focus:bg-red-50/50 rounded-lg cursor-pointer px-2.5 py-2 text-sm"

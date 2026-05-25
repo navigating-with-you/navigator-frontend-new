@@ -1,0 +1,615 @@
+import { useState, useEffect, useRef } from "react";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { createOrganization, listRoles, createInvite, listFolders, uploadFiles } from "@/lib/api";
+import { toast } from "sonner";
+import {
+    Building, Users, FileText, Settings, CheckCircle,
+    Upload, Trash2, Plus, Loader2, Sun, Moon, Check,
+    Image as ImageIcon
+} from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    Avatar,
+    AvatarImage,
+    AvatarFallback,
+} from "@/components/ui/avatar";
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+
+type OnboardingPageProps = {
+    onComplete: (orgId: string) => void;
+};
+
+export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
+    const { getToken, user, logout } = useKindeAuth();
+    const { theme, toggleTheme } = useTheme();
+
+    const fullName = user?.givenName ? `${user.givenName} ${user.familyName || ""}`.trim() : "User";
+    const initials = fullName
+        ? fullName
+              .split(" ")
+              .map((n: string) => n[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase()
+        : "U";
+
+    const [currentStep, setCurrentStep] = useState(1);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [createdOrgId, setCreatedOrgId] = useState<string | null>(null);
+
+    // ── STEP 1: Company Setup Data ──────────────────────────────────────────
+    const [orgName, setOrgName] = useState("");
+    const [orgEmail, setOrgEmail] = useState("");
+    const [contactNumber, setContactNumber] = useState("");
+    const [address, setAddress] = useState("");
+    const [city, setCity] = useState("");
+    const [stateProvince, setStateProvince] = useState("");
+    const [country, setCountry] = useState("US");
+    const [postalCode, setPostalCode] = useState("");
+    const [, setLogoFile] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // ── STEP 2: Invite Team Members ─────────────────────────────────────────
+    const [inviteEmail, setInviteEmail] = useState("");
+    const [inviteFirstName, setInviteFirstName] = useState("");
+    const [inviteLastName, setInviteLastName] = useState("");
+    const [invitedMembers, setInvitedMembers] = useState<Array<{
+        email: string;
+        firstName: string;
+        lastName: string;
+        roleId: string;
+        roleName: string;
+    }>>([]);
+    const [roles, setRoles] = useState<any[]>([]);
+    const [selectedRoleId, setSelectedRoleId] = useState("");
+
+    // ── STEP 3: Initial Documents ───────────────────────────────────────────
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [uploadingFiles, setUploadingFiles] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+    const docInputRef = useRef<HTMLInputElement>(null);
+
+    // Fetch roles on mount for Step 2
+    useEffect(() => {
+        const loadRoles = async () => {
+            try {
+                const token = await getToken();
+                if (!token) return;
+                const data = await listRoles(token);
+                setRoles(data || []);
+                if (data && data.length > 0) {
+                    // Default to non-super_admin role if possible
+                    const defaultRole = data.find((r: any) => r.name !== "super_admin") || data[0];
+                    setSelectedRoleId(defaultRole.id);
+                }
+            } catch (err) {
+                console.warn("Could not load roles for onboarding invites", err);
+            }
+        };
+        loadRoles();
+    }, [getToken]);
+
+    // Handle file selection for logo
+    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error("File size exceeds 5MB limit");
+                return;
+            }
+            setLogoFile(file);
+            setLogoPreview(URL.createObjectURL(file));
+        }
+    };
+
+    // ── Step 1 Submit: Create Organization ──────────────────────────────────
+    const handleCreateOrg = async () => {
+        if (!orgName.trim()) {
+            toast.error("Organization Name is required");
+            return;
+        }
+        if (!address.trim() || !city.trim() || !stateProvince.trim() || !postalCode.trim()) {
+            toast.error("Complete billing address details are required");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const token = await getToken();
+            if (!token) {
+                toast.error("Session authentication error");
+                return;
+            }
+
+            const response = await createOrganization({
+                name: orgName,
+                billing_address: {
+                    line1: address,
+                    city: city,
+                    state: stateProvince,
+                    postal_code: postalCode,
+                    country: country,
+                }
+            }, token);
+
+            setCreatedOrgId(response.id);
+            toast.success("Organization created successfully!");
+            onComplete(response.id);
+        } catch (err: any) {
+            console.error(err);
+            toast.error(err.message || "Failed to create organization. Check details and retry.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // ── Step 2 Handler: Add Member to Invite List ────────────────────────────
+    const handleAddMember = () => {
+        if (!inviteEmail.trim() || !inviteFirstName.trim()) {
+            toast.error("First Name and Email are required");
+            return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(inviteEmail)) {
+            toast.error("Please enter a valid email address");
+            return;
+        }
+
+        const role = roles.find(r => r.id === selectedRoleId);
+        const newMember = {
+            email: inviteEmail.trim(),
+            firstName: inviteFirstName.trim(),
+            lastName: inviteLastName.trim(),
+            roleId: selectedRoleId,
+            roleName: role ? role.name : "Employee",
+        };
+
+        setInvitedMembers(prev => [...prev, newMember]);
+        setInviteEmail("");
+        setInviteFirstName("");
+        setInviteLastName("");
+        toast.success(`Added ${newMember.firstName} to invite list`);
+    };
+
+    const handleRemoveMember = (idx: number) => {
+        setInvitedMembers(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const handleSendInvites = async () => {
+        if (invitedMembers.length === 0) {
+            setCurrentStep(3);
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const token = await getToken();
+            if (!token) return;
+
+            let successCount = 0;
+            for (const member of invitedMembers) {
+                try {
+                    await createInvite({
+                        email: member.email,
+                        first_name: member.firstName,
+                        last_name: member.lastName || null,
+                        role_name: member.roleName,
+                    }, token);
+                    successCount++;
+                } catch (err) {
+                    console.error(`Failed to invite ${member.email}:`, err);
+                }
+            }
+
+            toast.success(`Successfully sent ${successCount} invitation(s)`);
+            setCurrentStep(3);
+        } catch (err: any) {
+            toast.error("Failed to send invitations");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // ── Step 3 Handler: Upload Files ─────────────────────────────────────────
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const filesArray = Array.from(e.target.files);
+            setSelectedFiles(prev => [...prev, ...filesArray]);
+        }
+    };
+
+    const handleRemoveFile = (idx: number) => {
+        setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const handleUploadFiles = async () => {
+        if (selectedFiles.length === 0) {
+            setCurrentStep(4);
+            return;
+        }
+
+        setUploadingFiles(true);
+        try {
+            const token = await getToken();
+            if (!token) return;
+
+            // Fetch folders to find root folder
+            const folders = await listFolders(token);
+            const rootFolder = folders.find((f: any) => f.name === "Root");
+            if (!rootFolder) {
+                throw new Error("Root folder not found");
+            }
+
+            // Simulating upload progress
+            selectedFiles.forEach(file => {
+                setUploadProgress(prev => ({ ...prev, [file.name]: 10 }));
+                let progress = 10;
+                const interval = setInterval(() => {
+                    progress += Math.floor(Math.random() * 20) + 10;
+                    if (progress >= 95) {
+                        progress = 95;
+                        clearInterval(interval);
+                    }
+                    setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
+                }, 200);
+            });
+
+            await uploadFiles(rootFolder.id, selectedFiles, token);
+
+            selectedFiles.forEach(file => {
+                setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
+            });
+
+            toast.success("Files uploaded successfully to knowledge base!");
+            setTimeout(() => {
+                setCurrentStep(4);
+            }, 800);
+        } catch (err: any) {
+            console.error(err);
+            toast.error(err.message || "Failed to upload files");
+        } finally {
+            setUploadingFiles(false);
+        }
+    };
+
+    // ── Final Onboarding Complete ───────────────────────────────────────────
+    const handleFinishOnboarding = () => {
+        if (createdOrgId) {
+            onComplete(createdOrgId);
+        }
+    };
+
+    const steps = [
+        { id: 1, label: "Company Setup", icon: Building },
+    ];
+
+    return (
+        <div className="min-h-screen w-full flex flex-col bg-white dark:bg-zinc-950 transition-colors duration-300 relative select-none">
+            {/* Header / Top Bar */}
+            <header className="w-full border-b border-zinc-100 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 px-6 md:px-12 py-4 shrink-0">
+                <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
+                    {/* Logo */}
+                    <div className="flex items-center">
+                        <img 
+                            src="/navigator-logo.svg" 
+                            alt="Navigator" 
+                            className="h-8 md:h-9 w-auto object-contain block dark:brightness-110" 
+                        />
+                    </div>
+
+                    {/* Controls & Profile */}
+                    <div className="flex items-center gap-4">
+                        {/* Theme Toggle */}
+                        <Button
+                            onClick={toggleTheme}
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
+                            aria-label="Toggle theme"
+                        >
+                            {theme === "light" ? (
+                                <Moon className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
+                            ) : (
+                                <Sun className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
+                            )}
+                        </Button>
+
+                        {/* User Profile dropdown */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    className="flex items-center gap-2.5 outline-none hover:opacity-85 transition-opacity rounded-full p-0.5 cursor-pointer"
+                                    data-testid="user-profile"
+                                >
+                                    <Avatar className="h-8 w-8">
+                                        {user?.picture ? (
+                                            <AvatarImage
+                                                src={user.picture}
+                                                alt={fullName}
+                                            />
+                                        ) : null}
+                                        <AvatarFallback className="bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-semibold text-xs flex items-center justify-center">
+                                            {initials}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <span className="hidden sm:inline text-sm font-medium text-zinc-900 dark:text-zinc-100 max-w-[120px] truncate">
+                                        {fullName}
+                                    </span>
+                                </button>
+                            </DropdownMenuTrigger>
+
+                            <DropdownMenuContent align="end" className="w-56 mt-2 rounded-xl p-1.5 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg text-zinc-900 dark:text-zinc-100">
+                                <DropdownMenuLabel className="font-normal px-2.5 py-2">
+                                    <div className="flex flex-col space-y-1">
+                                        <p className="text-sm font-medium leading-none text-zinc-900 dark:text-zinc-100">
+                                            {fullName}
+                                        </p>
+                                        <p className="text-xs leading-none text-zinc-500 dark:text-zinc-400 truncate">
+                                            {user?.email || ""}
+                                        </p>
+                                    </div>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator className="bg-zinc-100 dark:bg-zinc-800 my-1.5" />
+
+                                <DropdownMenuItem 
+                                    onClick={() => logout()}
+                                    className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50/50 dark:focus:bg-red-950/20 rounded-lg cursor-pointer px-2.5 py-2 text-sm flex items-center"
+                                >
+                                    <svg 
+                                        className="mr-2 h-4 w-4 inline-block" 
+                                        fill="none" 
+                                        viewBox="0 0 24 24" 
+                                        stroke="currentColor" 
+                                        strokeWidth="2"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                    </svg>
+                                    <span>Sign out</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </div>
+            </header>
+
+            {/* Main Form Container */}
+            <main className="w-full max-w-7xl mx-auto px-6 md:px-12 py-10 md:py-12 transition-all">
+
+                {/* Steps Horizontal Progress Indicator */}
+                <div className="w-full mb-10">
+                    {/* Progress Bar Line */}
+                    <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mb-3">
+                        <div
+                            className="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all duration-500 ease-out"
+                            style={{ width: "100%" }}
+                        />
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-500 uppercase tracking-wider">
+                            Step 1 of 1
+                        </span>
+                        <span className="text-xs font-medium text-zinc-400">
+                            {steps[currentStep - 1].label}
+                        </span>
+                    </div>
+                </div>
+
+                {/* STEP 1: Let's Get Your Company Set Up */}
+                {currentStep === 1 && (
+                    <div className="space-y-8">
+                        <div>
+                            <h1 className="text-[32px] font-bold text-zinc-900 dark:text-zinc-100 leading-tight">
+                                Let's Get Your Company Set Up
+                            </h1>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
+                                Tell us about your organization to initialize your secure AI workspace.
+                            </p>
+                        </div>
+
+                        {/* Logo Upload Section */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                Company Logo
+                            </label>
+                            <div className="flex flex-col sm:flex-row items-center gap-6 p-4 border border-zinc-100 dark:border-zinc-800/80 rounded-2xl bg-white dark:bg-zinc-900">
+                                <div className="h-24 w-24 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center overflow-hidden shrink-0 border border-zinc-250/60 dark:border-zinc-700 shadow-inner">
+                                    {logoPreview ? (
+                                        <img src={logoPreview} alt="Logo preview" className="h-full w-full object-cover" />
+                                    ) : (
+                                        <ImageIcon className="h-10 w-10 text-zinc-400" />
+                                    )}
+                                </div>
+                                <div className="space-y-3 text-center sm:text-left">
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                        Allowed only .jpeg, .jpg, .png. Maximum size of 5 MB.
+                                    </p>
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleLogoChange}
+                                        accept="image/*"
+                                        className="hidden"
+                                    />
+                                    <Button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="h-9 px-4 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-sm cursor-pointer"
+                                    >
+                                        Choose File
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Fields Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="md:col-span-1 space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                    Organization Name <span className="text-red-500 ml-0.5">*</span>
+                                </label>
+                                <Input
+                                    type="text"
+                                    value={orgName}
+                                    onChange={(e) => setOrgName(e.target.value)}
+                                    placeholder="Enter your organization name"
+                                    className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+                                />
+                            </div>
+
+                            <div className="md:col-span-1 space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                    Organization Email
+                                </label>
+                                <Input
+                                    type="email"
+                                    value={orgEmail}
+                                    onChange={(e) => setOrgEmail(e.target.value)}
+                                    placeholder="Enter your organization email"
+                                    className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+                                />
+                            </div>
+
+                            <div className="md:col-span-1 space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                    Contact Number
+                                </label>
+                                <div className="flex h-11 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden focus-within:ring-1 focus-within:ring-ring transition-all bg-white dark:bg-zinc-900">
+                                    <div className="flex items-center gap-1.5 px-3 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm select-none">
+                                        <span>🇺🇸</span>
+                                        <span className="text-zinc-650 dark:text-zinc-400 font-medium">+1</span>
+                                    </div>
+                                    <input
+                                        type="tel"
+                                        value={contactNumber}
+                                        onChange={(e) => setContactNumber(e.target.value)}
+                                        placeholder="Enter contact number"
+                                        className="flex-1 bg-transparent border-none outline-none px-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-muted-foreground"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Address Fields */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="md:col-span-1 space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                    Address <span className="text-red-500 ml-0.5">*</span>
+                                </label>
+                                <Input
+                                    type="text"
+                                    value={address}
+                                    onChange={(e) => setAddress(e.target.value)}
+                                    placeholder="Enter organization address"
+                                    className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+                                />
+                            </div>
+
+                            <div className="md:col-span-1 space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                    City <span className="text-red-500 ml-0.5">*</span>
+                                </label>
+                                <Input
+                                    type="text"
+                                    value={city}
+                                    onChange={(e) => setCity(e.target.value)}
+                                    placeholder="Enter city"
+                                    className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+                                />
+                            </div>
+
+                            <div className="md:col-span-1 space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                    State or Province <span className="text-red-500 ml-0.5">*</span>
+                                </label>
+                                <Input
+                                    type="text"
+                                    value={stateProvince}
+                                    onChange={(e) => setStateProvince(e.target.value)}
+                                    placeholder="Enter state or province"
+                                    className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Country & Postal */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="md:col-span-1 space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                    Country
+                                </label>
+                                <Select
+                                    value={country}
+                                    onValueChange={setCountry}
+                                >
+                                    <SelectTrigger className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                                        <SelectValue placeholder="Select Country" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="US">United States</SelectItem>
+                                        <SelectItem value="CA">Canada</SelectItem>
+                                        <SelectItem value="GB">United Kingdom</SelectItem>
+                                        <SelectItem value="AU">Australia</SelectItem>
+                                        <SelectItem value="DE">Germany</SelectItem>
+                                        <SelectItem value="IN">India</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="md:col-span-1 space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                    Postal Code <span className="text-red-500 ml-0.5">*</span>
+                                </label>
+                                <Input
+                                    type="text"
+                                    value={postalCode}
+                                    onChange={(e) => setPostalCode(e.target.value)}
+                                    placeholder="Enter postal code"
+                                    className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Navigation Row */}
+                        <div className="flex justify-end pt-4">
+                            <Button
+                                type="button"
+                                onClick={handleCreateOrg}
+                                disabled={isSubmitting}
+                                className="h-11 px-10 font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/60 rounded-lg transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer min-w-[120px]"
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        <span>Saving...</span>
+                                    </>
+                                ) : (
+                                    "Save & Continue"
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+            </main>
+        </div>
+    );
+}

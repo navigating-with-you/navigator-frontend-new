@@ -28,6 +28,7 @@ export default function AuthInitializer() {
 
                         const userData = await syncUser(token);
                         localStorage.setItem("navigator_user_profile", JSON.stringify(userData));
+                        window.dispatchEvent(new Event("navigator_user_synced"));
                         console.log("User synced successfully", userData);
                     }
                 } catch (error) {
@@ -39,11 +40,13 @@ export default function AuthInitializer() {
         };
 
         performSync();
+    }, [isAuthenticated, getToken, user]);
 
+    useEffect(() => {
         return () => {
             cacheWebSocket.disconnect();
         };
-    }, [isAuthenticated, getToken, user]);
+    }, []);
 
     return null;
 }

@@ -13,6 +13,7 @@ import AuthInitializer from "@/components/auth/AuthInitializer";
 import { Toaster } from "@/components/ui/sonner";
 import type { JSX } from "react";
 
+
 function AppRoutes(): JSX.Element {
     const { isAuthenticated } = useKindeAuth();
 
@@ -69,13 +70,23 @@ function AppRoutes(): JSX.Element {
                     />
 
                     <Route
-                        path="/chatnew"
+                        path="/chat"
                         element={<NewChatPage />}
                     />
 
                     <Route
+                        path="/chat/:id"
+                        element={<NewChatPage />}
+                    />
+
+                    <Route
+                        path="/chatnew"
+                        element={<Navigate to="/chat" replace />}
+                    />
+
+                    <Route
                         path="/chatsearch"
-                        element={<Navigate to="/chatnew" replace />}
+                        element={<Navigate to="/chat" replace />}
                     />
                 </Route>
             </Route>
@@ -93,8 +104,8 @@ function App(): JSX.Element {
     return (
         <div className="App">
             <BrowserRouter>
-                <AuthInitializer />
-                <AppRoutes />
+                    <AuthInitializer />
+                    <AppRoutes />
             </BrowserRouter>
 
             <Toaster position="top-right" />

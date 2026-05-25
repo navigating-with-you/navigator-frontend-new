@@ -117,8 +117,8 @@
   }
 
   /* Input & search */
-  .dark input,
-  .dark textarea {
+  .dark input:not(.bg-transparent),
+  .dark textarea:not(.bg-transparent) {
     background-color: hsl(222 47% 13%) !important;
     color: hsl(210 40% 96%) !important;
     border-color: hsl(222 47% 22%) !important;
@@ -178,5 +178,27 @@
   * {
     scrollbar-width: thin;
     scrollbar-color: #e4e4e7 transparent;
+  }
+}
+
+@keyframes typingDot {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

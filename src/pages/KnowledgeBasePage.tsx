@@ -7,8 +7,6 @@ import {
     Globe,
     RefreshCw,
     Search,
-    Sparkles,
-    Info,
     X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +19,7 @@ import CreateFolderDrawer from "@/components/knowledge-base/CreateFolderDrawer";
 import AddFilesDrawer from "@/components/knowledge-base/AddFilesDrawer";
 import AddTextDrawer from "@/components/knowledge-base/AddTextDrawer";
 import AddUrlDrawer from "@/components/knowledge-base/AddUrlDrawer";
-import AskAiDrawer from "@/components/knowledge-base/AskAiDrawer";
+
 import KnowledgeBaseDetailDrawer from "@/components/knowledge-base/KnowledgeBaseDetailDrawer";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import {
@@ -130,7 +128,7 @@ export default function KnowledgeBasePage() {
     const [filesOpen, setFilesOpen] = useState(false);
     const [textOpen, setTextOpen] = useState(false);
     const [urlOpen, setUrlOpen] = useState(false);
-    const [askAiOpen, setAskAiOpen] = useState(false);
+
     const [detailEntry, setDetailEntry] = useState<KBEntry | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
 
@@ -438,7 +436,7 @@ export default function KnowledgeBasePage() {
     // ── Render ─────────────────────────────────────────────────────────────────
 
     return (
-        <div className="px-8 py-6 flex flex-col h-full overflow-hidden" data-testid="knowledge-base-page">
+        <div className="px-8 py-6 flex flex-col h-full overflow-hidden" data-testid="knowledge-base-page" data-tour="knowledge-base-page">
 
             {/* Header / Breadcrumbs */}
             <div className="flex-shrink-0 flex flex-col gap-1">
@@ -465,23 +463,7 @@ export default function KnowledgeBasePage() {
                                         <span className="text-zinc-900 dark:text-zinc-100 font-bold">
                                             {item.name}
                                         </span>
-                                        <button
-                                            onClick={() => {
-                                                setDetailEntry({
-                                                    id: item.id,
-                                                    name: item.name,
-                                                    type: "folder",
-                                                    folder: "",
-                                                    owner: "",
-                                                    createdDate: "",
-                                                });
-                                                setDetailOpen(true);
-                                            }}
-                                            className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
-                                            title="Folder Details"
-                                        >
-                                            <Info className="h-4 w-4" />
-                                        </button>
+
                                     </div>
                                 );
                             }
@@ -500,16 +482,6 @@ export default function KnowledgeBasePage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {currentFolderId && childFiles.length > 0 && (
-                            <Button
-                                onClick={() => setAskAiOpen(true)}
-                                className="gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                                data-testid="ask-ai-btn"
-                            >
-                                <Sparkles className="h-4 w-4" />
-                                Ask AI
-                            </Button>
-                        )}
                         <Button
                             variant="outline"
                             className="gap-2 rounded-lg border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold"
@@ -664,11 +636,7 @@ export default function KnowledgeBasePage() {
             </div>
 
             {/* Drawers */}
-            <AskAiDrawer
-                open={askAiOpen}
-                onOpenChange={setAskAiOpen}
-                folderId={currentFolderId ?? undefined}
-            />
+
 
             <CreateFolderDrawer
                 open={folderOpen}

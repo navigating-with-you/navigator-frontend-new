@@ -313,7 +313,7 @@ export default function EmployeesPage() {
 
     return (
         <div className="flex flex-col h-full overflow-hidden" data-testid="employees-page">
-            <div className="px-4 sm:px-8 py-6 flex flex-col h-full overflow-y-auto">
+            <div className="px-4 sm:px-8 py-6 flex flex-col h-full overflow-y-auto" data-tour="employees-page">
                 {/* Header - Fixed */}
                 <div className="shrink-0 flex flex-col gap-1">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -343,7 +343,7 @@ export default function EmployeesPage() {
 
                 {/* Actions - Fixed */}
                 <div className="mt-6 shrink-0 flex flex-wrap gap-3">
-                    <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setDrawerOpen(true)}>
+                    <Button data-tour="add-employee-btn" variant="outline" className="flex-1 sm:flex-none" onClick={() => setDrawerOpen(true)}>
                         <Plus className="h-4 w-4" />
                         Add
                     </Button>
@@ -383,7 +383,7 @@ export default function EmployeesPage() {
                 </div>
 
                 {/* Filters - Fixed */}
-                <div className="mt-4 shrink-0 flex flex-wrap gap-2">
+                <div data-tour="employee-filters" className="mt-4 shrink-0 flex flex-wrap gap-2">
                     <FilterDropdown
                         label="Status"
                         value={filters.status}

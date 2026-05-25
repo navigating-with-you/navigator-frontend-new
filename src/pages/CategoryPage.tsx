@@ -399,7 +399,7 @@ export default function CategoryPage() {
 
     return (
         <div className="flex flex-col h-full overflow-hidden bg-zinc-50/20 dark:bg-zinc-950/20" data-testid="teams-page">
-            <div className="px-4 sm:px-8 py-6 flex flex-col h-full overflow-y-auto hover-scrollbar">
+            <div className="px-4 sm:px-8 py-6 flex flex-col h-full overflow-y-auto hover-scrollbar" data-tour="teams-page">
 
                 {/* Header */}
                 <div className="shrink-0 flex flex-col gap-1">
@@ -435,6 +435,7 @@ export default function CategoryPage() {
                 {/* Toolbar Buttons */}
                 <div className="mt-6 shrink-0 flex flex-wrap gap-3">
                     <Button
+                        data-tour="add-team-btn"
                         variant="outline"
                         className="flex-1 sm:flex-none"
                         onClick={triggerAddMode}
@@ -485,7 +486,7 @@ export default function CategoryPage() {
                 </div>
 
                 {/* Filter Dropdowns */}
-                <div className="mt-4 shrink-0 flex flex-wrap gap-2 select-none">
+                <div data-tour="team-filters" className="mt-4 shrink-0 flex flex-wrap gap-2 select-none">
                     <FilterDropdown
                         label="Type"
                         value={filters.type}
