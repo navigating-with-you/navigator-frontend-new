@@ -1,4 +1,5 @@
 import { cacheManager } from "./cacheManager";
+import { config } from "../config";
 
 interface CacheInvalidationEvent {
     event: string;
@@ -19,7 +20,7 @@ class CacheWebSocketManager {
     private heartbeatTimer: any = null;
 
     constructor() {
-        this.url = import.meta.env.VITE_WS_URL || "ws://localhost:8000";
+        this.url = config.wsUrl || config.apiBaseUrl.replace("http://", "ws://").replace("https://", "wss://");
     }
 
     setToken(token: string) {

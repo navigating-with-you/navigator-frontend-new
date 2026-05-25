@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, AlertCircle } from "lucide-react";
+import { X, AlertCircle, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,7 +76,7 @@ export default function AddUrlDrawer({
                         <X className="h-5 w-5" />
                     </button>
                     <SheetTitle className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                        Add URL
+                        Save URL Reference
                     </SheetTitle>
                 </div>
 
@@ -154,7 +154,7 @@ export default function AddUrlDrawer({
                             </div>
                         )}
                         <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                            The URL will be saved as a <code className="font-mono">.txt</code> reference file in the selected folder.
+                            The URL will be saved as a <code className="font-mono">.txt</code> reference file. Note: content scraping is not supported.
                         </p>
                     </div>
                 </div>
@@ -165,9 +165,16 @@ export default function AddUrlDrawer({
                         disabled={!canSave}
                         onClick={handleSubmit}
                         data-testid="add-url-submit-btn"
-                        className="rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                        className="rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-2"
                     >
-                        {isSubmitting ? "Saving..." : "Save"}
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Saving Reference...</span>
+                            </>
+                        ) : (
+                            "Save Reference"
+                        )}
                     </Button>
                 </div>
             </SheetContent>

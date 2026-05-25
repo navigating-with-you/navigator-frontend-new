@@ -50,8 +50,6 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
     // ── STEP 1: Company Setup Data ──────────────────────────────────────────
     const [orgName, setOrgName] = useState("");
-    const [orgEmail, setOrgEmail] = useState("");
-    const [contactNumber, setContactNumber] = useState("");
     const [address, setAddress] = useState("");
     const [city, setCity] = useState("");
     const [stateProvince, setStateProvince] = useState("");
@@ -69,6 +67,7 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 toast.error("File size exceeds 5MB limit");
                 return;
             }
+            toast.warning("Logo upload is not yet supported.");
             setLogoFile(file);
             setLogoPreview(URL.createObjectURL(file));
         }
@@ -279,7 +278,7 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
                         {/* Fields Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="md:col-span-1 space-y-1.5">
+                            <div className="md:col-span-3 space-y-1.5">
                                 <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                                     Organization Name <span className="text-red-500 ml-0.5">*</span>
                                 </label>
@@ -290,38 +289,6 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     placeholder="Enter your organization name"
                                     className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                                 />
-                            </div>
-
-                            <div className="md:col-span-1 space-y-1.5">
-                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                                    Organization Email
-                                </label>
-                                <Input
-                                    type="email"
-                                    value={orgEmail}
-                                    onChange={(e) => setOrgEmail(e.target.value)}
-                                    placeholder="Enter your organization email"
-                                    className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
-                                />
-                            </div>
-
-                            <div className="md:col-span-1 space-y-1.5">
-                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                                    Contact Number
-                                </label>
-                                <div className="flex h-11 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden focus-within:ring-1 focus-within:ring-ring transition-all bg-white dark:bg-zinc-900">
-                                    <div className="flex items-center gap-1.5 px-3 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm select-none">
-                                        <span>🇺🇸</span>
-                                        <span className="text-zinc-650 dark:text-zinc-400 font-medium">+1</span>
-                                    </div>
-                                    <input
-                                        type="tel"
-                                        value={contactNumber}
-                                        onChange={(e) => setContactNumber(e.target.value)}
-                                        placeholder="Enter contact number"
-                                        className="flex-1 bg-transparent border-none outline-none px-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-muted-foreground"
-                                    />
-                                </div>
                             </div>
                         </div>
 

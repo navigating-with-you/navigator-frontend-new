@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Trash2 } from "lucide-react";
+import { X, Trash2, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -311,9 +311,16 @@ export default function AddFilesDrawer({
                         disabled={!canAdd}
                         onClick={handleSubmit}
                         data-testid="add-files-submit-btn"
-                        className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-8 font-semibold"
+                        className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-8 font-semibold flex items-center justify-center gap-2"
                     >
-                        Add
+                        {isUploading ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Uploading...</span>
+                            </>
+                        ) : (
+                            "Add"
+                        )}
                     </Button>
                 </div>
             </SheetContent>

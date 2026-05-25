@@ -1,5 +1,5 @@
 import { useEffect, useState, type JSX } from "react";
-import { X, AlertCircle } from "lucide-react";
+import { X, AlertCircle, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,6 @@ interface AddEmployeeDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSubmit: (data: any, invite: boolean) => void;
-    nextEmployeeId: string;
 }
 
 const initialForm: EmployeeForm = {
@@ -40,7 +39,6 @@ export default function AddEmployeeDrawer({
     open,
     onOpenChange,
     onSubmit,
-    nextEmployeeId,
 }: AddEmployeeDrawerProps): JSX.Element {
     const { getToken } = useKindeAuth();
     const [form, setForm] = useState<EmployeeForm>(initialForm);
@@ -106,7 +104,7 @@ export default function AddEmployeeDrawer({
             }
 
             // Call invite API
-            await createInvite({
+            const response = await createInvite({
                 email: form.email,
                 first_name: form.firstName,
                 last_name: form.lastName || null,
@@ -118,7 +116,7 @@ export default function AddEmployeeDrawer({
             // Notify parent
             onSubmit(
                 {
-                    id: nextEmployeeId,
+                    id: response.invite_id,
                     name: `${form.firstName} ${form.lastName}`.trim(),
                     email: form.email,
                     role: roles.find(r => r.id === form.roleId)?.name || "Member",
@@ -290,9 +288,16 @@ export default function AddEmployeeDrawer({
                         onClick={submit}
                         disabled={!canSave || isSubmitting}
                         data-testid="save-invite-employee-btn"
-                        className="rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                        className="rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-2"
                     >
-                        {isSubmitting ? "Sending..." : "Send Invite"}
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Sending...</span>
+                            </>
+                        ) : (
+                            "Send Invite"
+                        )}
                     </Button>
                 </div>
             </SheetContent>

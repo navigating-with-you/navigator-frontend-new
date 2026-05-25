@@ -10,6 +10,7 @@ import {
     ChevronLeft,
     ChevronRight,
     ChevronDown,
+    Loader2,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ import AddEmployeesDialog from "./AddEmployeesDialog";
 interface CategoryDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSubmit: (category: Category) => void;
+    onSubmit: (category: Category) => void | Promise<void>;
     category?: Category | null;
     mode: "add" | "edit" | "view";
     allEmployees: any[];
@@ -69,6 +70,7 @@ export default function CategoryDrawer({
     const [filePage, setFilePage] = useState(1);
     const [rowsPerPage] = useState(50);
     const [touched, setTouched] = useState<{ name?: boolean; managerId?: boolean }>({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Reset drawer state on open/close or category changes
     useEffect(() => {
@@ -94,6 +96,7 @@ export default function CategoryDrawer({
             setManagerOpen(false);
             setEmpPage(1);
             setFilePage(1);
+            setIsSubmitting(false);
         }
     }, [open, category, mode]);
 
@@ -200,29 +203,34 @@ export default function CategoryDrawer({
         }
     };
 
-    const handleSave = () => {
-        if (!canSave) return;
+    const handleSave = async () => {
+        if (!canSave || isSubmitting) return;
 
-        const selectedManager = managerOptions.find((m) => m.id === managerId);
+        setIsSubmitting(true);
+        try {
+            const selectedManager = managerOptions.find((m) => m.id === managerId);
 
-        const newCategory: Category = {
-            id: category?.id || `CAT-${Date.now()}`,
-            name: name.trim(),
-            description: description.trim(),
-            managerId,
-            managerName: selectedManager ? selectedManager.name : "Unassigned",
-            kbCount: selectedFiles.length,
-            employeeCount: selectedEmployees.length,
-            employees: selectedEmployees,
-            files: selectedFiles,
-            type: category?.type || "Department",
-            createdBy: category?.createdBy || "Admin",
-            createdDate: category?.createdDate || new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
-            isArchived: category?.isArchived ?? false,
-        };
+            const newCategory: Category = {
+                id: category?.id || `CAT-${Date.now()}`,
+                name: name.trim(),
+                description: description.trim(),
+                managerId,
+                managerName: selectedManager ? selectedManager.name : "Unassigned",
+                kbCount: selectedFiles.length,
+                employeeCount: selectedEmployees.length,
+                employees: selectedEmployees,
+                files: selectedFiles,
+                type: category?.type || "Department",
+                createdBy: category?.createdBy || "Admin",
+                createdDate: category?.createdDate || new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
+                isArchived: category?.isArchived ?? false,
+            };
 
-        onSubmit(newCategory);
-        onOpenChange(false);
+            await onSubmit(newCategory);
+            onOpenChange(false);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -716,12 +724,19 @@ export default function CategoryDrawer({
                 {!isReadOnly && (
                     <div className="flex items-center justify-end gap-3 border-t border-zinc-150 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-8 py-4 shrink-0 select-none">
                         <Button
-                            disabled={!canSave}
+                            disabled={!canSave || isSubmitting}
                             onClick={handleSave}
                             data-testid="save-team-btn"
-                            className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold h-10 px-6 shadow-sm disabled:opacity-50"
+                            className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold h-10 px-6 shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                            Save
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span>Saving...</span>
+                                </>
+                            ) : (
+                                "Save"
+                            )}
                         </Button>
                     </div>
                 )}

@@ -7,11 +7,34 @@ import { toast } from "sonner";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { cn } from "@/lib/utils";
 
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 import { type Category } from "@/types/category";
 import CategoryTable from "@/components/category/CategoryTable";
 import CategoryDrawer from "@/components/category/CategoryDrawer";
 import FilterDropdown from "@/components/FilterDropdown";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
+
+function pLimit(concurrency: number) {
+    return async function<T>(tasks: (() => Promise<T>)[]) {
+        const results: T[] = new Array(tasks.length);
+        let index = 0;
+        const worker = async () => {
+            while (index < tasks.length) {
+                const currentIdx = index++;
+                results[currentIdx] = await tasks[currentIdx]();
+            }
+        };
+        const workers = Array.from({ length: Math.min(concurrency, tasks.length) }, worker);
+        await Promise.all(workers);
+        return results;
+    };
+}
 
 import {
     listGroups,
@@ -111,8 +134,9 @@ export default function CategoryPage() {
 
                     if (groupsList.length > 0) {
                         // Fetch detailed members list for each group
-                        const categoriesData: Category[] = await Promise.all(
-                            groupsList.map(async (g: any) => {
+                        const limit = pLimit(5);
+                        const categoriesData: Category[] = await limit(
+                            groupsList.map((g: any) => async () => {
                                 try {
                                     const details = await getGroup(g.id, token);
                                     const members = details?.members || [];
@@ -164,7 +188,7 @@ export default function CategoryPage() {
                                             month: "long",
                                             year: "numeric"
                                         }),
-                                        isArchived: false
+                                        isArchived: g.is_archived ?? false
                                     };
                                 } catch (err) {
                                     const rawManagerId = g.created_by || "";
@@ -187,15 +211,13 @@ export default function CategoryPage() {
                                             month: "long",
                                             year: "numeric"
                                         }),
-                                        isArchived: false
+                                        isArchived: g.is_archived ?? false
                                     };
                                 }
                             })
                         );
 
                         setCategories(categoriesData);
-                        setIsLoading(false);
-                        return;
                     } else {
                         setCategories([]);
                     }
@@ -302,6 +324,16 @@ export default function CategoryPage() {
                             await removeGroupMembers(newCat.id, removedIds, token);
                         }
 
+                        setCategories(prev => prev.map(c => c.id === newCat.id ? {
+                            ...c,
+                            name: newCat.name,
+                            description: newCat.description,
+                            managerId: newCat.managerId,
+                            managerName: newCat.managerName,
+                            employeeCount: newCat.employees.length,
+                            employees: newCat.employees,
+                        } : c));
+
                         toast.success(`Team "${newCat.name}" updated successfully`);
                     } else {
                         // 1. Create group
@@ -318,55 +350,90 @@ export default function CategoryPage() {
                             await addGroupMembers(newGroupId, currentIds, token);
                         }
 
+                        const createdCat: Category = {
+                            ...newCat,
+                            id: newGroupId,
+                            createdBy: newCat.managerName || "Admin",
+                            createdDate: new Date().toLocaleDateString("en-GB", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric"
+                            })
+                        };
+                        setCategories(prev => [...prev, createdCat]);
+
                         toast.success(`Team "${newCat.name}" created successfully`);
                     }
 
-                    await loadCategories();
                     setDrawerOpen(false);
                 }
             } else {
                 toast.error("Not authenticated");
-                setIsLoading(false);
             }
         } catch (err) {
             console.error("API Error creating/updating team:", err);
             toast.error("API error creating/updating team");
-            setIsLoading(false);
-        }
-    };
-
-    const handleDeleteCategory = async (id: string) => {
-        setIsLoading(true);
-        const target = categories.find((c) => c.id === id);
-        try {
-            if (isAuthenticated) {
-                const token = await getToken();
-                if (token) {
-                    await deleteGroup(id, token);
-                    toast.success(`Team "${target?.name || "Team"}" deleted successfully`);
-                    await loadCategories();
-                }
-            } else {
-                toast.error("Not authenticated");
-            }
-        } catch (err) {
-            console.error("API Error deleting team:", err);
-            toast.error("API error deleting team");
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleArchiveCategory = (id: string) => {
-        const updated = categories.map((c) => {
-            if (c.id === id) {
-                const isArchivedNow = !c.isArchived;
-                toast.success(`Team "${c.name}" ${isArchivedNow ? "archived" : "unarchived"} successfully`);
-                return { ...c, isArchived: isArchivedNow };
+    const handleDeleteCategory = async (id: string) => {
+        const target = categories.find((c) => c.id === id);
+        if (!target) return;
+
+        const prevCategories = [...categories];
+        setCategories((prev) => prev.filter((c) => c.id !== id));
+
+        try {
+            if (isAuthenticated) {
+                const token = await getToken();
+                if (token) {
+                    await deleteGroup(id, token);
+                    toast.success(`Team "${target.name}" deleted successfully`);
+                } else {
+                    toast.error("Not authenticated");
+                    setCategories(prevCategories);
+                }
+            } else {
+                toast.error("Not authenticated");
+                setCategories(prevCategories);
             }
-            return c;
-        });
-        setCategories(updated);
+        } catch (err) {
+            console.error("API Error deleting team:", err);
+            toast.error("API error deleting team");
+            setCategories(prevCategories);
+        }
+    };
+
+    const handleArchiveCategory = async (id: string) => {
+        const target = categories.find((c) => c.id === id);
+        if (!target) return;
+
+        const isArchivedNow = !target.isArchived;
+        const prevCategories = [...categories];
+
+        setCategories(prev => prev.map(c => c.id === id ? { ...c, isArchived: isArchivedNow } : c));
+        toast.success(`Team "${target.name}" ${isArchivedNow ? "archived" : "unarchived"} successfully`);
+
+        try {
+            if (isAuthenticated) {
+                const token = await getToken();
+                if (token) {
+                    await updateGroup(id, { is_archived: isArchivedNow }, token);
+                } else {
+                    toast.error("Not authenticated");
+                    setCategories(prevCategories);
+                }
+            } else {
+                toast.error("Not authenticated");
+                setCategories(prevCategories);
+            }
+        } catch (err) {
+            console.error("API Error archiving team:", err);
+            toast.error("API error archiving team");
+            setCategories(prevCategories);
+        }
     };
 
     // Action Triggers
@@ -444,23 +511,37 @@ export default function CategoryPage() {
                         Add
                     </Button>
 
-                    <Button
-                        variant="outline"
-                        className="flex-1 sm:flex-none"
-                        onClick={() => toast.success("Team bulk import complete")}
-                    >
-                        <Download className="h-4 w-4" />
-                        Import
-                    </Button>
+                    <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span>
+                                    <Button variant="outline" disabled className="flex-1 sm:flex-none opacity-50 cursor-not-allowed">
+                                        <Download className="h-4 w-4" />
+                                        Import
+                                    </Button>
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                                Coming soon
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
 
-                    <Button
-                        variant="outline"
-                        className="flex-1 sm:flex-none"
-                        onClick={() => toast.success("Team bulk export complete")}
-                    >
-                        <Upload className="h-4 w-4" />
-                        Export
-                    </Button>
+                    <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span>
+                                    <Button variant="outline" disabled className="flex-1 sm:flex-none opacity-50 cursor-not-allowed">
+                                        <Upload className="h-4 w-4" />
+                                        Export
+                                    </Button>
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                                Coming soon
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
 
                 {/* Search Bar */}

@@ -89,7 +89,9 @@ function StatusDot({
             ? "bg-emerald-500"
             : status === "away"
                 ? "bg-orange-500"
-                : "bg-zinc-300";
+                : status === "pending"
+                    ? "bg-blue-500 animate-pulse"
+                    : "bg-zinc-300";
 
     return (
         <TooltipProvider delayDuration={200}>
@@ -103,7 +105,7 @@ function StatusDot({
                     />
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">
-                    {isActive ? "Active" : "Inactive"}
+                    {status === "pending" ? "Pending Invite" : (isActive ? "Active" : "Inactive")}
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>

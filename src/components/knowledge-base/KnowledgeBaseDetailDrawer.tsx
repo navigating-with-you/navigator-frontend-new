@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-import { getFolder, uploadFiles, deleteFiles, updateFolder, getFile, getFileDownloadUrl, extractFileText } from "@/lib/api";
+import { getFolder, uploadFiles, deleteFiles, updateFolder, getFile, getFileDownloadUrl, extractFileText, createOcrJob, retryOcrJob, getFileOcrJob } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { KBEntry } from "@/types/knowledge-base";
+import { cacheWebSocket } from "@/utils/cacheWebSocket";
 
 interface KBDetailDrawerProps {
     open: boolean;
@@ -44,8 +45,15 @@ export default function KnowledgeBaseDetailDrawer({
     const [ocrText, setOcrText] = useState<string | null>(null);
     const [isOcrLoading, setIsOcrLoading] = useState<boolean>(false);
     const [ocrError, setOcrError] = useState<string | null>(null);
+    const [ocrJob, setOcrJob] = useState<any | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    
+    // Refs for WebSocket subscription handlers
+    const ocrJobIdRef = useRef<string | null>(null);
+    const fileIdRef = useRef<string | null>(null);
+    const tokenRef = useRef<string | null>(null);
+    const hasSubscribedRef = useRef<boolean>(false);
 
     // Helpers
     const formatSize = (bytes: number) => {
@@ -68,6 +76,104 @@ export default function KnowledgeBaseDetailDrawer({
         }
     };
 
+    const handleOcrJobEvent = (data: any) => {
+        console.log("[DetailDrawer] Received OCR job WebSocket event:", data);
+        const eventJobId = data.resource_id;
+        const currentJobId = ocrJobIdRef.current;
+        const currentFileId = fileIdRef.current;
+
+        const isMatch = eventJobId === currentJobId || 
+                        data.metadata?.file_id === currentFileId;
+
+        if (!isMatch) return;
+
+        if (data.metadata) {
+            const updatedJob = {
+                job_id: eventJobId,
+                status: data.metadata.status || (data.event === "ocr:job_completed" ? "completed" : "processing"),
+                progress_percentage: data.metadata.progress_percentage ?? 100,
+                progress_message: data.metadata.progress_message || "",
+                error_message: data.metadata.error_message || null,
+            };
+
+            setOcrJob(updatedJob);
+
+            if (data.event === "ocr:job_completed" || data.metadata.status === "completed") {
+                if (currentFileId && tokenRef.current) {
+                    fetchExtractedText(currentFileId, tokenRef.current);
+                }
+                unsubscribeWebSocket();
+            } else if (data.metadata.status === "failed") {
+                setOcrError(data.metadata.error_message || "OCR extraction failed.");
+                setIsOcrLoading(false);
+                unsubscribeWebSocket();
+            }
+        }
+    };
+
+    const subscribeWebSocket = () => {
+        if (hasSubscribedRef.current) return;
+        cacheWebSocket.on("ocr:job_created", handleOcrJobEvent);
+        cacheWebSocket.on("ocr:job_updated", handleOcrJobEvent);
+        cacheWebSocket.on("ocr:job_completed", handleOcrJobEvent);
+        hasSubscribedRef.current = true;
+        console.log("[DetailDrawer] Subscribed to OCR WebSocket events");
+    };
+
+    const unsubscribeWebSocket = () => {
+        if (!hasSubscribedRef.current) return;
+        cacheWebSocket.off("ocr:job_created", handleOcrJobEvent);
+        cacheWebSocket.off("ocr:job_updated", handleOcrJobEvent);
+        cacheWebSocket.off("ocr:job_completed", handleOcrJobEvent);
+        hasSubscribedRef.current = false;
+        console.log("[DetailDrawer] Unsubscribed from OCR WebSocket events");
+    };
+
+    const fetchExtractedText = async (fileId: string, token: string) => {
+        try {
+            const ocrRes = await extractFileText(fileId, token);
+            setOcrText(ocrRes.extracted_text || "");
+        } catch (err: any) {
+            console.error("Error extracting text:", err);
+            setOcrError(err.message || "OCR extraction failed or not available for this file type.");
+        } finally {
+            setIsOcrLoading(false);
+        }
+    };
+
+    const checkOrStartOcrJob = async (fileId: string, token: string) => {
+        try {
+            fileIdRef.current = fileId;
+            tokenRef.current = token;
+
+            let job: any = null;
+            try {
+                job = await getFileOcrJob(fileId, token);
+            } catch (err: any) {
+                console.log("No OCR job found, creating a new one...", err);
+                job = await createOcrJob({ file_id: fileId, extraction_type: "standard" }, token);
+            }
+
+            setOcrJob(job);
+            ocrJobIdRef.current = job.job_id || job.id;
+
+            if (job.status === "completed") {
+                await fetchExtractedText(fileId, token);
+            } else if (job.status === "failed") {
+                setOcrError(job.error_message || "OCR extraction failed.");
+                setIsOcrLoading(false);
+            } else if (job.status === "pending" || job.status === "processing") {
+                subscribeWebSocket();
+            } else {
+                setIsOcrLoading(false);
+            }
+        } catch (err: any) {
+            console.error("Error checking or starting OCR job:", err);
+            setOcrError(err.message || "Failed to process OCR job.");
+            setIsOcrLoading(false);
+        }
+    };
+
     // Fetch file metadata and OCR text content
     const fetchFileAllDetails = async () => {
         if (!entry || entry.type !== "file") return;
@@ -76,6 +182,7 @@ export default function KnowledgeBaseDetailDrawer({
             setIsOcrLoading(true);
             setOcrError(null);
             setOcrText(null);
+            setOcrJob(null);
 
             const token = await getToken();
             if (!token) return;
@@ -105,20 +212,43 @@ export default function KnowledgeBaseDetailDrawer({
                     console.error("Error reading plain text file:", err);
                     setOcrText("Failed to read text file content.");
                 }
+                setIsOcrLoading(false);
             } else {
-                try {
-                    const ocrRes = await extractFileText(entry.id, token);
-                    setOcrText(ocrRes.extracted_text || "");
-                } catch (err: any) {
-                    console.error("Error extracting text:", err);
-                    setOcrError(err.message || "OCR extraction failed or not available for this file type.");
-                }
+                await checkOrStartOcrJob(entry.id, token);
             }
         } catch (err: any) {
             console.error("Error fetching file details:", err);
             toast.error(err.message || "Failed to load file details");
+            setIsOcrLoading(false);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleRetryOcr = async () => {
+        if (!entry) return;
+        try {
+            setIsOcrLoading(true);
+            setOcrError(null);
+            const token = await getToken();
+            if (!token) return;
+
+            toast.loading("Retrying OCR extraction...", { id: "retry-ocr" });
+            unsubscribeWebSocket();
+            
+            if (ocrJob?.job_id) {
+                const job = await retryOcrJob(ocrJob.job_id, token);
+                toast.success("OCR job retried successfully", { id: "retry-ocr" });
+                setOcrJob(job);
+                ocrJobIdRef.current = job.job_id || job.id;
+                subscribeWebSocket();
+            } else {
+                toast.success("OCR job started", { id: "retry-ocr" });
+                await checkOrStartOcrJob(entry.id, token);
+            }
+        } catch (err: any) {
+            console.error("Error retrying OCR job:", err);
+            toast.error(err.message || "Failed to retry OCR job", { id: "retry-ocr" });
             setIsOcrLoading(false);
         }
     };
@@ -167,6 +297,11 @@ export default function KnowledgeBaseDetailDrawer({
 
     // Reset mode and fetch files on open/entry changes
     useEffect(() => {
+        unsubscribeWebSocket();
+        ocrJobIdRef.current = null;
+        fileIdRef.current = null;
+        tokenRef.current = null;
+        
         if (open && entry) {
             setMode("view");
             if (entry.type === "folder") {
@@ -175,6 +310,7 @@ export default function KnowledgeBaseDetailDrawer({
                 setFolderDetails(null);
                 setOcrText(null);
                 setOcrError(null);
+                setOcrJob(null);
             } else {
                 setFiles([]);
                 fetchFileAllDetails();
@@ -185,7 +321,9 @@ export default function KnowledgeBaseDetailDrawer({
             setFolderDetails(null);
             setOcrText(null);
             setOcrError(null);
+            setOcrJob(null);
         }
+        return () => unsubscribeWebSocket();
     }, [open, entry]);
 
     // Handle single file deletion (minus icon)
@@ -396,10 +534,26 @@ export default function KnowledgeBaseDetailDrawer({
                                     {isOcrLoading ? (
                                         <div className="flex flex-col items-center justify-center h-full text-zinc-500 py-16">
                                             <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-3" />
-                                            <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Processing file OCR...</span>
-                                            <p className="text-xs text-zinc-400 dark:text-zinc-500 max-w-xs mt-1 text-center">
-                                                Gemini is reading the document structure and extracting text. This might take a moment.
-                                            </p>
+                                            {!ocrJob || ocrJob.status === "completed" ? (
+                                                <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 animate-pulse">
+                                                    Loading document content...
+                                                </span>
+                                            ) : (
+                                                <>
+                                                    <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                                                        Processing file OCR ({ocrJob.progress_percentage}%)
+                                                    </span>
+                                                    <p className="text-xs text-zinc-400 dark:text-zinc-500 max-w-xs mt-1 text-center">
+                                                        {ocrJob.progress_message || "Gemini is reading the document structure and extracting text. This might take a moment."}
+                                                    </p>
+                                                    <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-4 max-w-[200px]">
+                                                        <div
+                                                            className="bg-blue-500 h-full transition-all duration-500 ease-out"
+                                                            style={{ width: `${ocrJob.progress_percentage}%` }}
+                                                        ></div>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     ) : ocrError ? (
                                         <div className="flex flex-col items-center justify-center h-full text-zinc-500 py-16">
@@ -408,6 +562,14 @@ export default function KnowledgeBaseDetailDrawer({
                                             <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mt-2 text-center leading-relaxed">
                                                 {ocrError}
                                             </p>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleRetryOcr}
+                                                className="mt-4 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg text-xs font-semibold shadow-xs"
+                                            >
+                                                Retry Extraction
+                                            </Button>
                                         </div>
                                     ) : !ocrText || ocrText.trim() === "" ? (
                                         <div className="flex flex-col items-center justify-center h-full text-zinc-500 py-16">

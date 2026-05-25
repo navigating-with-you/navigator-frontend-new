@@ -36,6 +36,11 @@ export default function AuthInitializer() {
                     toast.error("Failed to sync your account details.");
                     syncStarted.current = false;
                 }
+            } else if (!isAuthenticated && syncStarted.current) {
+                apiClient.clearToken();
+                cacheWebSocket.disconnect();
+                localStorage.removeItem("navigator_user_profile");
+                syncStarted.current = false;
             }
         };
 

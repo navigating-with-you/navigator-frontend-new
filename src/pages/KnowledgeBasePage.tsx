@@ -177,9 +177,10 @@ export default function KnowledgeBasePage() {
             }
 
             // Enrich files with OCR job status
-            if (files.length > 0 && folderId) {
+            const targetFolderIdForOcr = folderId || data.root_folder_id || rootFolderId;
+            if (files.length > 0 && targetFolderIdForOcr) {
                 try {
-                    const jobData = await listFolderOcrJobs(folderId, token);
+                    const jobData = await listFolderOcrJobs(targetFolderIdForOcr, token);
                     const map: Record<string, string> = {};
                     for (const job of jobData.jobs || []) {
                         map[job.file_id] = job.status;
@@ -319,9 +320,13 @@ export default function KnowledgeBasePage() {
         try {
             const token = await getToken();
             if (!token) return;
-            await createFolder({ name: payload.name, description: payload.description }, token);
+            const newFolder = await createFolder({
+                name: payload.name,
+                description: payload.description,
+                parent_folder_id: currentFolderId ?? undefined
+            }, token);
             toast.success("Folder created successfully");
-            await fetchContents(currentFolderId);
+            setChildFolders((prev) => [...prev, newFolder]);
             setFolderOpen(false);
         } catch (error: any) {
             toast.error(error.message || "Failed to create folder");
@@ -333,10 +338,32 @@ export default function KnowledgeBasePage() {
             const token = await getToken();
             if (!token) return;
             toast.loading("Uploading files...", { id: "uploading-files" });
-            await uploadFiles(folderId, files, token);
+            const result = await uploadFiles(folderId, files, token);
             toast.success("Files uploaded successfully", { id: "uploading-files" });
-            // Refresh the folder that received the files
-            await fetchContents(currentFolderId);
+            
+            const uploadedFiles = (result.files || []).map((f: any) => ({
+                id: f.file_id,
+                name: f.filename,
+                original_filename: f.filename,
+                file_size: f.file_size,
+                created_at: f.created_at,
+                mime_type: f.mime_type || "application/octet-stream",
+                uploader: {
+                    display_name: "Admin",
+                    email: ""
+                }
+            }));
+
+            if (currentFolderId === folderId || (!currentFolderId && folderId === rootFolderId)) {
+                setChildFiles((prev) => [...prev, ...uploadedFiles]);
+                setOcrStatusMap((prev) => {
+                    const next = { ...prev };
+                    uploadedFiles.forEach((f: any) => {
+                        next[f.id] = "pending";
+                    });
+                    return next;
+                });
+            }
             setFilesOpen(false);
         } catch (error: any) {
             toast.error(error.message || "Failed to upload files", { id: "uploading-files" });
@@ -357,12 +384,24 @@ export default function KnowledgeBasePage() {
             const blob = new Blob([payload.content], { type: "text/plain" });
             const file = new File([blob], fileName, { type: "text/plain" });
 
-            await uploadFiles(payload.folderId, [file], token);
+            const result = await uploadFiles(payload.folderId, [file], token);
             toast.success(`"${payload.title}" saved successfully`, { id: "add-text" });
 
-            // If we're currently viewing the target folder, refresh immediately
-            if (currentFolderId === payload.folderId || !currentFolderId) {
-                await fetchContents(currentFolderId);
+            const uploadedFile = result.files?.[0];
+            if (uploadedFile && (currentFolderId === payload.folderId || (!currentFolderId && payload.folderId === rootFolderId))) {
+                const newFileObj = {
+                    id: uploadedFile.file_id,
+                    name: uploadedFile.filename,
+                    original_filename: uploadedFile.filename,
+                    file_size: uploadedFile.file_size,
+                    created_at: uploadedFile.created_at,
+                    mime_type: "text/plain",
+                    uploader: {
+                        display_name: "Admin",
+                        email: ""
+                    }
+                };
+                setChildFiles((prev) => [...prev, newFileObj]);
             }
             setTextOpen(false);
         } catch (error: any) {
@@ -389,11 +428,24 @@ export default function KnowledgeBasePage() {
             const blob = new Blob([content], { type: "text/plain" });
             const file = new File([blob], fileName, { type: "text/plain" });
 
-            await uploadFiles(payload.folderId, [file], token);
+            const result = await uploadFiles(payload.folderId, [file], token);
             toast.success(`"${displayName}" saved successfully`, { id: "add-url" });
 
-            if (currentFolderId === payload.folderId || !currentFolderId) {
-                await fetchContents(currentFolderId);
+            const uploadedFile = result.files?.[0];
+            if (uploadedFile && (currentFolderId === payload.folderId || (!currentFolderId && payload.folderId === rootFolderId))) {
+                const newFileObj = {
+                    id: uploadedFile.file_id,
+                    name: uploadedFile.filename,
+                    original_filename: uploadedFile.filename,
+                    file_size: uploadedFile.file_size,
+                    created_at: uploadedFile.created_at,
+                    mime_type: "text/plain",
+                    uploader: {
+                        display_name: "Admin",
+                        email: ""
+                    }
+                };
+                setChildFiles((prev) => [...prev, newFileObj]);
             }
             setUrlOpen(false);
         } catch (error: any) {
@@ -402,9 +454,22 @@ export default function KnowledgeBasePage() {
     };
 
     const handleDelete = async (id: string, type: "folder" | "file") => {
+        const prevFolders = [...childFolders];
+        const prevFiles = [...childFiles];
+
+        if (type === "folder") {
+            setChildFolders((prev) => prev.filter((f) => f.id !== id));
+        } else {
+            setChildFiles((prev) => prev.filter((f) => f.id !== id));
+        }
+
         try {
             const token = await getToken();
-            if (!token) return;
+            if (!token) {
+                setChildFolders(prevFolders);
+                setChildFiles(prevFiles);
+                return;
+            }
             if (type === "file") {
                 toast.loading("Removing document...", { id: "del-doc" });
                 const res = await deleteFiles([id], token);
@@ -417,10 +482,11 @@ export default function KnowledgeBasePage() {
                 await deleteFolder(id, token);
                 toast.success("Folder deleted successfully", { id: "del-folder" });
             }
-            await fetchContents(currentFolderId);
         } catch (error: any) {
             const toastId = type === "file" ? "del-doc" : "del-folder";
             toast.error(error.message || "Failed to delete item", { id: toastId });
+            setChildFolders(prevFolders);
+            setChildFiles(prevFiles);
         }
     };
 

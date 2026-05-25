@@ -24,6 +24,11 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Copy custom nginx configuration for SPA routing
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Copy and set up the entrypoint script for dynamic configuration
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 EXPOSE 8435
 
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]

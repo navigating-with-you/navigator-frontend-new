@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, AlertCircle } from "lucide-react";
+import { X, AlertCircle, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,9 +168,16 @@ export default function AddTextDrawer({
                         disabled={!canSave}
                         onClick={handleSubmit}
                         data-testid="add-text-submit-btn"
-                        className="rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                        className="rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-2"
                     >
-                        {isSubmitting ? "Saving..." : "Save"}
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Saving...</span>
+                            </>
+                        ) : (
+                            "Save"
+                        )}
                     </Button>
                 </div>
             </SheetContent>

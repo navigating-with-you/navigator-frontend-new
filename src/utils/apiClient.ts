@@ -1,4 +1,5 @@
 import { cacheManager } from "./cacheManager";
+import { config } from "../config";
 
 interface ApiOptions {
     cache?: boolean;
@@ -24,11 +25,16 @@ function parseErrorDetail(errorData: any, defaultMsg: string): string {
 }
 
 class ApiClient {
-    private baseURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+    private baseURL = config.apiBaseUrl;
     private token: string | null = null;
 
     setToken(token: string) {
         this.token = token;
+    }
+
+    clearToken() {
+        this.token = null;
+        cacheManager.clear();
     }
 
     async get<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
@@ -39,13 +45,13 @@ class ApiClient {
         }
 
         const url = `${this.baseURL}${endpoint}`;
-        const cacheKey = `GET:${endpoint}`;
+        const cacheKey = `GET:${activeToken ? activeToken.slice(-16) : "anonymous"}:${endpoint}`;
 
         // Check cache first
         if (cache) {
             const cachedData = cacheManager.get(cacheKey);
             if (cachedData) {
-                console.log(`[Cache HIT] ${endpoint}`);
+                if (import.meta.env.DEV) console.log(`[Cache HIT] ${endpoint}`);
                 return cachedData;
             }
         }
@@ -73,7 +79,7 @@ class ApiClient {
 
             // 304 Not Modified - use cached data
             if (response.status === 304) {
-                console.log(`[Cache 304] ${endpoint}`);
+                if (import.meta.env.DEV) console.log(`[Cache 304] ${endpoint}`);
                 const cachedData = cacheManager.getExpired(cacheKey);
                 if (cachedData) {
                     cacheManager.refresh(cacheKey, cacheTTL);
@@ -229,6 +235,7 @@ class ApiClient {
         if (endpoint.includes("/invite") || endpoint.includes("/auth")) {
             cacheManager.invalidatePattern("/auth");
             cacheManager.invalidatePattern("/invite");
+            cacheManager.invalidatePattern("/auth/employees");
         }
         if (endpoint.includes("/ocr")) {
             cacheManager.invalidatePattern("/ocr");

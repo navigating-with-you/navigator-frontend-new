@@ -1,5 +1,11 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Plus, Download, Upload, RefreshCw, Search, X } from "lucide-react";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +49,7 @@ export default function EmployeesPage() {
 
     const isEmpty = employees.length === 0;
 
-    const fetchEmployees = async () => {
+    const fetchEmployees = useCallback(async () => {
         try {
             setIsLoading(true);
             const token = await getToken();
@@ -151,7 +157,7 @@ export default function EmployeesPage() {
                         role: roleName,
                         category: "-",
                         avatar: "",
-                        status: "offline",
+                        status: "pending",
                         kbFiles: "-",
                         simpleInteraction: "-",
                         complexInteraction: "-",
@@ -176,7 +182,7 @@ export default function EmployeesPage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [getToken]);
 
     const handleResendInvite = async (inviteId: string) => {
         try {
@@ -187,7 +193,6 @@ export default function EmployeesPage() {
             }
             await resendInvite(inviteId, token);
             toast.success("Invitation resent successfully");
-            fetchEmployees();
         } catch (error: any) {
             console.error("Resend invite error:", error);
             toast.error(error.message || "Failed to resend invite");
@@ -195,16 +200,19 @@ export default function EmployeesPage() {
     };
 
     const handleRevokeInvite = async (inviteId: string) => {
+        const prevEmployees = [...employees];
+        setEmployees(prev => prev.filter(e => e.inviteId !== inviteId));
         try {
             const token = await getToken();
             if (!token) {
                 toast.error("Not authenticated");
+                setEmployees(prevEmployees);
                 return;
             }
             await revokeInvite(inviteId, token);
             toast.success("Invitation revoked successfully");
-            fetchEmployees();
         } catch (error: any) {
+            setEmployees(prevEmployees);
             console.error("Revoke invite error:", error);
             toast.error(error.message || "Failed to revoke invite");
         }
@@ -231,7 +239,7 @@ export default function EmployeesPage() {
         } else {
             setIsLoading(false);
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, fetchEmployees]);
 
     const uniqueStatuses = useMemo(() => {
         const list = new Set<string>();
@@ -291,21 +299,46 @@ export default function EmployeesPage() {
 
     const isNoResults = !isEmpty && filteredEmployees.length === 0;
 
-    const handleAddEmployee = (_newEmp: any, _invite: boolean) => {
-        // Trigger list refresh to load the newly invited user from the backend
-        fetchEmployees();
+    const handleAddEmployee = (newEmp: any, _invite: boolean) => {
+        // Optimistically add to employees state
+        setEmployees(prev => {
+            const exists = prev.some(e => e.email.toLowerCase() === newEmp.email.toLowerCase());
+            if (exists) return prev;
+            const newEmployeeItem: Employee = {
+                id: newEmp.id || `inv-${Date.now()}`,
+                inviteId: newEmp.id || `inv-${Date.now()}`,
+                name: newEmp.name,
+                role: newEmp.role,
+                category: "-",
+                avatar: "",
+                status: "pending",
+                kbFiles: 0,
+                simpleInteraction: "-",
+                complexInteraction: "-",
+                email: newEmp.email,
+                createdBy: user?.givenName ? `${user.givenName} ${user.familyName || ""}`.trim() : "Admin",
+                createdDate: new Date().toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }),
+                isActive: false,
+            };
+            return [...prev, newEmployeeItem];
+        });
         setDrawerOpen(false);
     };
 
     const handleDeleteEmployee = async (id: string) => {
+        const prevEmployees = [...employees];
+        setEmployees(prev => prev.filter(e => e.id !== id));
         try {
             const token = await getToken();
-            if (token) {
-                await deleteEmployee(id, token);
+            if (!token) {
+                toast.error("Not authenticated");
+                setEmployees(prevEmployees);
+                return;
             }
+            await deleteEmployee(id, token);
             toast.success("Employee deleted successfully");
-            fetchEmployees();
         } catch (error: any) {
+            setEmployees(prevEmployees);
             console.error("Delete employee error:", error);
             toast.error(error.message || "Failed to delete employee");
         }
@@ -348,15 +381,37 @@ export default function EmployeesPage() {
                         Add
                     </Button>
 
-                    <Button variant="outline" className="flex-1 sm:flex-none">
-                        <Download className="h-4 w-4" />
-                        Import
-                    </Button>
+                    <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span>
+                                    <Button variant="outline" disabled className="flex-1 sm:flex-none opacity-50 cursor-not-allowed">
+                                        <Download className="h-4 w-4" />
+                                        Import
+                                    </Button>
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                                Coming soon
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
 
-                    <Button variant="outline" className="flex-1 sm:flex-none">
-                        <Upload className="h-4 w-4" />
-                        Export
-                    </Button>
+                    <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span>
+                                    <Button variant="outline" disabled className="flex-1 sm:flex-none opacity-50 cursor-not-allowed">
+                                        <Upload className="h-4 w-4" />
+                                        Export
+                                    </Button>
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                                Coming soon
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
 
                 {/* Search - Fixed */}
@@ -486,7 +541,6 @@ export default function EmployeesPage() {
                     open={drawerOpen}
                     onOpenChange={setDrawerOpen}
                     onSubmit={handleAddEmployee}
-                    nextEmployeeId={`EMP-${Date.now()}`}
                 />
 
                 <EmployeeDetailsDrawer

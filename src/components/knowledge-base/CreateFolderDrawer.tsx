@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import type { CreateFolderPayload } from "@/types/knowledge-base";
 interface CreateFolderDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSubmit: (payload: CreateFolderPayload) => void;
+    onSubmit: (payload: CreateFolderPayload) => void | Promise<void>;
 }
 
 export default function CreateFolderDrawer({
@@ -20,15 +20,27 @@ export default function CreateFolderDrawer({
 }: CreateFolderDrawerProps) {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (!open) {
             setName("");
             setDescription("");
+            setIsSubmitting(false);
         }
     }, [open]);
 
-    const canCreate = name.trim().length > 0;
+    const canCreate = name.trim().length > 0 && !isSubmitting;
+
+    const handleCreate = async () => {
+        if (!canCreate) return;
+        setIsSubmitting(true);
+        try {
+            await onSubmit({ name: name.trim(), description: description.trim() || undefined });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
@@ -43,6 +55,7 @@ export default function CreateFolderDrawer({
                         className="rounded-md p-1 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
                         data-testid="close-create-folder-btn"
                         aria-label="Close"
+                        disabled={isSubmitting}
                     >
                         <X className="h-5 w-5" />
                     </button>
@@ -66,6 +79,7 @@ export default function CreateFolderDrawer({
                             onChange={(e) => setName(e.target.value)}
                             placeholder="Enter knowledge base folder name"
                             data-testid="folder-name-input"
+                            disabled={isSubmitting}
                             className="h-11 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                         />
                     </div>
@@ -85,6 +99,7 @@ export default function CreateFolderDrawer({
                             placeholder="Describe the purpose of this folder..."
                             rows={4}
                             data-testid="folder-description-input"
+                            disabled={isSubmitting}
                             className="rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 resize-none"
                         />
                         <p className="text-xs text-zinc-400 dark:text-zinc-500 text-right">
@@ -95,12 +110,19 @@ export default function CreateFolderDrawer({
 
                 <div className="flex items-center justify-end gap-3 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
                     <Button
-                        onClick={() => onSubmit({ name: name.trim(), description: description.trim() || undefined })}
+                        onClick={handleCreate}
                         disabled={!canCreate}
                         data-testid="create-folder-submit-btn"
-                        className="rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                        className="rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-2"
                     >
-                        Create
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Creating...</span>
+                            </>
+                        ) : (
+                            "Create"
+                        )}
                     </Button>
                 </div>
             </SheetContent>

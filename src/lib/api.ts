@@ -1,4 +1,5 @@
 import { apiClient } from "@/utils/apiClient";
+import { config } from "../config";
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -59,8 +60,17 @@ export async function getFolderContents(folderId: string, token: string) {
     return apiClient.get<any>(`/api/root-folder/folders/${folderId}/contents`, { token, cacheTTL: 300000 });
 }
 
-export async function createFolder(payload: { name: string; description?: string }, token: string) {
-    return apiClient.post<any>("/folders/", payload, { token });
+export async function createFolder(payload: { name: string; description?: string; parent_folder_id?: string }, token: string) {
+    if (payload.parent_folder_id) {
+        return apiClient.post<any>(`/api/root-folder/folders/${payload.parent_folder_id}/subfolders`, {
+            name: payload.name,
+            description: payload.description
+        }, { token });
+    }
+    return apiClient.post<any>("/api/root-folder/folders", {
+        name: payload.name,
+        description: payload.description
+    }, { token });
 }
 
 export async function getFolder(folderId: string, token: string) {
@@ -136,6 +146,10 @@ export async function getOcrStats(token: string) {
     return apiClient.get<any>("/ocr/stats", { token, cache: false });
 }
 
+export async function createOcrJob(payload: { file_id: string; extraction_type?: string }, token: string) {
+    return apiClient.post<any>("/ocr/jobs", payload, { token });
+}
+
 // ── Groups / Categories ───────────────────────────────────────────────────────
 
 export async function listGroups(token: string) {
@@ -150,7 +164,7 @@ export async function getGroup(groupId: string, token: string) {
     return apiClient.get<any>(`/groups/${groupId}`, { token, cacheTTL: 300000 });
 }
 
-export async function updateGroup(groupId: string, payload: { name?: string; description?: string }, token: string) {
+export async function updateGroup(groupId: string, payload: { name?: string; description?: string; is_archived?: boolean }, token: string) {
     return apiClient.patch<any>(`/groups/${groupId}`, payload, { token });
 }
 
@@ -241,7 +255,7 @@ export async function sendChatQueryStream(
     callbacks: ChatStreamCallbacks,
     signal?: AbortSignal
 ): Promise<void> {
-    const baseURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+    const baseURL = config.apiBaseUrl;
 
     const response = await fetch(`${baseURL}/chat/query`, {
         method: "POST",
