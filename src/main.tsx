@@ -12,6 +12,7 @@ createRoot(document.getElementById("root")!).render(
             domain={import.meta.env.VITE_KINDE_DOMAIN}
             redirectUri={import.meta.env.VITE_KINDE_REDIRECT_URI}
             logoutUri={import.meta.env.VITE_KINDE_LOGOUT_REDIRECT_URI}
+            useInsecureForRefreshToken={import.meta.env.VITE_KINDE_INSECURE_REFRESH}
         >
             <ThemeProvider>
                 <App />
