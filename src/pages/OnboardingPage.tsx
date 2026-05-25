@@ -1,16 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-import { createOrganization, listRoles, createInvite, listFolders, uploadFiles } from "@/lib/api";
+import { createOrganization } from "@/lib/api";
 import { toast } from "sonner";
-import {
-    Building, Users, FileText, Settings, CheckCircle,
-    Upload, Trash2, Plus, Loader2, Sun, Moon, Check,
-    Image as ImageIcon
-} from "lucide-react";
+import { Building, Loader2, Sun, Moon, Image as ImageIcon } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
     Select,
     SelectContent,
@@ -43,16 +38,15 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const fullName = user?.givenName ? `${user.givenName} ${user.familyName || ""}`.trim() : "User";
     const initials = fullName
         ? fullName
-              .split(" ")
-              .map((n: string) => n[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase()
+            .split(" ")
+            .map((n: string) => n[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase()
         : "U";
 
-    const [currentStep, setCurrentStep] = useState(1);
+    const currentStep = 1;
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [createdOrgId, setCreatedOrgId] = useState<string | null>(null);
 
     // ── STEP 1: Company Setup Data ──────────────────────────────────────────
     const [orgName, setOrgName] = useState("");
@@ -66,46 +60,6 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const [, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    // ── STEP 2: Invite Team Members ─────────────────────────────────────────
-    const [inviteEmail, setInviteEmail] = useState("");
-    const [inviteFirstName, setInviteFirstName] = useState("");
-    const [inviteLastName, setInviteLastName] = useState("");
-    const [invitedMembers, setInvitedMembers] = useState<Array<{
-        email: string;
-        firstName: string;
-        lastName: string;
-        roleId: string;
-        roleName: string;
-    }>>([]);
-    const [roles, setRoles] = useState<any[]>([]);
-    const [selectedRoleId, setSelectedRoleId] = useState("");
-
-    // ── STEP 3: Initial Documents ───────────────────────────────────────────
-    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-    const [uploadingFiles, setUploadingFiles] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
-    const docInputRef = useRef<HTMLInputElement>(null);
-
-    // Fetch roles on mount for Step 2
-    useEffect(() => {
-        const loadRoles = async () => {
-            try {
-                const token = await getToken();
-                if (!token) return;
-                const data = await listRoles(token);
-                setRoles(data || []);
-                if (data && data.length > 0) {
-                    // Default to non-super_admin role if possible
-                    const defaultRole = data.find((r: any) => r.name !== "super_admin") || data[0];
-                    setSelectedRoleId(defaultRole.id);
-                }
-            } catch (err) {
-                console.warn("Could not load roles for onboarding invites", err);
-            }
-        };
-        loadRoles();
-    }, [getToken]);
 
     // Handle file selection for logo
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,7 +104,6 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 }
             }, token);
 
-            setCreatedOrgId(response.id);
             toast.success("Organization created successfully!");
             onComplete(response.id);
         } catch (err: any) {
@@ -158,142 +111,6 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
             toast.error(err.message || "Failed to create organization. Check details and retry.");
         } finally {
             setIsSubmitting(false);
-        }
-    };
-
-    // ── Step 2 Handler: Add Member to Invite List ────────────────────────────
-    const handleAddMember = () => {
-        if (!inviteEmail.trim() || !inviteFirstName.trim()) {
-            toast.error("First Name and Email are required");
-            return;
-        }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(inviteEmail)) {
-            toast.error("Please enter a valid email address");
-            return;
-        }
-
-        const role = roles.find(r => r.id === selectedRoleId);
-        const newMember = {
-            email: inviteEmail.trim(),
-            firstName: inviteFirstName.trim(),
-            lastName: inviteLastName.trim(),
-            roleId: selectedRoleId,
-            roleName: role ? role.name : "Employee",
-        };
-
-        setInvitedMembers(prev => [...prev, newMember]);
-        setInviteEmail("");
-        setInviteFirstName("");
-        setInviteLastName("");
-        toast.success(`Added ${newMember.firstName} to invite list`);
-    };
-
-    const handleRemoveMember = (idx: number) => {
-        setInvitedMembers(prev => prev.filter((_, i) => i !== idx));
-    };
-
-    const handleSendInvites = async () => {
-        if (invitedMembers.length === 0) {
-            setCurrentStep(3);
-            return;
-        }
-
-        setIsSubmitting(true);
-        try {
-            const token = await getToken();
-            if (!token) return;
-
-            let successCount = 0;
-            for (const member of invitedMembers) {
-                try {
-                    await createInvite({
-                        email: member.email,
-                        first_name: member.firstName,
-                        last_name: member.lastName || null,
-                        role_name: member.roleName,
-                    }, token);
-                    successCount++;
-                } catch (err) {
-                    console.error(`Failed to invite ${member.email}:`, err);
-                }
-            }
-
-            toast.success(`Successfully sent ${successCount} invitation(s)`);
-            setCurrentStep(3);
-        } catch (err: any) {
-            toast.error("Failed to send invitations");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    // ── Step 3 Handler: Upload Files ─────────────────────────────────────────
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            const filesArray = Array.from(e.target.files);
-            setSelectedFiles(prev => [...prev, ...filesArray]);
-        }
-    };
-
-    const handleRemoveFile = (idx: number) => {
-        setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
-    };
-
-    const handleUploadFiles = async () => {
-        if (selectedFiles.length === 0) {
-            setCurrentStep(4);
-            return;
-        }
-
-        setUploadingFiles(true);
-        try {
-            const token = await getToken();
-            if (!token) return;
-
-            // Fetch folders to find root folder
-            const folders = await listFolders(token);
-            const rootFolder = folders.find((f: any) => f.name === "Root");
-            if (!rootFolder) {
-                throw new Error("Root folder not found");
-            }
-
-            // Simulating upload progress
-            selectedFiles.forEach(file => {
-                setUploadProgress(prev => ({ ...prev, [file.name]: 10 }));
-                let progress = 10;
-                const interval = setInterval(() => {
-                    progress += Math.floor(Math.random() * 20) + 10;
-                    if (progress >= 95) {
-                        progress = 95;
-                        clearInterval(interval);
-                    }
-                    setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
-                }, 200);
-            });
-
-            await uploadFiles(rootFolder.id, selectedFiles, token);
-
-            selectedFiles.forEach(file => {
-                setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
-            });
-
-            toast.success("Files uploaded successfully to knowledge base!");
-            setTimeout(() => {
-                setCurrentStep(4);
-            }, 800);
-        } catch (err: any) {
-            console.error(err);
-            toast.error(err.message || "Failed to upload files");
-        } finally {
-            setUploadingFiles(false);
-        }
-    };
-
-    // ── Final Onboarding Complete ───────────────────────────────────────────
-    const handleFinishOnboarding = () => {
-        if (createdOrgId) {
-            onComplete(createdOrgId);
         }
     };
 
@@ -308,10 +125,10 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
                     {/* Logo */}
                     <div className="flex items-center">
-                        <img 
-                            src="/navigator-logo.svg" 
-                            alt="Navigator" 
-                            className="h-8 md:h-9 w-auto object-contain block dark:brightness-110" 
+                        <img
+                            src="/navigator-logo.svg"
+                            alt="Navigator"
+                            className="h-8 md:h-9 w-auto object-contain block dark:brightness-110"
                         />
                     </div>
 
@@ -370,15 +187,15 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator className="bg-zinc-100 dark:bg-zinc-800 my-1.5" />
 
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                     onClick={() => logout()}
                                     className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50/50 dark:focus:bg-red-950/20 rounded-lg cursor-pointer px-2.5 py-2 text-sm flex items-center"
                                 >
-                                    <svg 
-                                        className="mr-2 h-4 w-4 inline-block" 
-                                        fill="none" 
-                                        viewBox="0 0 24 24" 
-                                        stroke="currentColor" 
+                                    <svg
+                                        className="mr-2 h-4 w-4 inline-block"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
                                         strokeWidth="2"
                                     >
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
