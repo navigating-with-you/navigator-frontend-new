@@ -137,7 +137,7 @@ export default function KnowledgeBasePage() {
     const currentFolderEntry = folderStack.length > 0 ? folderStack[folderStack.length - 1] : null;
 
     // File processing state management (simplified - no WebSocket)
-    const getFileProcessingState = () => null;
+    const getFileProcessingState = (_fileId: string): { status: string } | null => null;
 
     // Employees list for creator filter options
     const [employeesList, setEmployeesList] = useState<any[]>([]);

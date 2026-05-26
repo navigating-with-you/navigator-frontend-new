@@ -222,11 +222,6 @@ export default function EmployeesPage() {
         if (isAuthenticated) {
             fetchEmployees();
 
-            const handleUserChange = () => {
-                console.log("User changed by another user - refreshing...");
-                fetchEmployees();
-            };
-
             return () => {
                 // Manual refresh will be triggered via UI actions instead of WebSocket
             };

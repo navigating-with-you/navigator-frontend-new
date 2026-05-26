@@ -188,6 +188,7 @@ export default function CategoryDrawer({
                 id: file.id,
                 name: file.name,
                 size: file.size || "0 B",
+                mimeType: file.mimeType || file.type || "application/octet-stream",
             }));
 
         if (newFiles.length > 0) {
@@ -202,11 +203,6 @@ export default function CategoryDrawer({
         if (filteredEmployees.length - 1 <= empStartIdx && empPage > 1) {
             setEmpPage((p) => p - 1);
         }
-    };
-
-    const handleAddFile = (file: CategoryFile) => {
-        setSelectedFiles((prev) => [...prev, file]);
-        setFilePage(1);
     };
 
     const handleRemoveFile = (id: string) => {

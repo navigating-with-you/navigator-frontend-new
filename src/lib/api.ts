@@ -294,7 +294,6 @@ export async function sendChatQueryStream(
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    let lastEventTime = Date.now();
     const eventTimeoutMs = 30000; // 30 second timeout per event
 
     try {
@@ -319,7 +318,6 @@ export async function sendChatQueryStream(
             const { done, value } = result as any;
             if (done) break;
 
-            lastEventTime = Date.now();
             buffer += decoder.decode(value, { stream: true });
 
             // SSE messages are separated by double newlines
