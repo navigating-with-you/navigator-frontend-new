@@ -53,14 +53,14 @@ export default function AppLayout(): JSX.Element {
     const { getToken, isAuthenticated } = useKindeAuth();
 
     const [profile, setProfile] = useState<any>(() => {
-        const stored = localStorage.getItem("navigator_user_profile");
+        const stored = sessionStorage.getItem("navigator_user_profile");
         return stored ? JSON.parse(stored) : null;
     });
     const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(!profile);
 
     useEffect(() => {
         const handleSync = () => {
-            const stored = localStorage.getItem("navigator_user_profile");
+            const stored = sessionStorage.getItem("navigator_user_profile");
             if (stored) {
                 setProfile(JSON.parse(stored));
                 setIsLoadingProfile(false);
@@ -193,7 +193,7 @@ export default function AppLayout(): JSX.Element {
                 onComplete={(newOrgId) => {
                     const updated = { ...profile, organization_id: newOrgId };
                     setProfile(updated);
-                    localStorage.setItem("navigator_user_profile", JSON.stringify(updated));
+                    sessionStorage.setItem("navigator_user_profile", JSON.stringify(updated));
                     window.dispatchEvent(new Event("navigator_conversation_created"));
                     navigate("/dashboard", { replace: true });
                 }} 

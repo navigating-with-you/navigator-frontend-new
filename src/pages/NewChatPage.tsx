@@ -9,14 +9,12 @@ import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
-    Paperclip,
     ArrowUp,
     FileText,
     ChevronDown,
     Copy,
     RotateCcw,
     Share2,
-    Trash2,
     Square,
     Cpu,
 } from "lucide-react";
@@ -37,6 +35,7 @@ import {
     sendChatQueryStream,
     createConversation,
     getConversation,
+    updateConversation,
     type ChatMessage,
     type Citation,
     type Conversation,
@@ -339,7 +338,6 @@ export default function NewChatPage(): JSX.Element {
     const [isResponding, setIsResponding] = useState(false);
     const [isLoadingMessages, setIsLoadingMessages] = useState(false);
     const [greeting, setGreeting] = useState("Good Morning");
-    const [selectedAgent, setSelectedAgent] = useState("Agent");
     const [selectedModel, setSelectedModel] = useState("Auto");
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [thinkingLabel, setThinkingLabel] = useState("Thinking...");
@@ -392,9 +390,14 @@ export default function NewChatPage(): JSX.Element {
                             ? "Retrieved from documents"
                             : undefined,
                 }))
-                .sort(
-                    (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
-                );
+                .sort((a, b) => {
+                    const timeDiff = a.timestamp.getTime() - b.timestamp.getTime();
+                    if (timeDiff !== 0) return timeDiff;
+                    // Tiebreaker: user messages always come before assistant messages
+                    if (a.role === "user" && b.role === "assistant") return -1;
+                    if (a.role === "assistant" && b.role === "user") return 1;
+                    return 0;
+                });
             setMessages(mapped);
             setConversationId(conv.id);
         } catch (err: any) {
@@ -449,7 +452,7 @@ export default function NewChatPage(): JSX.Element {
     // ── Profile / greeting ────────────────────────────────────────────────────
 
     useEffect(() => {
-        const stored = localStorage.getItem("navigator_user_profile");
+        const stored = sessionStorage.getItem("navigator_user_profile");
         if (stored) {
             try { setProfile(JSON.parse(stored)); } catch { /* ignore */ }
         }
@@ -535,6 +538,7 @@ export default function NewChatPage(): JSX.Element {
             }
 
             let convId = conversationId;
+            const isNewConversation = !convId;
 
             if (!convId) {
                 isCreatingConversationRef.current = true;
@@ -557,6 +561,7 @@ export default function NewChatPage(): JSX.Element {
                 {
                     query: text,
                     conversation_id: convId ?? undefined,
+                    model: selectedModel === "Auto" ? undefined : selectedModel.toLowerCase(),
                 },
                 token,
                 {
@@ -663,6 +668,15 @@ export default function NewChatPage(): JSX.Element {
                         );
                         // Refresh sidebar after new message
                         window.dispatchEvent(new Event("navigator_conversation_created"));
+
+                        if (isNewConversation && convId) {
+                            const title = text.trim().slice(0, 60);
+                            updateConversation(convId, { title }, token).then(() => {
+                                window.dispatchEvent(new Event("navigator_conversation_created"));
+                            }).catch(err => {
+                                console.error("Failed to update conversation title:", err);
+                            });
+                        }
                     },
                     onError: (errMsg) => {
                         toast.error(errMsg || "Failed to get a response.");
@@ -753,34 +767,7 @@ export default function NewChatPage(): JSX.Element {
             data-testid="new-chat-page"
             data-tour="chat-page"
         >
-            {/* ── Fixed Top Bar: Agent Selector ─────────────────────────── */}
-            <div className="shrink-0 flex items-center justify-between px-6 py-3 bg-[#FEFFFA] dark:bg-zinc-950">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer select-none">
-                            <img src="/logo.svg" alt="Logo" className="h-3.5 w-3.5 shrink-0" />
-                            <span>{selectedAgent}</span>
-                            <ChevronDown className="h-3 w-3 text-zinc-400" />
-                        </div>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
-                        <DropdownMenuItem onClick={() => setSelectedAgent("Agent")}>Agent</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setSelectedAgent("Support Bot")}>Support Bot</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setSelectedAgent("Sales Bot")}>Sales Bot</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
 
-                {messages.length > 0 && (
-                    <button
-                        type="button"
-                        onClick={() => { startNewChat(); navigate("/chat"); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-                    >
-                        <Trash2 className="h-3 w-3 text-zinc-400" />
-                        New Chat
-                    </button>
-                )}
-            </div>
 
             {/* ── Scrollable Messages Area ──────────────────────────────── */}
             <div
@@ -791,11 +778,13 @@ export default function NewChatPage(): JSX.Element {
                 {showEmptyState ? (
                     /* ── Empty / Welcome State ────────────────────────── */
                     <div className="flex flex-col items-center justify-center min-h-full text-center px-4 py-8 max-w-3xl mx-auto">
-                        {/* 4-point Star Logo */}
-                        <div className="mb-6">
-                            <svg viewBox="0 0 24 24" fill="currentColor" className="h-12 w-12 text-blue-600 dark:text-blue-500 mx-auto animate-pulse">
-                                <path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z" />
-                            </svg>
+                        {/* Logo */}
+                        <div className="mb-6 select-none pointer-events-none">
+                            <img 
+                                src="/logo.svg" 
+                                alt="Logo" 
+                                className="h-12 w-12 mx-auto dark:brightness-110" 
+                            />
                         </div>
 
                         {/* Title */}
@@ -823,15 +812,6 @@ export default function NewChatPage(): JSX.Element {
                                 />
 
                                 <div className="flex items-center gap-2 shrink-0">
-                                    {/* Attach */}
-                                    <button
-                                        type="button"
-                                        onClick={() => toast.info("File upload coming soon")}
-                                        className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-                                    >
-                                        <Paperclip className="h-4 w-4" />
-                                    </button>
-
                                     {/* Model selector */}
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -1006,7 +986,13 @@ export default function NewChatPage(): JSX.Element {
                                                                 </Tooltip>
                                                                 <Tooltip>
                                                                     <TooltipTrigger asChild>
-                                                                        <button className="flex items-center gap-1 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
+                                                                        <button 
+                                                                            onClick={() => {
+                                                                                navigator.clipboard.writeText(m.content);
+                                                                                toast.success("Message copied to clipboard!");
+                                                                            }}
+                                                                            className="flex items-center gap-1 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                                                                        >
                                                                             <Share2 className="h-3.5 w-3.5" /> Share
                                                                         </button>
                                                                     </TooltipTrigger>
@@ -1087,21 +1073,6 @@ export default function NewChatPage(): JSX.Element {
                                     </DropdownMenuContent>
                                 </DropdownMenu>
 
-                                {/* Attach */}
-                                <TooltipProvider delayDuration={200}>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <button
-                                                type="button"
-                                                onClick={() => toast.info("File upload coming soon")}
-                                                className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer"
-                                            >
-                                                <Paperclip className="h-3.5 w-3.5" />
-                                            </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="top">Attach files</TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
                             </div>
 
                             {/* Send / Stop button */}

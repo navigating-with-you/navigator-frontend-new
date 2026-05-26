@@ -1,4 +1,4 @@
-import { NavLink, useNavigate, useParams } from "react-router-dom";
+import { NavLink, useNavigate, useParams, useLocation } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 
 import {
@@ -7,12 +7,8 @@ import {
     ListTree,
     FileStack,
     Plug,
-    CreditCard,
-    Receipt,
     PenSquare,
     Search,
-    AlertTriangle,
-    ArrowRight,
     MessageSquare,
     Loader2,
     Trash2,
@@ -28,11 +24,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
+
 import {
     Dialog,
     DialogContent,
@@ -64,143 +56,23 @@ type SidebarProps = {
 };
 
 const mainNav: NavItemType[] = [
-    { to: "dashboard", label: "Dashboard", icon: LayoutGrid },
-    { to: "employees", label: "Employees", icon: Users },
-    { to: "teams", label: "Teams", icon: ListTree },
-    { to: "knowledge-base", label: "Knowledge Base", icon: FileStack },
-    { to: "integration", label: "Integration", icon: Plug },
+    { to: "/dashboard", label: "Dashboard", icon: LayoutGrid },
+    { to: "/employees", label: "Employees", icon: Users },
+    { to: "/teams", label: "Teams", icon: ListTree },
+    { to: "/knowledge-base", label: "Knowledge Base", icon: FileStack },
+    { to: "/integration", label: "Integration", icon: Plug },
 ];
 
 const chatNav: NavItemType[] = [
-    { to: "chat", label: "New Chat", icon: PenSquare },
+    { to: "/chat", label: "New Chat", icon: PenSquare },
     { to: "chatsearch", label: "Search Chats", icon: Search },
 ];
 
 
 
-function ProgressCircle({ percentage, color }: { percentage: number; color: string }) {
-    const strokeDasharray = `${percentage}, 100`;
-    return (
-        <svg className="w-5 h-5 shrink-0 -rotate-90" viewBox="0 0 36 36">
-            <path
-                className="text-zinc-100"
-                strokeWidth="5"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-            />
-            <path
-                className={color}
-                strokeDasharray={strokeDasharray}
-                strokeWidth="5"
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-            />
-        </svg>
-    );
-}
 
-function UsageCardContent({ navigate, compact = false }: { navigate: any; compact?: boolean }) {
-    if (!compact) return (
-        <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1 select-none">
-            {/* FULL VERSION - for collapsed popover */}
-            <div className="space-y-4">
-                {/* Top orange banner */}
-                <div className="rounded-xl bg-[#fff7ed] dark:bg-amber-950/20 p-3 border border-[#ffedd5] dark:border-amber-900/30">
-                    <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5 text-[#ea580c] shrink-0" />
-                        <span className="text-sm font-semibold text-[#ea580c]">
-                            Approaching usage limits
-                        </span>
-                    </div>
-                    <div className="mt-1 ml-7 text-xs text-zinc-650 dark:text-zinc-400">
-                        Current Plan: <span className="font-semibold text-zinc-900 dark:text-zinc-100">Core</span>
-                    </div>
-                </div>
 
-                {/* Circular progress rows */}
-                <div className="space-y-3 px-1 text-xs text-zinc-600 dark:text-zinc-400 font-medium">
-                    <div className="flex items-center gap-2.5">
-                        <ProgressCircle percentage={84} color="text-[#ea580c]" />
-                        <div>
-                            Complex Tasks <span className="font-bold text-zinc-900 dark:text-zinc-100">(84%)</span>
-                        </div>
-                    </div>
- 
-                    <div className="grid grid-cols-2 gap-2 pt-0.5">
-                        <div className="flex items-center gap-2">
-                            <ProgressCircle percentage={32} color="text-blue-600" />
-                            <div className="truncate">
-                                Core Tasks <span className="font-bold text-zinc-900 dark:text-zinc-100">(32%)</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <ProgressCircle percentage={50} color="text-blue-600" />
-                            <div className="truncate">
-                                Pages <span className="font-bold text-zinc-900 dark:text-zinc-100">(5)</span>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div className="pt-1">
-                        <button
-                            type="button"
-                            onClick={() => navigate("/subscription")}
-                            className="flex items-center gap-1 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer"
-                        >
-                            View Plans
-                            <ArrowRight className="h-3.5 w-3.5" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Upgrade Button */}
-                <Button
-                    onClick={() => navigate("/subscription")}
-                    className="w-full bg-[#2563eb] text-white hover:bg-[#1d4ed8] rounded-xl font-semibold shadow-md py-2.5 h-10 cursor-pointer text-xs"
-                >
-                    Upgrade for More Usage
-                </Button>
-            </div>
-        </div>
-    );
-
-    // COMPACT version for expanded sidebar
-    return (
-        <div className="space-y-2">
-            <div className="rounded-xl border border-orange-205 dark:border-orange-900/30 bg-orange-50/80 dark:bg-orange-950/20 p-2.5">
-                <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                        <AlertTriangle className="h-4 w-4 text-orange-500 shrink-0" />
-                        <span className="text-xs font-semibold text-orange-800 dark:text-orange-400 truncate">Usage at 84%</span>
-                    </div>
-                    <span className="text-[10px] bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-300 font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">Core Plan</span>
-                </div>
-                <div className="mt-2 flex items-center gap-3">
-                    <div className="flex-1 bg-orange-200/60 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-orange-500 h-full rounded-full" style={{ width: '84%' }} />
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => navigate("/subscription")}
-                        className="text-xs font-bold text-blue-600 hover:text-blue-700 shrink-0 flex items-center gap-0.5 cursor-pointer"
-                    >
-                        Plans <ArrowRight className="h-3 w-3" />
-                    </button>
-                </div>
-            </div>
-            <Button
-                size="sm"
-                onClick={() => navigate("/subscription")}
-                className="w-full bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-xs font-semibold h-8 cursor-pointer"
-            >
-                Upgrade for More Usage
-            </Button>
-        </div>
-    );
-}
 
 function NavItem({
     to,
@@ -208,7 +80,17 @@ function NavItem({
     icon: Icon,
     collapsed = false,
 }: NavItemProps) {
+    const location = useLocation();
     const testId = `nav-${label.toLowerCase().replace(/\s+/g, "-")}`;
+
+    const isItemActive = (targetTo: string) => {
+        if (targetTo === "/chat") {
+            return location.pathname === "/chat" || location.pathname.startsWith("/chat/");
+        }
+        return location.pathname === targetTo;
+    };
+
+    const isActive = isItemActive(to);
 
     if (collapsed) {
         return (
@@ -218,7 +100,7 @@ function NavItem({
                         <NavLink
                             to={to}
                             data-testid={testId}
-                            className={({ isActive }) =>
+                            className={
                                 cn(
                                     "flex items-center justify-center h-10 w-10 rounded-lg transition-colors",
                                     isActive
@@ -243,7 +125,7 @@ function NavItem({
         <NavLink
             to={to}
             data-testid={testId}
-            className={({ isActive }) =>
+            className={
                 cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                     isActive
@@ -529,8 +411,15 @@ export default function Sidebar({
     open,
     onSearchClick,
 }: SidebarProps): JSX.Element {
+    const location = useLocation();
     const collapsed = !open;
-    const navigate = useNavigate();
+
+    const isItemActive = (targetTo: string) => {
+        if (targetTo === "/chat") {
+            return location.pathname === "/chat" || location.pathname.startsWith("/chat/");
+        }
+        return location.pathname === targetTo;
+    };
 
     if (collapsed) {
         return (
@@ -547,36 +436,39 @@ export default function Sidebar({
 
                 {/* Main Nav + Chat - scroll area */}
                 <div className="flex-1 overflow-y-auto w-full hover-scrollbar">
-                    <div className="flex flex-col items-center py-2 gap-0.5 w-full">
+                    <div className="flex flex-col items-center pb-2 gap-0.5 w-full">
                         {/* Main Nav */}
-                        {mainNav.map((item) => (
-                            <TooltipProvider key={item.to} delayDuration={100}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <NavLink
-                                            to={item.to}
-                                            data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                                            className={({ isActive }) =>
-                                                cn(
-                                                    "mx-auto flex items-center justify-center h-10 w-10 rounded-xl transition-all",
-                                                    isActive
-                                                        ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                                                        : "text-zinc-550 dark:text-zinc-400 hover:bg-[#E7E7E0] dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100"
-                                                )
-                                            }
-                                        >
-                                            <item.icon className="h-[18px] w-[18px]" />
-                                        </NavLink>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="right" className="text-xs">
-                                        {item.label}
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        ))}
+                        {mainNav.map((item) => {
+                            const active = isItemActive(item.to);
+                            return (
+                                <TooltipProvider key={item.to} delayDuration={100}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <NavLink
+                                                to={item.to}
+                                                data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                                                className={
+                                                    cn(
+                                                        "mx-auto flex items-center justify-center h-10 w-10 rounded-xl transition-all",
+                                                        active
+                                                            ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                                                            : "text-zinc-550 dark:text-zinc-400 hover:bg-[#E7E7E0] dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100"
+                                                    )
+                                                }
+                                            >
+                                                <item.icon className="h-[18px] w-[18px]" />
+                                            </NavLink>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="right" className="text-xs">
+                                            {item.label}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            );
+                        })}
 
                         {/* Divider */}
-                        <div className="w-8 border-t border-zinc-200 my-2" />                        {/* Chat Label */}
+                        <div className="w-8 border-t border-zinc-200 dark:border-zinc-800 my-2" />                        {/* Chat Label */}
                         <span className="text-[9px] font-semibold text-zinc-450 dark:text-zinc-550 uppercase tracking-widest mb-1 select-none">Chat</span>
 
                         {/* Chat Nav */}
@@ -596,12 +488,11 @@ export default function Sidebar({
                                         ) : (
                                             <NavLink
                                                 to={item.to}
-                                                end
                                                 data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                                                className={({ isActive }) =>
+                                                className={
                                                     cn(
                                                         "mx-auto flex items-center justify-center h-10 w-10 rounded-xl transition-all",
-                                                        isActive
+                                                        isItemActive(item.to)
                                                         ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
                                                         : "text-zinc-550 dark:text-zinc-400 hover:bg-[#E7E7E0] dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100"
                                                     )
@@ -631,7 +522,7 @@ export default function Sidebar({
             data-testid="sidebar"
         >
             {/* Logo */}
-            <NavLink to="/dashboard" className="flex items-center px-5 py-4 shrink-0">
+            <NavLink to="/dashboard" className="h-[68px] flex items-center px-5 shrink-0">
                 <img
                     src="/navigator-logo.svg"
                     alt="Navigator"
@@ -649,7 +540,7 @@ export default function Sidebar({
                 ))}
             </nav>
 
-            <div className="my-2 border-t border-zinc-100 shrink-0" />
+            <div className="my-2 border-t border-zinc-200 dark:border-zinc-800 shrink-0" />
 
             {/* Chat Section */}
             <div className="px-5 pb-1 pt-1 text-[11px] font-bold text-zinc-450 dark:text-zinc-550 uppercase tracking-widest shrink-0 select-none">
@@ -675,22 +566,21 @@ export default function Sidebar({
                         );
                     }
                     // For "New Chat" link, add 'end' prop to only highlight on exact /chat match
-                    if (item.to === "chat") {
+                    if (item.to === "/chat") {
                         return (
-                            <NavLink
-                                key={item.to}
-                                to={item.to}
-                                end
-                                data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                                className={({ isActive }) =>
-                                    cn(
-                                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                                        isActive
-                                            ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                                            : "text-zinc-600 dark:text-zinc-400 hover:bg-[#E7E7E0] dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"
-                                    )
-                                }
-                            >
+                             <NavLink
+                                 key={item.to}
+                                 to={item.to}
+                                 data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                                 className={
+                                     cn(
+                                         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                                         isItemActive(item.to)
+                                             ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                                             : "text-zinc-600 dark:text-zinc-400 hover:bg-[#E7E7E0] hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                                     )
+                                 }
+                             >
                                 <div className="flex h-5 w-5 items-center justify-center shrink-0">
                                     <item.icon className="h-5 w-5" />
                                 </div>
@@ -707,7 +597,7 @@ export default function Sidebar({
                 })}
             </nav>
 
-            <div className="my-2 border-t border-zinc-100 shrink-0" />
+            <div className="my-2 border-t border-zinc-200 dark:border-zinc-800 shrink-0" />
 
             {/* Chat History */}
             <div className="px-5 pb-1 text-sm font-medium text-zinc-500 shrink-0">

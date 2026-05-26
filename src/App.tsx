@@ -19,6 +19,7 @@ const IntegrationPage = lazy(() => import("@/pages/Integration"));
 const SubscriptionPage = lazy(() => import("@/pages/SubscriptionPage"));
 const BillingPage = lazy(() => import("@/pages/PlaceholderPage").then(m => ({ default: () => m.default({ title: "Billing" }) })));
 const ChatPage = lazy(() => import("@/pages/NewChatPage"));
+const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
 /**
  * Loading fallback component shown while chunks are being loaded
@@ -153,7 +154,11 @@ function AppRoutes(): JSX.Element {
             {/* Fallback */}
             <Route
                 path="*"
-                element={<Navigate to="/" replace />}
+                element={
+                    <Suspense fallback={<PageLoader />}>
+                        <NotFoundPage />
+                    </Suspense>
+                }
             />
         </Routes>
     );

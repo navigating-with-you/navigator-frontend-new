@@ -27,9 +27,11 @@ export default function AuthInitializer() {
                         }
 
                         const userData = await syncUser(token);
-                        localStorage.setItem("navigator_user_profile", JSON.stringify(userData));
+                        sessionStorage.setItem("navigator_user_profile", JSON.stringify(userData));
                         window.dispatchEvent(new Event("navigator_user_synced"));
-                        console.log("User synced successfully", userData);
+                        if (import.meta.env.DEV) {
+                            console.log("User synced successfully", userData);
+                        }
                     }
                 } catch (error) {
                     console.error("Failed to sync user:", error);
@@ -39,7 +41,7 @@ export default function AuthInitializer() {
             } else if (!isAuthenticated && syncStarted.current) {
                 apiClient.clearToken();
                 cacheWebSocket.disconnect();
-                localStorage.removeItem("navigator_user_profile");
+                sessionStorage.removeItem("navigator_user_profile");
                 syncStarted.current = false;
             }
         };

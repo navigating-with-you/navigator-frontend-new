@@ -19,7 +19,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { type Category, type CategoryEmployee, type CategoryFile } from "@/types/category";
 import { cn } from "@/lib/utils";
@@ -236,10 +235,9 @@ export default function CategoryDrawer({
             };
 
             await onSubmit(newCategory);
-            toast.success(`Category "${name}" ${category ? "updated" : "created"} successfully`, { id: "category-save" });
             onOpenChange(false);
         } catch (error: any) {
-            toast.error(error.message || "Failed to save category", { id: "category-save" });
+            console.error("Failed to save category:", error);
         } finally {
             setIsSubmitting(false);
         }

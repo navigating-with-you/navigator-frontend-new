@@ -5,6 +5,7 @@ import "./index.css";
 import App from "./App.tsx";
 import { ThemeProvider } from "./contexts/ThemeContext.tsx";
 import { config } from "./config.ts";
+import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
 
 createRoot(document.getElementById("root")!).render(
     <StrictMode>
@@ -16,7 +17,9 @@ createRoot(document.getElementById("root")!).render(
             useInsecureForRefreshToken={config.kindeInsecureRefresh}
         >
             <ThemeProvider>
-                <App />
+                <ErrorBoundary>
+                    <App />
+                </ErrorBoundary>
             </ThemeProvider>
         </KindeProvider>
     </StrictMode>

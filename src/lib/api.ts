@@ -195,6 +195,7 @@ export interface ChatQueryPayload {
     conversation_id?: string;
     folder_id?: string;
     max_iterations?: number;
+    model?: string;
 }
 
 /** A citation from the backend SSE stream */
@@ -294,7 +295,7 @@ export async function sendChatQueryStream(
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    const eventTimeoutMs = 30000; // 30 second timeout per event
+    const eventTimeoutMs = 90000; // 90 second timeout per event
 
     try {
         while (true) {

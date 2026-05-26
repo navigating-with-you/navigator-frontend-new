@@ -363,6 +363,15 @@ export default function CategoryPage() {
                 const token = await getToken();
                 if (token) {
                     const exists = categories.some((c) => c.id === newCat.id);
+                    
+                    const formatFileSize = (bytes: number): string => {
+                        if (!bytes) return "0 B";
+                        const k = 1024;
+                        const sizes = ["B", "KB", "MB", "GB"];
+                        const i = Math.floor(Math.log(bytes) / Math.log(k));
+                        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+                    };
+
                     if (exists) {
                         // 1. Update name and description
                         await updateGroup(newCat.id, {
@@ -399,16 +408,40 @@ export default function CategoryPage() {
                             await removeGroupFiles(newCat.id, removedFileIds, token);
                         }
 
+                        // 4. Fetch real updated group details from the database
+                        const details = await getGroup(newCat.id, token);
+                        const members = (details?.members || []) as any[];
+                        const rawManagerId = details?.created_by || newCat.managerId || "";
+                        const matchedEmp = employeesList.find((emp: any) => emp.id === rawManagerId);
+                        const managerName = matchedEmp ? matchedEmp.name : (rawManagerId || "Administrator");
+
+                        const groupFiles = (details?.files || []) as any[];
+                        const mappedFiles = groupFiles.map((f: any) => ({
+                            id: f.id,
+                            name: f.name,
+                            size: formatFileSize(f.file_size || 0),
+                            mimeType: f.mime_type || "application/octet-stream"
+                        }));
+
                         setCategories(prev => prev.map(c => c.id === newCat.id ? {
                             ...c,
                             name: newCat.name,
                             description: newCat.description,
-                            managerId: newCat.managerId,
-                            managerName: newCat.managerName,
-                            employeeCount: newCat.employees.length,
-                            employees: newCat.employees,
-                            kbCount: newCat.files?.length || 0,
-                            files: newCat.files,
+                            managerId: rawManagerId,
+                            managerName: managerName,
+                            employeeCount: members.length,
+                            employees: members.map((m: any) => {
+                                const empDetails = employeesList.find((emp: any) => emp.id === m.id);
+                                const name = empDetails?.name || (m.display_name || m.email?.split("@")[0] || "Unknown");
+                                return {
+                                    id: m.id,
+                                    name: name,
+                                    role: empDetails?.role || m.role_name || "Member",
+                                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+                                };
+                            }),
+                            kbCount: mappedFiles.length,
+                            files: mappedFiles,
                         } : c));
 
                         toast.success(`Team "${newCat.name}" updated successfully`);
@@ -433,15 +466,48 @@ export default function CategoryPage() {
                             await addGroupFiles(newGroupId, currentFileIds, token);
                         }
 
+                        // 4. Fetch the real group state from the database (includes auto-added super admin)
+                        const details = await getGroup(newGroupId, token);
+                        const members = (details?.members || []) as any[];
+                        const rawManagerId = response.created_by || details?.created_by || "";
+                        const matchedEmp = employeesList.find((emp: any) => emp.id === rawManagerId);
+                        const managerName = matchedEmp ? matchedEmp.name : (rawManagerId || "Administrator");
+
+                        const groupFiles = (details?.files || []) as any[];
+                        const mappedFiles = groupFiles.map((f: any) => ({
+                            id: f.id,
+                            name: f.name,
+                            size: formatFileSize(f.file_size || 0),
+                            mimeType: f.mime_type || "application/octet-stream"
+                        }));
+
                         const createdCat: Category = {
-                            ...newCat,
                             id: newGroupId,
-                            createdBy: newCat.managerName || "Admin",
-                            createdDate: new Date().toLocaleDateString("en-GB", {
+                            name: response.name || newCat.name,
+                            description: response.description || newCat.description,
+                            managerId: rawManagerId,
+                            managerName: managerName,
+                            kbCount: mappedFiles.length,
+                            employeeCount: members.length,
+                            employees: members.map((m: any) => {
+                                const empDetails = employeesList.find((emp: any) => emp.id === m.id);
+                                const name = empDetails?.name || (m.display_name || m.email?.split("@")[0] || "Unknown");
+                                return {
+                                    id: m.id,
+                                    name: name,
+                                    role: empDetails?.role || m.role_name || "Member",
+                                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+                                };
+                            }),
+                            files: mappedFiles,
+                            type: "Department",
+                            createdBy: managerName,
+                            createdDate: new Date(response.created_at || Date.now()).toLocaleDateString("en-GB", {
                                 day: "numeric",
                                 month: "long",
                                 year: "numeric"
-                            })
+                            }),
+                            isArchived: response.is_archived ?? false
                         };
                         setCategories(prev => [...prev, createdCat]);
 

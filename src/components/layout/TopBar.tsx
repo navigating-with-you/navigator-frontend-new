@@ -34,7 +34,6 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuSeparator,
-    DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
     Tooltip,
@@ -60,7 +59,7 @@ export default function TopBar({
 
 
     useEffect(() => {
-        const stored = localStorage.getItem("navigator_user_profile");
+        const stored = sessionStorage.getItem("navigator_user_profile");
         if (stored) {
             try {
                 setProfile(JSON.parse(stored));
