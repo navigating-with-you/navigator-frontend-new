@@ -17,6 +17,9 @@ import {
     Share2,
     Square,
     Cpu,
+    Folder,
+    Search,
+    Navigation,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -36,6 +39,8 @@ import {
     createConversation,
     getConversation,
     updateConversation,
+    truncateConversation,
+    clearConversationMessages,
     type ChatMessage,
     type Citation,
     type Conversation,
@@ -101,7 +106,7 @@ function ThinkingAccordion({ isStreaming, thinkingSteps }: ThinkingAccordionProp
     // Status bullet color
     const dotClass = isStreaming
         ? "bg-blue-500 animate-pulse"
-        : "bg-emerald-500";
+        : "bg-[#15803d] dark:bg-emerald-500";
 
     // Header text
     let headerText = "";
@@ -123,17 +128,24 @@ function ThinkingAccordion({ isStreaming, thinkingSteps }: ThinkingAccordionProp
     }
 
     return (
-        <div className="w-full mb-3 select-none">
+        <div className="w-full mb-4 select-none bg-[#eae9e4] dark:bg-zinc-900/60 rounded-2xl p-4 transition-all border border-zinc-200/20 dark:border-zinc-800/30">
             {/* Header row */}
             <div
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center justify-between py-1 cursor-pointer group hover:opacity-90 transition-opacity"
+                className="flex items-center justify-between cursor-pointer"
             >
-                <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                    <span className={cn("h-1.5 w-1.5 rounded-full", dotClass)} />
-                    <span>{headerText}</span>
+                <div className="flex items-center gap-2">
+                    <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", dotClass)} />
+                    <span className={cn(
+                        "text-xs font-semibold",
+                        isStreaming
+                            ? "text-zinc-650 dark:text-zinc-350"
+                            : "text-[#15803d] dark:text-emerald-400 font-bold"
+                    )}>
+                        {headerText}
+                    </span>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
                     <span>{isExpanded ? "Collapse" : "Expand"}</span>
                     <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", isExpanded ? "rotate-180" : "")} />
                 </div>
@@ -141,7 +153,7 @@ function ThinkingAccordion({ isStreaming, thinkingSteps }: ThinkingAccordionProp
 
             {/* Collapsible list */}
             {isExpanded && (
-                <div className="mt-1.5 p-3 px-4 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200/50 dark:border-zinc-800/80 rounded-2xl space-y-2 text-xs text-zinc-600 dark:text-zinc-400">
+                <div className="mt-3.5 space-y-2.5 text-xs text-zinc-650 dark:text-zinc-300 pl-1.5">
                     {thinkingSteps.map((step, idx) => {
                         const messageLower = step.message.toLowerCase();
                         const isSearch = step.step === "searching" || messageLower.includes("search");
@@ -150,13 +162,13 @@ function ThinkingAccordion({ isStreaming, thinkingSteps }: ThinkingAccordionProp
                         return (
                             <div key={idx} className="flex items-center gap-2.5">
                                 {isSearch ? (
-                                    <span className="text-zinc-400 text-xs shrink-0 select-none">🔍</span>
+                                    <Search className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-450 shrink-0" />
                                 ) : isBrowsing ? (
-                                    <span className="text-zinc-400 text-xs shrink-0 select-none">🌐</span>
+                                    <Navigation className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-450 shrink-0" />
                                 ) : (
-                                    <span className="text-zinc-400 text-[10px] shrink-0 select-none">➡️</span>
+                                    <Navigation className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
                                 )}
-                                <span className="leading-normal">{step.message}</span>
+                                <span className="leading-relaxed">{step.message}</span>
                             </div>
                         );
                     })}
@@ -182,6 +194,198 @@ const getCitationForReference = (
     }
 };
 
+// ── Inline Citation Pill Component ─────────────────────────────────────────────
+interface CitationPillProps {
+    citation: Citation;
+    type: "Source" | "Web";
+}
+
+function CitationPill({ citation, type }: CitationPillProps) {
+    const isWeb = type === "Web";
+    const [imgError, setImgError] = useState(false);
+
+    const getDomain = (url?: string) => {
+        if (!url) return null;
+        try {
+            return new URL(url).hostname;
+        } catch {
+            return null;
+        }
+    };
+
+    const domain = getDomain(citation.heading_path);
+    const faviconUrl = isWeb && domain ? `https://www.google.com/s2/favicons?sz=64&domain=${domain}` : null;
+
+    const handleClick = () => {
+        if (isWeb && citation.heading_path) {
+            window.open(citation.heading_path, "_blank");
+        } else {
+            toast.info(`Document source: ${citation.filename}`);
+        }
+    };
+
+    return (
+        <span
+            onClick={handleClick}
+            title={citation.content_preview || citation.filename}
+            className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#eae9e4] hover:bg-[#e0dfda] dark:bg-zinc-800 dark:hover:bg-zinc-700/80 border border-zinc-200/40 dark:border-zinc-700/50 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer select-none mx-1 relative -top-[1px]"
+        >
+            <span className="max-w-[150px] truncate">{citation.filename}</span>
+            {isWeb ? (
+                faviconUrl && !imgError ? (
+                    <img
+                        src={faviconUrl}
+                        alt=""
+                        onError={() => setImgError(true)}
+                        className="h-3.5 w-3.5 rounded-full object-contain shrink-0 bg-white"
+                    />
+                ) : (
+                    <span className="h-3.5 w-3.5 rounded-full bg-zinc-300 dark:bg-zinc-650 flex items-center justify-center shrink-0">
+                        <span className="text-[8px] font-bold text-zinc-600 dark:text-zinc-400">W</span>
+                    </span>
+                )
+            ) : (
+                <Folder className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
+            )}
+        </span>
+    );
+}
+
+// ── Sources Pill Stack & Details Dropdown Component ─────────────────────────────
+interface SourcesPillProps {
+    sources: Citation[];
+}
+
+function SourcesPill({ sources }: SourcesPillProps) {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close on click outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsExpanded(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // Filter unique sources for the visual logo stack
+    const uniqueSources: { filename: string; isWeb: boolean; domain?: string; citation: Citation }[] = [];
+    const seen = new Set<string>();
+
+    sources.forEach(src => {
+        const isWeb = src.file_id === null || src.file_id === undefined;
+        let domain: string | undefined;
+        if (isWeb && src.heading_path) {
+            try {
+                domain = new URL(src.heading_path).hostname;
+            } catch {
+                domain = undefined;
+            }
+        }
+        const key = isWeb ? (domain || src.filename) : src.filename;
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueSources.push({ filename: src.filename, isWeb, domain, citation: src });
+        }
+    });
+
+    const displayedIcons = uniqueSources.slice(0, 3);
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="inline-flex items-center gap-2.5 px-3 py-1 bg-[#eae9e4] hover:bg-[#e0dfda] dark:bg-zinc-800 dark:hover:bg-zinc-700/80 border border-zinc-200/40 dark:border-zinc-700/50 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer select-none"
+            >
+                <div className="flex items-center -space-x-1.5 mr-0.5">
+                    {displayedIcons.map((src, idx) => {
+                        if (src.isWeb && src.domain) {
+                            return (
+                                <img
+                                    key={idx}
+                                    src={`https://www.google.com/s2/favicons?sz=64&domain=${src.domain}`}
+                                    alt=""
+                                    className="h-4 w-4 rounded-full object-contain bg-white border border-white dark:border-zinc-800 shrink-0 z-[10]"
+                                    onError={(e) => {
+                                        (e.target as HTMLElement).style.display = "none";
+                                    }}
+                                />
+                            );
+                        } else {
+                            return (
+                                <span
+                                    key={idx}
+                                    className="h-4 w-4 flex items-center justify-center bg-zinc-300 dark:bg-zinc-750 rounded-full border border-white dark:border-zinc-800 shrink-0 z-[10]"
+                                >
+                                    <Folder className="h-2.5 w-2.5 text-zinc-650 dark:text-zinc-350" />
+                                </span>
+                            );
+                        }
+                    })}
+                </div>
+                <span>{sources.length} {sources.length === 1 ? "Source" : "Sources"}</span>
+            </button>
+
+            {isExpanded && (
+                <div className="absolute left-0 bottom-full mb-2 w-64 max-h-60 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg p-2 z-50 space-y-1">
+                    <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-800 mb-1">
+                        Sources Used
+                    </div>
+                    {sources.map((src, idx) => {
+                        const isWeb = src.file_id === null || src.file_id === undefined;
+                        let domain: string | undefined;
+                        if (isWeb && src.heading_path) {
+                            try {
+                                domain = new URL(src.heading_path).hostname;
+                            } catch {
+                                domain = undefined;
+                            }
+                        }
+
+                        return (
+                            <div
+                                key={idx}
+                                onClick={() => {
+                                    if (isWeb && src.heading_path) {
+                                        window.open(src.heading_path, "_blank");
+                                    } else {
+                                        toast.info(`Document source: ${src.filename}`);
+                                    }
+                                    setIsExpanded(false);
+                                }}
+                                className="flex items-center gap-2.5 p-2 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-lg cursor-pointer text-xs transition-colors"
+                            >
+                                {isWeb && domain ? (
+                                    <img
+                                        src={`https://www.google.com/s2/favicons?sz=64&domain=${domain}`}
+                                        alt=""
+                                        className="h-4 w-4 rounded-full object-contain shrink-0 bg-white"
+                                    />
+                                ) : (
+                                    <Folder className="h-4 w-4 text-zinc-500 shrink-0" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-zinc-700 dark:text-zinc-300 truncate">
+                                        {src.filename}
+                                    </p>
+                                    {src.content_preview && (
+                                        <p className="text-[10px] text-zinc-400 dark:text-zinc-500 truncate mt-0.5">
+                                            {src.content_preview}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Render message markdown-lite ──────────────────────────────────────────────
 function MessageContent({
     content,
@@ -199,7 +403,7 @@ function MessageContent({
     const lines = content.split("\n");
 
     return (
-        <div className="space-y-2 text-sm leading-relaxed">
+        <div className="space-y-3.5 text-sm leading-relaxed">
             {lines.map((line, idx) => {
                 const trimmed = line.trim();
                 if (!trimmed) return <div key={idx} className="h-1" />;
@@ -207,7 +411,7 @@ function MessageContent({
                 // H3: ###
                 if (trimmed.startsWith("### ")) {
                     return (
-                        <p key={idx} className="font-semibold text-zinc-900 dark:text-zinc-100 mt-3 first:mt-0 text-[13px]">
+                        <p key={idx} className="font-bold text-zinc-900 dark:text-zinc-100 mt-4 first:mt-0 text-[14px] leading-snug">
                             {formatInline(trimmed.slice(4), citations)}
                         </p>
                     );
@@ -216,7 +420,7 @@ function MessageContent({
                 // H2: ##
                 if (trimmed.startsWith("## ")) {
                     return (
-                        <p key={idx} className="font-bold text-zinc-900 dark:text-zinc-100 mt-4 first:mt-0 text-sm">
+                        <p key={idx} className="font-bold text-zinc-900 dark:text-zinc-100 mt-5 first:mt-0 text-[16px] leading-snug">
                             {formatInline(trimmed.slice(3), citations)}
                         </p>
                     );
@@ -225,9 +429,20 @@ function MessageContent({
                 // Bold line: **text**
                 if (trimmed.startsWith("**") && trimmed.endsWith("**") && trimmed.length > 4) {
                     return (
-                        <p key={idx} className="font-semibold text-zinc-900 dark:text-zinc-100 mt-3 first:mt-0">
+                        <p key={idx} className="font-semibold text-zinc-900 dark:text-zinc-100 mt-4 first:mt-0 text-[15px] leading-snug">
                             {formatInline(trimmed.slice(2, -2), citations)}
                         </p>
+                    );
+                }
+
+                // Arrow line: → or ->
+                const arrowMatch = trimmed.match(/^(→|->)\s*(.+)/);
+                if (arrowMatch) {
+                    return (
+                        <div key={idx} className="flex items-start gap-2 pl-2 text-zinc-800 dark:text-zinc-200">
+                            <span className="shrink-0 text-zinc-500 dark:text-zinc-400 select-none">→</span>
+                            <span className="leading-relaxed">{formatInline(arrowMatch[2], citations)}</span>
+                        </div>
                     );
                 }
 
@@ -236,9 +451,9 @@ function MessageContent({
                 if (bulletMatch) {
                     const indent = bulletMatch[1].length;
                     return (
-                        <div key={idx} className={cn("flex items-start gap-2", indent > 0 ? "pl-6" : "pl-2")}>
-                            <span className="mt-2 h-1.5 w-1.5 rounded-full bg-zinc-400 shrink-0" />
-                            <span className="text-zinc-700 dark:text-zinc-300">{formatInline(bulletMatch[2], citations)}</span>
+                        <div key={idx} className={cn("flex items-start gap-2 text-zinc-800 dark:text-zinc-200", indent > 0 ? "pl-6" : "pl-2")}>
+                            <span className="shrink-0 text-zinc-400 dark:text-zinc-500 select-none font-semibold">•</span>
+                            <span className="leading-relaxed">{formatInline(bulletMatch[2], citations)}</span>
                         </div>
                     );
                 }
@@ -249,14 +464,14 @@ function MessageContent({
                     return (
                         <div key={idx} className="flex items-start gap-2 pl-2">
                             <span className="shrink-0 text-xs font-semibold text-zinc-400 mt-0.5 w-4">{numMatch[1]}.</span>
-                            <span className="text-zinc-700 dark:text-zinc-300">{formatInline(numMatch[2], citations)}</span>
+                            <span className="text-zinc-850 dark:text-zinc-150">{formatInline(numMatch[2], citations)}</span>
                         </div>
                     );
                 }
 
                 // Plain paragraph
                 return (
-                    <p key={idx} className="text-zinc-700 dark:text-zinc-300">
+                    <p key={idx} className="text-zinc-800 dark:text-zinc-200 leading-relaxed">
                         {formatInline(trimmed, citations)}
                     </p>
                 );
@@ -268,7 +483,7 @@ function MessageContent({
 
 /** Apply bold/italic inline formatting + citation pill replacements */
 function formatInline(text: string, citations?: Citation[]): JSX.Element {
-    const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\[Source \d+\]|\[Web \d+\])/g);
+    const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\[Source \d+\]|\[Web \d+\]|\[[^\]]+\])/g);
     return (
         <>
             {parts.map((part, i) => {
@@ -290,35 +505,30 @@ function formatInline(text: string, citations?: Citation[]): JSX.Element {
                     const citation = getCitationForReference(type, index, citations);
 
                     if (citation) {
-                        const isWeb = type === "Web";
-                        return (
-                            <span
-                                key={i}
-                                onClick={() => {
-                                    if (isWeb && citation.heading_path) {
-                                        window.open(citation.heading_path, "_blank");
-                                    } else {
-                                        toast.info(`Document source: ${citation.filename}`);
-                                    }
-                                }}
-                                title={citation.content_preview || citation.filename}
-                                className={cn(
-                                    "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold border transition-all cursor-pointer select-none mx-0.5 relative -top-[1px]",
-                                    isWeb
-                                        ? "bg-amber-50 hover:bg-amber-100 border-amber-200/50 text-amber-800 dark:bg-amber-950/20 dark:hover:bg-amber-900/30 dark:border-amber-900/40 dark:text-amber-300"
-                                        : "bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
-                                )}
-                            >
-                                {isWeb ? (
-                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
-                                ) : (
-                                    <FileText className="h-3 w-3 shrink-0 text-zinc-500" />
-                                )}
-                                <span className="max-w-[120px] truncate">{citation.filename}</span>
-                            </span>
-                        );
+                        return <CitationPill key={i} citation={citation} type={type} />;
                     }
                 }
+
+                // Check for filename-based citations (e.g. [Volunteer_Guidelines.docx, Section])
+                const genericMatch = part.match(/^\[([^\]]+)\]$/);
+                if (genericMatch) {
+                    const content = genericMatch[1].trim();
+                    const firstPart = content.split(",")[0].trim();
+                    
+                    const foundCitation = citations?.find(c => {
+                        const fname = c.filename.toLowerCase();
+                        const contentLower = content.toLowerCase();
+                        const firstPartLower = firstPart.toLowerCase();
+                        
+                        return fname === contentLower || fname === firstPartLower || contentLower.includes(fname);
+                    });
+
+                    if (foundCitation) {
+                        const type = (foundCitation.file_id !== null && foundCitation.file_id !== undefined) ? "Source" : "Web";
+                        return <CitationPill key={i} citation={foundCitation} type={type} />;
+                    }
+                }
+
                 return <span key={i}>{part}</span>;
             })}
         </>
@@ -416,12 +626,32 @@ export default function NewChatPage(): JSX.Element {
         }
     }, []);
 
+    // Track active conversation ID in a ref to discard stale streaming callbacks
+    const currentConversationIdRef = useRef<string | null>(conversationId);
+    useEffect(() => {
+        currentConversationIdRef.current = conversationId;
+    }, [conversationId]);
+
+    // Abort controller clean up on unmount
+    useEffect(() => {
+        return () => {
+            abortControllerRef.current?.abort();
+        };
+    }, []);
+
     // ── URL / route effects ───────────────────────────────────────────────────
 
     useEffect(() => {
         if (authLoading) return;
         if (id) {
             if (id !== conversationId) {
+                // Abort any ongoing streaming query for the old conversation
+                if (abortControllerRef.current) {
+                    abortControllerRef.current.abort();
+                    abortControllerRef.current = null;
+                }
+                setIsResponding(false);
+
                 if (isCreatingConversationRef.current) {
                     setConversationId(id);
                     isCreatingConversationRef.current = false;
@@ -430,6 +660,12 @@ export default function NewChatPage(): JSX.Element {
                 }
             }
         } else {
+            // Abort any ongoing streaming query
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+                abortControllerRef.current = null;
+            }
+            setIsResponding(false);
             startNewChat();
         }
     }, [id, authLoading, loadConversationById, startNewChat]);
@@ -488,7 +724,7 @@ export default function NewChatPage(): JSX.Element {
 
     // ── Send message ──────────────────────────────────────────────────────────
 
-    const handleSendMessage = async (text: string) => {
+    const handleSendMessage = async (text: string, truncateMessageId?: string) => {
         if (!text.trim() || isResponding) return;
 
         isAtBottomRef.current = true;
@@ -519,33 +755,40 @@ export default function NewChatPage(): JSX.Element {
         const controller = new AbortController();
         abortControllerRef.current = controller;
 
+        let convId = conversationId;
+
         try {
             const token = await getToken();
 
             if (!token) {
                 // Dev mock fallback
                 setTimeout(() => {
-                    setMessages((prev) =>
-                        prev.map((m) =>
+                    setMessages((prev) => {
+                        if (!prev.some((m) => m.id === streamingId)) return prev;
+                        return prev.map((m) =>
                             m.id === streamingId
                                 ? { ...m, content: `I've received: "${text}". (Dev mode — no auth token)`, isStreaming: false }
                                 : m
-                        )
-                    );
+                        );
+                    });
                     setIsResponding(false);
                 }, 1200);
                 return;
             }
 
-            let convId = conversationId;
             const isNewConversation = !convId;
 
             if (!convId) {
                 isCreatingConversationRef.current = true;
                 try {
                     const conv: Conversation = await createConversation("Untitled", token);
+                    if (currentConversationIdRef.current !== null) {
+                        // User navigated away to a different chat while we were creating this new one
+                        return;
+                    }
                     convId = conv.id;
                     setConversationId(conv.id);
+                    currentConversationIdRef.current = conv.id;
                     navigate(`/chat/${conv.id}`, { replace: true });
                     window.dispatchEvent(new Event("navigator_conversation_created"));
                 } catch (convErr: any) {
@@ -562,14 +805,17 @@ export default function NewChatPage(): JSX.Element {
                     query: text,
                     conversation_id: convId ?? undefined,
                     model: selectedModel === "Auto" ? undefined : selectedModel.toLowerCase(),
+                    truncate_message_id: truncateMessageId,
                 },
                 token,
                 {
                     onThinking: (step, message) => {
+                        if (convId !== currentConversationIdRef.current) return;
                         const label = THINKING_STEP_LABELS[step] ?? message ?? "Thinking...";
                         setThinkingLabel(label);
-                        setMessages((prev) =>
-                            prev.map((m) => {
+                        setMessages((prev) => {
+                            if (!prev.some((m) => m.id === streamingId)) return prev;
+                            return prev.map((m) => {
                                 if (m.id !== streamingId) return m;
                                 const existing = m.thinkingSteps || [];
                                 const last = existing[existing.length - 1];
@@ -581,18 +827,20 @@ export default function NewChatPage(): JSX.Element {
                                         { step, message, timestamp: new Date().toISOString() },
                                     ],
                                 };
-                            })
-                        );
+                            });
+                        });
                     },
                     onToolCall: (toolName, query) => {
+                        if (convId !== currentConversationIdRef.current) return;
                         const toolLabel = toolName === "search_knowledge_base"
                             ? "Searching knowledge base"
                             : toolName === "search_web"
                                 ? "Searching the web"
                                 : `Calling ${toolName}`;
 
-                        setMessages((prev) =>
-                            prev.map((m) => {
+                        setMessages((prev) => {
+                            if (!prev.some((m) => m.id === streamingId)) return prev;
+                            return prev.map((m) => {
                                 if (m.id !== streamingId) return m;
                                 const existing = m.thinkingSteps || [];
                                 return {
@@ -606,18 +854,20 @@ export default function NewChatPage(): JSX.Element {
                                         },
                                     ],
                                 };
-                            })
-                        );
+                            });
+                        });
                     },
                     onToolResult: (toolName, resultCount) => {
+                        if (convId !== currentConversationIdRef.current) return;
                         const toolLabel = toolName === "search_knowledge_base"
                             ? "Knowledge base search"
                             : toolName === "search_web"
                                 ? "Web search"
                                 : toolName;
 
-                        setMessages((prev) =>
-                            prev.map((m) => {
+                        setMessages((prev) => {
+                            if (!prev.some((m) => m.id === streamingId)) return prev;
+                            return prev.map((m) => {
                                 if (m.id !== streamingId) return m;
                                 const existing = m.thinkingSteps || [];
                                 return {
@@ -631,26 +881,31 @@ export default function NewChatPage(): JSX.Element {
                                         },
                                     ],
                                 };
-                            })
-                        );
+                            });
+                        });
                     },
                     onToken: (token) => {
+                        if (convId !== currentConversationIdRef.current) return;
                         accumulatedContent += token;
                         const snapshot = accumulatedContent;
-                        setMessages((prev) =>
-                            prev.map((m) =>
+                        setMessages((prev) => {
+                            if (!prev.some((m) => m.id === streamingId)) return prev;
+                            return prev.map((m) =>
                                 m.id === streamingId
                                     ? { ...m, content: snapshot, isStreaming: true }
                                     : m
-                            )
-                        );
+                            );
+                        });
                     },
                     onCitation: (citation) => {
+                        if (convId !== currentConversationIdRef.current) return;
                         citations.push(citation);
                     },
                     onDone: (data) => {
-                        setMessages((prev) =>
-                            prev.map((m) =>
+                        if (convId !== currentConversationIdRef.current) return;
+                        setMessages((prev) => {
+                            if (!prev.some((m) => m.id === streamingId)) return prev;
+                            return prev.map((m) =>
                                 m.id === streamingId
                                     ? {
                                         ...m,
@@ -664,8 +919,8 @@ export default function NewChatPage(): JSX.Element {
                                                 : undefined,
                                     }
                                     : m
-                            )
-                        );
+                            );
+                        });
                         // Refresh sidebar after new message
                         window.dispatchEvent(new Event("navigator_conversation_created"));
 
@@ -679,41 +934,57 @@ export default function NewChatPage(): JSX.Element {
                         }
                     },
                     onError: (errMsg) => {
-                        toast.error(errMsg || "Failed to get a response.");
-                        setMessages((prev) => prev.filter((m) => m.id !== streamingId));
+                        if (convId !== currentConversationIdRef.current) return;
+                        toast.error("Something went wrong. Please try again.");
+                        setMessages((prev) => {
+                            if (!prev.some((m) => m.id === streamingId)) return prev;
+                            return prev.map((m) =>
+                                m.id === streamingId
+                                    ? {
+                                        ...m,
+                                        content: "Something went wrong. Please try again.",
+                                        isStreaming: false,
+                                    }
+                                    : m
+                            );
+                        });
                     },
                 },
                 controller.signal
             );
         } catch (error: any) {
+            if (convId !== currentConversationIdRef.current) return;
             if (error.name === "AbortError") {
                 // User cancelled — finalize partial message
-                setMessages((prev) =>
-                    prev.map((m) => (m.id === streamingId ? { ...m, isStreaming: false } : m))
-                );
+                setMessages((prev) => {
+                    if (!prev.some((m) => m.id === streamingId)) return prev;
+                    return prev.map((m) => (m.id === streamingId ? { ...m, isStreaming: false } : m));
+                });
                 return;
             }
             console.error("Chat error:", error);
 
             // Provide detailed error feedback
-            const errorMsg = error.message || "Failed to get a response. Please try again.";
-            toast.error(errorMsg);
+            toast.error("Something went wrong. Please try again.");
 
             // Replace streaming message with error notification
-            setMessages((prev) =>
-                prev.map((m) =>
+            setMessages((prev) => {
+                if (!prev.some((m) => m.id === streamingId)) return prev;
+                return prev.map((m) =>
                     m.id === streamingId
                         ? {
                             ...m,
-                            content: `Error: ${errorMsg}`,
+                            content: "Something went wrong. Please try again.",
                             isStreaming: false,
                         }
                         : m
-                )
-            );
+                );
+            });
         } finally {
-            setIsResponding(false);
-            abortControllerRef.current = null;
+            if (convId === currentConversationIdRef.current) {
+                setIsResponding(false);
+                abortControllerRef.current = null;
+            }
         }
     };
 
@@ -730,14 +1001,38 @@ export default function NewChatPage(): JSX.Element {
 
     // ── Retry ─────────────────────────────────────────────────────────────────
 
-    const handleRetry = async () => {
-        const lastUser = [...messages].reverse().find((m) => m.role === "user");
-        const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
-        if (!lastUser || !lastAssistant) return;
+    const handleRetry = async (messageToRetry: Message) => {
+        if (isResponding) return;
 
-        // Remove last assistant message and re-send
-        setMessages((prev) => prev.filter((m) => m.id !== lastAssistant.id));
-        await handleSendMessage(lastUser.content);
+        // 1. Find the index of the assistant message to retry
+        const assistantIdx = messages.findIndex((m) => m.id === messageToRetry.id);
+        if (assistantIdx === -1) return;
+
+        // 2. Find the preceding user message
+        let userMsgIdx = -1;
+        for (let i = assistantIdx - 1; i >= 0; i--) {
+            if (messages[i].role === "user") {
+                userMsgIdx = i;
+                break;
+            }
+        }
+        if (userMsgIdx === -1) return;
+
+        const userMsg = messages[userMsgIdx];
+
+        // 3. Determine if we have a valid database UUID for the assistant message
+        const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(messageToRetry.id);
+        const truncateId = isValidUuid ? messageToRetry.id : undefined;
+
+        // 4. Update local state: clear the user message and all messages below it
+        // We update the state here immediately preceding handleSendMessage.
+        // Because handleSendMessage uses setMessages((prev) => ...), React batches these two updates
+        // together, so the user never sees a blank intermediate screen!
+        const messagesToKeep = messages.slice(0, userMsgIdx);
+        setMessages(messagesToKeep);
+
+        // 5. Resend the prompt with on-the-fly backend truncation
+        await handleSendMessage(userMsg.content, truncateId);
     };
 
     // ── Copy ──────────────────────────────────────────────────────────────────
@@ -922,15 +1217,11 @@ export default function NewChatPage(): JSX.Element {
                                             </div>
                                         ) : (
                                             /* Assistant bubble */
-                                            <div className="flex w-full justify-start gap-3">
-                                                {/* Avatar */}
-                                                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 shrink-0 flex items-center justify-center mt-1">
-                                                    <Cpu className="h-4 w-4 text-white" />
-                                                </div>
-                                                <div className="flex flex-col items-start gap-2 max-w-[75%]">
+                                            <div className="flex w-full justify-start">
+                                                <div className="flex flex-col items-start w-full gap-2.5">
                                                     {/* Thinking step accordion - with distinct styling */}
                                                     {m.thinkingSteps && m.thinkingSteps.length > 0 && (
-                                                        <div className="w-full mb-2">
+                                                        <div className="w-full mb-1">
                                                             <ThinkingAccordion
                                                                 isStreaming={m.isStreaming ?? false}
                                                                 thinkingSteps={m.thinkingSteps}
@@ -940,15 +1231,15 @@ export default function NewChatPage(): JSX.Element {
 
                                                     {/* Thinking step label fallback — while streaming and no steps array yet */}
                                                     {m.isStreaming && (!m.thinkingSteps || m.thinkingSteps.length === 0) && (
-                                                        <div className="w-full mb-2 flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-xl text-xs text-blue-700 dark:text-blue-300">
+                                                        <div className="w-full mb-1 flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-xl text-xs text-blue-700 dark:text-blue-300 animate-pulse">
                                                             <TypingDots />
                                                             <span>{thinkingLabel}</span>
                                                         </div>
                                                     )}
 
-                                                    {/* Message content with distinct background */}
+                                                    {/* Message content - wide, clean layout without bubble background */}
                                                     {(m.content || m.isStreaming) && (
-                                                        <div className="w-full text-zinc-800 dark:text-zinc-200 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200/50 dark:border-zinc-800/50">
+                                                        <div className="w-full text-zinc-800 dark:text-zinc-200">
                                                             <MessageContent
                                                                 content={m.content}
                                                                 citations={m.sources}
@@ -957,18 +1248,17 @@ export default function NewChatPage(): JSX.Element {
                                                         </div>
                                                     )}
 
-                                                    {/* Action buttons */}
+                                                    {/* Action buttons toolbar */}
                                                     {!m.isStreaming && m.content && (
-                                                        <div className="flex items-center gap-3 px-0 text-zinc-400 dark:text-zinc-500 text-xs select-none flex-wrap mt-1">
-                                                            <span className="text-[11px]">{timeStr}</span>
+                                                        <div className="flex items-center gap-5 text-zinc-450 dark:text-zinc-500 text-xs font-semibold select-none flex-wrap mt-3">
                                                             <TooltipProvider delayDuration={200}>
                                                                 <Tooltip>
                                                                     <TooltipTrigger asChild>
                                                                         <button
-                                                                            className="flex items-center gap-1 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                                                                            className="flex items-center gap-1.5 hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors cursor-pointer"
                                                                             onClick={() => handleCopy(m.content)}
                                                                         >
-                                                                            <Copy className="h-3.5 w-3.5" /> Copy
+                                                                            <Copy className="h-4 w-4" /> Copy
                                                                         </button>
                                                                     </TooltipTrigger>
                                                                     <TooltipContent side="top">Copy to clipboard</TooltipContent>
@@ -976,10 +1266,10 @@ export default function NewChatPage(): JSX.Element {
                                                                 <Tooltip>
                                                                     <TooltipTrigger asChild>
                                                                         <button
-                                                                            className="flex items-center gap-1 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                                                                            onClick={handleRetry}
+                                                                            className="flex items-center gap-1.5 hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors cursor-pointer"
+                                                                            onClick={() => handleRetry(m)}
                                                                         >
-                                                                            <RotateCcw className="h-3.5 w-3.5" /> Retry
+                                                                            <RotateCcw className="h-4 w-4" /> Try Again
                                                                         </button>
                                                                     </TooltipTrigger>
                                                                     <TooltipContent side="top">Regenerate response</TooltipContent>
@@ -991,28 +1281,18 @@ export default function NewChatPage(): JSX.Element {
                                                                                 navigator.clipboard.writeText(m.content);
                                                                                 toast.success("Message copied to clipboard!");
                                                                             }}
-                                                                            className="flex items-center gap-1 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                                                                            className="flex items-center gap-1.5 hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors cursor-pointer"
                                                                         >
-                                                                            <Share2 className="h-3.5 w-3.5" /> Share
+                                                                            <Share2 className="h-4 w-4" /> Share
                                                                         </button>
                                                                     </TooltipTrigger>
                                                                     <TooltipContent side="top">Share message</TooltipContent>
                                                                 </Tooltip>
                                                             </TooltipProvider>
 
-                                                            {/* Citations list footer */}
+                                                            {/* Sources stacked pill */}
                                                             {m.sources && m.sources.length > 0 && (
-                                                                <div className="flex items-center gap-1.5 ml-1 border-l border-zinc-200 dark:border-zinc-700 pl-3 flex-wrap">
-                                                                    {m.sources.map((src, sIdx) => (
-                                                                        <div
-                                                                            key={sIdx}
-                                                                            className="flex items-center gap-1 px-2 py-0.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded text-[10px] text-zinc-500 dark:text-zinc-400 font-medium"
-                                                                        >
-                                                                            <FileText className="h-3 w-3 text-zinc-400 shrink-0" />
-                                                                            <span className="max-w-[120px] truncate">{src.filename}</span>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
+                                                                <SourcesPill sources={m.sources} />
                                                             )}
                                                         </div>
                                                     )}

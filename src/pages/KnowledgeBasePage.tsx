@@ -355,11 +355,11 @@ export default function KnowledgeBasePage() {
                 description: payload.description,
                 parent_folder_id: currentFolderId ?? undefined
             }, token);
-            toast.success("Folder created successfully");
             setChildFolders((prev) => [...prev, newFolder]);
-            setFolderOpen(false);
+            toast.success("Folder created successfully");
         } catch (error: any) {
             toast.error(error.message || "Failed to create folder");
+            throw error; // Re-throw so the drawer's catch block can close it if needed
         }
     };
 
@@ -862,13 +862,13 @@ export default function KnowledgeBasePage() {
                             Are you sure you want to delete the {selected.size} selected items? This action cannot be undone and will permanently remove them from the knowledge base.
                         </DialogDescription>
                     </DialogHeader>
-                    <DialogFooter className="mt-6 gap-2">
+                    <DialogFooter className="mt-6 flex flex-row justify-end gap-2">
                         <Button variant="outline" onClick={() => setConfirmBatchDelete(false)} disabled={isBatchProcessing} className="rounded-lg text-zinc-700 dark:text-zinc-300">
                             Cancel
                         </Button>
                         <Button
                             variant="destructive"
-                            className="bg-red-650 hover:bg-red-700 text-white rounded-lg"
+                            className="bg-red-600 hover:bg-red-700 text-white rounded-lg"
                             disabled={isBatchProcessing}
                             onClick={handleBatchDelete}
                         >

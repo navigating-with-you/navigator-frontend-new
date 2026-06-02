@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
 import type { CreateFolderPayload } from "@/types/knowledge-base";
 
 interface CreateFolderDrawerProps {
@@ -38,10 +37,9 @@ export default function CreateFolderDrawer({
         setIsSubmitting(true);
         try {
             await onSubmit({ name: name.trim(), description: description.trim() || undefined });
-            toast.success(`Folder "${name}" created successfully`, { id: "create-folder" });
             onOpenChange(false);
-        } catch (error: any) {
-            toast.error(error.message || "Failed to create folder", { id: "create-folder" });
+        } catch {
+            // Error toast is handled by the parent's onSubmit
         } finally {
             setIsSubmitting(false);
         }

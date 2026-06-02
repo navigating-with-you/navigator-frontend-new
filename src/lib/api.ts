@@ -196,6 +196,7 @@ export interface ChatQueryPayload {
     folder_id?: string;
     max_iterations?: number;
     model?: string;
+    truncate_message_id?: string;
 }
 
 /** A citation from the backend SSE stream */
@@ -430,5 +431,31 @@ export async function createOrganization(
     token: string
 ) {
     return apiClient.post<any>("/org/", payload, { token });
+}
+
+/** Truncate messages in a conversation starting from or after a message ID */
+export async function truncateConversation(
+    conversationId: string,
+    messageId: string,
+    inclusive: boolean,
+    token: string
+): Promise<void> {
+    return apiClient.delete<void>(
+        `/chat/conversations/${conversationId}/messages/${messageId}?inclusive=${inclusive}`,
+        undefined,
+        { token }
+    );
+}
+
+/** Clear all messages in a conversation */
+export async function clearConversationMessages(
+    conversationId: string,
+    token: string
+): Promise<void> {
+    return apiClient.delete<void>(
+        `/chat/conversations/${conversationId}/messages`,
+        undefined,
+        { token }
+    );
 }
 

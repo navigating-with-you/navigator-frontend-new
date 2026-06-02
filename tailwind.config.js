@@ -43,6 +43,16 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Custom extended colors
+        red: {
+          650: "#dc3545",
+        },
+        zinc: {
+          450: "#a1a1aa",
+          505: "#717179",
+          650: "#52525b",
+          750: "#3f3f46",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
