@@ -268,7 +268,7 @@ export function canAccessFeature(role: string, feature: keyof typeof FEATURE_FLA
  * @param role - The role to get permissions for
  * @returns Array of permission strings
  */
-export function getPermissionsForRole(role: string): string[] {
+export function getPermissionsForRole(role: string): readonly string[] {
   return ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS] || [];
 }
 

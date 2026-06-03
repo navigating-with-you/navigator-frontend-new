@@ -711,7 +711,7 @@ export default function CategoryDrawer({
                                                                 {!isReadOnly && (
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => handleRemoveFile(file.id)}
+                                                                        onClick={() => handleRemoveItem(file)}
                                                                         className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 ml-4 shrink-0 transition-colors"
                                                                         title="Remove file"
                                                                         aria-label={`Remove file ${file.name}`}

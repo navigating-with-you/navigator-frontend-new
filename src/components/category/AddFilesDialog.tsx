@@ -57,7 +57,6 @@ interface AddFilesDialogProps {
 export default function AddFilesDialog({
     open,
     onOpenChange,
-    unselectedFiles,
     alreadySelectedFileIds = [],
     onAdd,
 }: AddFilesDialogProps) {
@@ -139,8 +138,9 @@ export default function AddFilesDialog({
         let current = folders.find(f => f.id === currentFolderId);
         while (current) {
             path.unshift({ id: current.id, name: current.name });
-            if (current.parent_folder_id) {
-                const parent = folders.find(f => f.id === current.parent_folder_id);
+            const parentId = current.parent_folder_id;
+            if (parentId) {
+                const parent = folders.find(f => f.id === parentId);
                 if (parent && parent.name !== 'Root') {
                     current = parent;
                 } else {

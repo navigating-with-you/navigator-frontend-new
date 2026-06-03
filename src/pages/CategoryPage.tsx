@@ -11,12 +11,6 @@ import { PermissionGate } from "@/components/PermissionGate";
 import { PERMISSIONS } from "@/utils/rbacConfig";
 import { usePermissions } from "@/hooks/usePermissions";
 
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 import { type Category } from "@/types/category";
 import CategoryTable from "@/components/category/CategoryTable";

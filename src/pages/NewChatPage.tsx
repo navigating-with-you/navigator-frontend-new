@@ -39,8 +39,6 @@ import {
     createConversation,
     getConversation,
     updateConversation,
-    truncateConversation,
-    clearConversationMessages,
     type ChatMessage,
     type Citation,
     type Conversation,
@@ -933,7 +931,7 @@ export default function NewChatPage(): JSX.Element {
                             });
                         }
                     },
-                    onError: (errMsg) => {
+                    onError: (_errMsg) => {
                         if (convId !== currentConversationIdRef.current) return;
                         toast.error("Something went wrong. Please try again.");
                         setMessages((prev) => {

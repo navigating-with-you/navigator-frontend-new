@@ -127,25 +127,7 @@ export default function InviteAcceptancePage() {
         }
     };
 
-    // ── Render Helpers ────────────────────────────────────────────────────
-    const renderHeader = () => (
-        <header className="flex h-[68px] w-full items-center justify-between border-b border-zinc-200/85 bg-[#FEFFFA] dark:bg-zinc-900 dark:border-zinc-800 px-8 shrink-0">
-            <div className="flex items-center">
-                <img
-                    src="/navigator-logo.svg"
-                    alt="Navigator"
-                    className="h-7 w-auto object-contain block"
-                />
-            </div>
-            <Button
-                variant="ghost"
-                onClick={() => navigate("/")}
-                className="text-zinc-700 dark:text-zinc-300 hover:bg-zinc-150/50 dark:hover:bg-zinc-800 cursor-pointer text-xs font-semibold"
-            >
-                Sign in
-            </Button>
-        </header>
-    );
+
 
     // Helper to evaluate checklist item states
     const isMinLength = password.length >= 8;
