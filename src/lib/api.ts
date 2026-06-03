@@ -210,6 +210,10 @@ export async function removeGroupFiles(groupId: string, fileIds: string[], token
     return apiClient.delete<any>(`/groups/${groupId}/files`, { file_ids: fileIds }, { token });
 }
 
+export async function getAvailableFilesAndFolders(token: string) {
+    return apiClient.get<any>("/groups/available-files", { token });
+}
+
 // ── Chat / RAG ────────────────────────────────────────────────────────────────
 
 export interface ChatQueryPayload {

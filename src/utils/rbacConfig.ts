@@ -197,6 +197,11 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.PROFILE_VIEW,
     PERMISSIONS.PROFILE_EDIT,
     PERMISSIONS.ACCESS_VIEW,
+
+    // Integrations - members can connect their own integrations
+    PERMISSIONS.INTEGRATION_VIEW,
+    PERMISSIONS.INTEGRATION_CONNECT,
+    PERMISSIONS.INTEGRATION_DISCONNECT,
   ],
 } as const;
 
@@ -239,7 +244,7 @@ export const FEATURE_FLAGS = {
   canManageAccess: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
 
   // Integrations
-  canManageIntegrations: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
+  canManageIntegrations: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EDITOR, ROLES.MEMBER],
 
   // Audit
   canViewAuditLogs: [ROLES.SUPER_ADMIN, ROLES.ADMIN],

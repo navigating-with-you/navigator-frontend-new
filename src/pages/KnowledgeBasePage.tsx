@@ -83,13 +83,14 @@ function formatDate(dateStr: string): string {
 
 function rawFolderToEntry(f: any): KBEntry {
     const size = f.total_size !== undefined ? formatSize(f.total_size) : "0 B";
+    const filesText = f.file_count !== undefined ? `${f.file_count} file${f.file_count !== 1 ? 's' : ''} • ` : "";
     return {
         id: f.id,
         name: f.name,
         type: "folder",
         folder: f.description || "",
         owner: f.creator?.display_name || f.creator?.email || "Unknown",
-        createdDate: f.created_at ? `${formatDate(f.created_at)} • ${size}` : "-",
+        createdDate: f.created_at ? `${formatDate(f.created_at)} • ${filesText}${size}` : "-",
         description: f.description,
     };
 }
@@ -664,17 +665,19 @@ export default function KnowledgeBasePage() {
             {/* Action toolbar — always visible */}
             <div className="flex-shrink-0 mt-6 flex flex-wrap items-center gap-3">
                 {/* Create Folder */}
-                <PermissionGate
-                    permission={PERMISSIONS.FOLDER_CREATE}
-                    fallback={null}
-                >
-                    <PageActionButton
-                        icon={<FolderPlus className="h-3.5 w-3.5" />}
-                        label="Create Folder"
-                        onClick={() => setFolderOpen(true)}
-                        data-testid="create-folder-btn"
-                    />
-                </PermissionGate>
+                {folderStack.length < 2 && (
+                    <PermissionGate
+                        permission={PERMISSIONS.FOLDER_CREATE}
+                        fallback={null}
+                    >
+                        <PageActionButton
+                            icon={<FolderPlus className="h-3.5 w-3.5" />}
+                            label="Create Folder"
+                            onClick={() => setFolderOpen(true)}
+                            data-testid="create-folder-btn"
+                        />
+                    </PermissionGate>
+                )}
 
                 {/* Add Files */}
                 <PermissionGate

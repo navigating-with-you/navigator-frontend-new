@@ -18,7 +18,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const [theme, setThemeState] = useState<Theme>(() => {
         const stored = localStorage.getItem("navigator_theme") as Theme | null;
         if (stored === "dark" || stored === "light") return stored;
-        return "dark"; // default to dark theme
+        return "light"; // default to light theme
     });
 
     useEffect(() => {

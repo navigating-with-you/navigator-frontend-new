@@ -3,6 +3,8 @@ export interface CategoryFile {
   name: string;
   size: string;
   mimeType: string;
+  folderName?: string;
+  folderId?: string;
 }
 
 export interface CategoryEmployee {

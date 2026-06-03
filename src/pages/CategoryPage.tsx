@@ -208,7 +208,9 @@ export default function CategoryPage() {
                                 id: f.id,
                                 name: f.name,
                                 size: formatFileSize(f.file_size || 0),
-                                mimeType: f.mime_type || "application/octet-stream"
+                                mimeType: f.mime_type || "application/octet-stream",
+                                folderId: f.folder_id,
+                                folderName: f.folder_path ? f.folder_path.split(" > ").pop() : undefined
                             }));
 
                             return {
@@ -307,16 +309,18 @@ export default function CategoryPage() {
                 return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
             };
 
-            const mapFile = (f: any) => ({
+            const mapFile = (f: any, folderId?: string, folderName?: string) => ({
                 id: f.id,
                 name: f.name,
                 size: formatFileSize(f.file_size || f.size || 0),
                 mimeType: f.mime_type || "application/octet-stream",
+                folderId,
+                folderName,
             });
 
             // 1. Root-level files
             const rootData = await getRootContents(token);
-            const rootFiles: any[] = (Array.isArray(rootData?.files) ? rootData.files : []).map(mapFile);
+            const rootFiles: any[] = (Array.isArray(rootData?.files) ? rootData.files : []).map((f: any) => mapFile(f, rootData.root_folder_id, "Root"));
 
             // 2. Files from every folder
             const foldersData = await listFolders(token);
@@ -333,7 +337,7 @@ export default function CategoryPage() {
                         const rawFiles: any[] = Array.isArray(filesData)
                             ? filesData
                             : (Array.isArray(filesData?.files) ? filesData.files : []);
-                        return rawFiles.map(mapFile);
+                        return rawFiles.map((f: any) => mapFile(f, folder.id, folder.name));
                     } catch {
                         return [];
                     }
@@ -486,7 +490,9 @@ export default function CategoryPage() {
                             id: f.id,
                             name: f.name,
                             size: formatFileSize(f.file_size || 0),
-                            mimeType: f.mime_type || "application/octet-stream"
+                            mimeType: f.mime_type || "application/octet-stream",
+                            folderId: f.folder_id,
+                            folderName: f.folder_path ? f.folder_path.split(" > ").pop() : undefined
                         }));
 
                         setCategories(prev => prev.map(c => c.id === newCat.id ? {
@@ -544,7 +550,9 @@ export default function CategoryPage() {
                             id: f.id,
                             name: f.name,
                             size: formatFileSize(f.file_size || 0),
-                            mimeType: f.mime_type || "application/octet-stream"
+                            mimeType: f.mime_type || "application/octet-stream",
+                            folderId: f.folder_id,
+                            folderName: f.folder_path ? f.folder_path.split(" > ").pop() : undefined
                         }));
 
                         const createdCat: Category = {
@@ -678,6 +686,14 @@ export default function CategoryPage() {
             const token = await getToken();
             if (!token) return;
 
+            const formatFileSize = (bytes: number): string => {
+                if (!bytes) return "0 B";
+                const k = 1024;
+                const sizes = ["B", "KB", "MB", "GB"];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+            };
+
             const fileIds = filesToAdd.map((f) => f.id);
             const promises = Array.from(selected).map((teamId) =>
                 addGroupFiles(teamId, fileIds, token)
@@ -694,8 +710,8 @@ export default function CategoryPage() {
                                 mergedFiles.push({
                                     id: newFile.id,
                                     name: newFile.name,
-                                    size: newFile.size || "0 B",
-                                    mimeType: newFile.mimeType || "application/octet-stream"
+                                    size: newFile.file_size !== undefined ? formatFileSize(newFile.file_size) : (newFile.size || "0 B"),
+                                    mimeType: newFile.mime_type || newFile.mimeType || "application/octet-stream"
                                 });
                             }
                         });

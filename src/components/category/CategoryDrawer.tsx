@@ -11,6 +11,7 @@ import {
     ChevronRight,
     ChevronDown,
     Loader2,
+    FolderClosed,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -112,6 +113,14 @@ export default function CategoryDrawer({
             }));
     }, [allEmployees]);
 
+    const unselectedEmployees = useMemo(() => {
+        return allEmployees.filter(
+            (emp) => !selectedEmployees.some((se) => se.id === emp.id)
+        );
+    }, [allEmployees, selectedEmployees]);
+
+    const availableFilesPool = allFiles;
+
     // Validation
     const isNameValid = name.trim().length > 0;
     const isManagerValid = managerId.trim().length > 0;
@@ -129,12 +138,42 @@ export default function CategoryDrawer({
         );
     }, [selectedEmployees, employeeSearch]);
 
-    // Filter files added to the category
-    const filteredFiles = useMemo(() => {
+    // List selected files as individual files with folder path details.
+    const displayedItems = useMemo(() => {
+        const items: Array<{
+            id: string;
+            type: "folder" | "file";
+            name: string;
+            size?: string;
+            mimeType?: string;
+            folderName?: string;
+            fileCount?: number;
+            files?: any[];
+        }> = [];
+
+        selectedFiles.forEach(file => {
+            const matchedFile = allFiles.find(f => f.id === file.id);
+            const folderName = matchedFile?.folderName || file.folderName;
+            items.push({
+                id: file.id,
+                type: "file",
+                name: file.name,
+                size: file.size,
+                mimeType: file.mimeType,
+                folderName: folderName !== "Root" ? folderName : undefined,
+            });
+        });
+
+        return items;
+    }, [selectedFiles, allFiles]);
+
+    const filteredItems = useMemo(() => {
         const query = fileSearch.toLowerCase().trim();
-        if (!query) return selectedFiles;
-        return selectedFiles.filter((f) => f.name.toLowerCase().includes(query));
-    }, [selectedFiles, fileSearch]);
+        if (!query) return displayedItems;
+        return displayedItems.filter(item =>
+            item.name.toLowerCase().includes(query)
+        );
+    }, [displayedItems, fileSearch]);
 
     // Pagination for employees tab
     const empTotal = filteredEmployees.length;
@@ -146,25 +185,13 @@ export default function CategoryDrawer({
     }, [filteredEmployees, empStartIdx, empEndIdx]);
 
     // Pagination for files tab
-    const fileTotal = filteredFiles.length;
+    const fileTotal = filteredItems.length;
     const fileTotalPages = Math.ceil(fileTotal / rowsPerPage) || 1;
     const fileStartIdx = (filePage - 1) * rowsPerPage;
     const fileEndIdx = Math.min(fileStartIdx + rowsPerPage, fileTotal);
     const paginatedFiles = useMemo(() => {
-        return filteredFiles.slice(fileStartIdx, fileEndIdx);
-    }, [filteredFiles, fileStartIdx, fileEndIdx]);
-
-    // Get list of employees in organization that are NOT currently added
-    const unselectedEmployees = useMemo(() => {
-        const selectedIds = new Set(selectedEmployees.map((e) => e.id));
-        return allEmployees.filter((emp) => !selectedIds.has(emp.id));
-    }, [allEmployees, selectedEmployees]);
-
-    // Dynamic pool of files available in KNB to associate
-    const availableFilesPool = useMemo(() => {
-        const selectedFileNames = new Set(selectedFiles.map((f) => f.name));
-        return allFiles.filter((f) => !selectedFileNames.has(f.name));
-    }, [selectedFiles, allFiles]);
+        return filteredItems.slice(fileStartIdx, fileEndIdx);
+    }, [filteredItems, fileStartIdx, fileEndIdx]);
 
     // Handlers
     const handleAddMultipleEmployees = (emps: any[]) => {
@@ -184,13 +211,23 @@ export default function CategoryDrawer({
     };
 
     const handleAddMultipleFiles = (files: any[]) => {
+        const formatFileSize = (bytes: number): string => {
+            if (!bytes) return "0 B";
+            const k = 1024;
+            const sizes = ["B", "KB", "MB", "GB"];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+        };
+
         const newFiles = files
             .filter((file) => !selectedFiles.some((f) => f.id === file.id))
             .map((file) => ({
                 id: file.id,
-                name: file.name,
-                size: file.size || "0 B",
-                mimeType: file.mimeType || file.type || "application/octet-stream",
+                name: file.original_filename || file.name,
+                size: file.file_size !== undefined ? formatFileSize(file.file_size) : (file.size || "0 B"),
+                mimeType: file.mime_type || file.mimeType || file.type || "application/octet-stream",
+                folderId: file.folder_id || file.folderId,
+                folderName: file.folder_path ? file.folder_path.split(" > ").pop() : (file.folderName || undefined),
             }));
 
         if (newFiles.length > 0) {
@@ -207,9 +244,14 @@ export default function CategoryDrawer({
         }
     };
 
-    const handleRemoveFile = (id: string) => {
-        setSelectedFiles((prev) => prev.filter((f) => f.id !== id));
-        if (filteredFiles.length - 1 <= fileStartIdx && filePage > 1) {
+    const handleRemoveItem = (item: any) => {
+        if (item.type === "folder") {
+            const fileIdsToRemove = new Set((item.files || []).map((f: any) => f.id));
+            setSelectedFiles((prev) => prev.filter((f) => !fileIdsToRemove.has(f.id)));
+        } else {
+            setSelectedFiles((prev) => prev.filter((f) => f.id !== item.id));
+        }
+        if (filteredItems.length - 1 <= fileStartIdx && filePage > 1) {
             setFilePage((p) => p - 1);
         }
     };
@@ -606,38 +648,81 @@ export default function CategoryDrawer({
                                                 <span>File Name</span>
                                             </div>
                                             <div className="flex flex-col">
-                                                {paginatedFiles.map((file) => (
-                                                    <div
-                                                        key={file.id}
-                                                        className="flex items-center justify-between px-4 py-2 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 rounded-lg mx-8 transition-colors group"
-                                                    >
-                                                        <div className="flex items-center gap-4 min-w-0">
-                                                            {!isReadOnly && <Checkbox checked={false} disabled className="border-zinc-300 dark:border-zinc-600 shadow-none" />}
-                                                            <div className="h-9 w-9 shrink-0 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center border border-zinc-200/60 dark:border-zinc-700/60 text-zinc-500">
-                                                                <FileText className="h-4 w-4" />
-                                                            </div>
-                                                            <div className="flex flex-col min-w-0">
-                                                                <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">
-                                                                    {file.name}
-                                                                </span>
-                                                                <span className="text-[11px] font-mono text-zinc-505 dark:text-zinc-450 truncate mt-0.5">
-                                                                    {file.size}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        {!isReadOnly && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleRemoveFile(file.id)}
-                                                                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 ml-4 shrink-0 transition-colors"
-                                                                title="Remove file"
-                                                                aria-label={`Remove file ${file.name}`}
+                                                {paginatedFiles.map((item) => {
+                                                    if (item.type === "folder") {
+                                                        return (
+                                                            <div
+                                                                key={`folder-${item.folderName}`}
+                                                                className="flex items-center justify-between px-4 py-2 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 rounded-lg mx-8 transition-colors group"
                                                             >
-                                                                <MinusCircle className="h-5 w-5" strokeWidth={1.5} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                                <div className="flex items-center gap-4 min-w-0">
+                                                                    {!isReadOnly && <Checkbox checked={false} disabled className="border-zinc-300 dark:border-zinc-600 shadow-none" />}
+                                                                    <div className="h-9 w-9 shrink-0 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center border border-blue-200/60 dark:border-blue-700/60 text-blue-600 dark:text-blue-400">
+                                                                        <FolderClosed className="h-4 w-4" />
+                                                                    </div>
+                                                                    <div className="flex flex-col min-w-0">
+                                                                        <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                                                                            {item.folderName}
+                                                                        </span>
+                                                                        <span className="text-[11px] text-zinc-505 dark:text-zinc-450 truncate mt-0.5">
+                                                                            {item.fileCount} file{item.fileCount !== 1 ? 's' : ''}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                {!isReadOnly && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveItem(item)}
+                                                                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 ml-4 shrink-0 transition-colors"
+                                                                        title="Remove folder"
+                                                                        aria-label={`Remove folder ${item.folderName}`}
+                                                                    >
+                                                                        <MinusCircle className="h-5 w-5" strokeWidth={1.5} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    } else {
+                                                        const file = item;
+                                                        return (
+                                                            <div
+                                                                key={file.id}
+                                                                className="flex items-center justify-between px-4 py-2 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 rounded-lg mx-8 transition-colors group"
+                                                            >
+                                                                <div className="flex items-center gap-4 min-w-0">
+                                                                    {!isReadOnly && <Checkbox checked={false} disabled className="border-zinc-300 dark:border-zinc-600 shadow-none" />}
+                                                                    <div className="h-9 w-9 shrink-0 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center border border-zinc-200/60 dark:border-zinc-700/60 text-zinc-500">
+                                                                        <FileText className="h-4 w-4" />
+                                                                    </div>
+                                                                    <div className="flex flex-col min-w-0">
+                                                                        <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                                                                            {file.name}
+                                                                        </span>
+                                                                        <span className="text-[11px] font-mono text-zinc-505 dark:text-zinc-450 truncate mt-0.5">
+                                                                            {file.size}
+                                                                            {file.folderName && file.folderName !== "Root" && (
+                                                                                <span className="ml-1.5 text-blue-600/80 dark:text-blue-400/80 font-sans font-normal">
+                                                                                    • in {file.folderName}
+                                                                                </span>
+                                                                            )}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                {!isReadOnly && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveFile(file.id)}
+                                                                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 ml-4 shrink-0 transition-colors"
+                                                                        title="Remove file"
+                                                                        aria-label={`Remove file ${file.name}`}
+                                                                    >
+                                                                        <MinusCircle className="h-5 w-5" strokeWidth={1.5} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    }
+                                                })}
                                             </div>
                                         </div>
                                     </div>
@@ -755,11 +840,12 @@ export default function CategoryDrawer({
                 onAdd={handleAddMultipleEmployees}
             />
             <AddFilesDialog
-                open={addFilesOpen}
-                onOpenChange={setAddFilesOpen}
-                unselectedFiles={availableFilesPool}
-                onAdd={handleAddMultipleFiles}
-            />
+                                                                 open={addFilesOpen}
+                                                                 onOpenChange={setAddFilesOpen}
+                                                                 unselectedFiles={availableFilesPool}
+                                                                 alreadySelectedFileIds={selectedFiles.map((f) => f.id)}
+                                                                 onAdd={handleAddMultipleFiles}
+                                                             />
         </Sheet>
     );
 }

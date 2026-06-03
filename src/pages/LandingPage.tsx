@@ -6,16 +6,16 @@ export default function LandingPage() {
 
     if (isLoading) {
         return (
-            <div className="flex h-screen w-full items-center justify-center bg-[#FEFFFA]">
+            <div className="flex h-screen w-full items-center justify-center bg-white">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
             </div>
         );
     }
 
     return (
-        <div className="flex min-h-screen w-full flex-col bg-[#FEFFFA]">
+        <div className="flex min-h-screen w-full flex-col bg-white">
             {/* Header */}
-            <header className="flex items-center justify-between px-8 py-6 border-b border-zinc-100">
+            <header className="flex items-center justify-between px-8 py-6 border-b border-zinc-200">
                 <div className="flex items-center">
                     <img 
                         src="/navigator-logo.svg" 
@@ -26,7 +26,7 @@ export default function LandingPage() {
                 <Button
                     variant="ghost"
                     onClick={() => login()}
-                    className="text-zinc-700"
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                 >
                     Sign in
                 </Button>
@@ -35,7 +35,7 @@ export default function LandingPage() {
             {/* Main Content */}
             <main className="flex flex-1 items-center justify-center px-6">
                 <div className="max-w-md text-center space-y-6">
-                    <h1 className="text-4xl font-semibold tracking-tight text-zinc-900">
+                    <h1 className="text-4xl font-bold tracking-tight text-zinc-900">
                         Knowledge management for teams
                     </h1>
                     
@@ -46,14 +46,13 @@ export default function LandingPage() {
                     <div className="flex flex-col gap-3 pt-4">
                         <Button
                             onClick={() => register()}
-                            className="h-11 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium"
+                            className="h-11 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium shadow-sm"
                         >
                             Get started
                         </Button>
                         <Button
-                            variant="outline"
                             onClick={() => login()}
-                            className="h-11 border-zinc-200 rounded-lg font-medium"
+                            className="h-11 bg-zinc-900 text-white hover:bg-zinc-800 rounded-lg font-medium shadow-sm"
                         >
                             Sign in
                         </Button>
@@ -62,7 +61,7 @@ export default function LandingPage() {
             </main>
 
             {/* Footer */}
-            <footer className="px-8 py-6 border-t border-zinc-100">
+            <footer className="px-8 py-6 border-t border-zinc-200">
                 <p className="text-sm text-zinc-500 text-center">
                     © 2026 Navigator
                 </p>
