@@ -152,7 +152,7 @@ export default function AddEmployeesDialog({
                     {/* Table Area */}
                     <div className="flex-1 overflow-auto flex flex-col px-6">
                         {/* Table Header */}
-                        <div className="sticky top-0 z-10 flex items-center gap-4 bg-zinc-55/60 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-t-lg px-4 py-3 shrink-0">
+                        <div className="sticky top-0 z-10 flex items-center gap-4 bg-[#FEFFFA] dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 rounded-t-lg px-4 py-3 shrink-0">
                             <Checkbox
                                 checked={allSelectedOnPage}
                                 onCheckedChange={toggleAll}

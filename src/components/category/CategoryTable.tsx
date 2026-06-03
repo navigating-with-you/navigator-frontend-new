@@ -13,6 +13,8 @@ import {
     ArrowDown,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PERMISSIONS } from "@/utils/rbacConfig";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -73,6 +75,11 @@ function RowMenu({
     onAddEmployees,
     onArchive,
 }: RowMenuProps): JSX.Element {
+    const { hasPermission } = usePermissions();
+    const canEdit = hasPermission(PERMISSIONS.GROUP_UPDATE);
+    const canManageMembers = hasPermission(PERMISSIONS.GROUP_MANAGE_MEMBERS);
+    const canDelete = hasPermission(PERMISSIONS.GROUP_DELETE);
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -99,40 +106,48 @@ function RowMenu({
                     View Details
                 </DropdownMenuItem>
 
-                <DropdownMenuItem
-                    data-testid={`edit-${category.id}`}
-                    onClick={() => onEdit(category)}
-                    className="cursor-pointer"
-                >
-                    <Pencil className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                    Edit
-                </DropdownMenuItem>
+                {canEdit && (
+                    <DropdownMenuItem
+                        data-testid={`edit-${category.id}`}
+                        onClick={() => onEdit(category)}
+                        className="cursor-pointer"
+                    >
+                        <Pencil className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                        Edit
+                    </DropdownMenuItem>
+                )}
 
-                <DropdownMenuItem
-                    data-testid={`add-employees-${category.id}`}
-                    onClick={() => onAddEmployees(category)}
-                    className="cursor-pointer"
-                >
-                    <UserPlus className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                    Add Employees
-                </DropdownMenuItem>
+                {canManageMembers && (
+                    <DropdownMenuItem
+                        data-testid={`add-employees-${category.id}`}
+                        onClick={() => onAddEmployees(category)}
+                        className="cursor-pointer"
+                    >
+                        <UserPlus className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                        Add Employees
+                    </DropdownMenuItem>
+                )}
 
-                <DropdownMenuItem
-                    onClick={() => onArchive(category.id)}
-                    className="cursor-pointer"
-                >
-                    <Archive className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                    {category.isArchived ? "Unarchive" : "Archive"}
-                </DropdownMenuItem>
+                {canEdit && (
+                    <DropdownMenuItem
+                        onClick={() => onArchive(category.id)}
+                        className="cursor-pointer"
+                    >
+                        <Archive className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                        {category.isArchived ? "Unarchive" : "Archive"}
+                    </DropdownMenuItem>
+                )}
 
-                <DropdownMenuItem
-                    data-testid={`delete-${category.id}`}
-                    onClick={() => onDelete(category.id)}
-                    className="text-red-600 focus:text-red-600 cursor-pointer focus:bg-red-50 dark:focus:bg-red-950/30"
-                >
-                    <Trash2 className="mr-2 h-4 w-4 text-red-600" />
-                    Delete
-                </DropdownMenuItem>
+                {canDelete && (
+                    <DropdownMenuItem
+                        data-testid={`delete-${category.id}`}
+                        onClick={() => onDelete(category.id)}
+                        className="text-red-650 focus:text-red-600 cursor-pointer focus:bg-red-50 dark:focus:bg-red-950/30"
+                    >
+                        <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                        Delete
+                    </DropdownMenuItem>
+                )}
             </DropdownMenuContent>
         </DropdownMenu>
     );
@@ -158,13 +173,19 @@ export default function CategoryTable({
     selected,
     setSelected,
 }: CategoryTableProps): JSX.Element {
+    const { hasPermission } = usePermissions();
+    const canSelect = hasPermission(PERMISSIONS.GROUP_DELETE) || hasPermission(PERMISSIONS.GROUP_MANAGE_MEMBERS) || hasPermission(PERMISSIONS.GROUP_UPDATE);
+
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(50);
     const [page, setPage] = useState<number>(1);
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
 
     const computedGridCols = useMemo(() => {
-        const cols = ["48px"]; // checkbox
+        const cols = [];
+        if (canSelect) {
+            cols.push("48px"); // checkbox
+        }
         visibleColumns.forEach((key: string) => {
             if (COLUMN_WIDTHS[key]) {
                 cols.push(COLUMN_WIDTHS[key]);
@@ -172,7 +193,7 @@ export default function CategoryTable({
         });
         cols.push("56px"); // actions
         return cols.join(" ");
-    }, [visibleColumns]);
+    }, [visibleColumns, canSelect]);
 
     const total = categories.length;
 
@@ -253,13 +274,15 @@ export default function CategoryTable({
                         style={{ gridTemplateColumns: computedGridCols }}
                         className="hidden md:grid items-center gap-2 bg-[#60646B]/10 rounded-t-[10px] px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none"
                     >
-                        <div>
-                            <Checkbox
-                                checked={allChecked}
-                                onCheckedChange={toggleAll}
-                                data-testid="team-select-all"
-                            />
-                        </div>
+                        {canSelect && (
+                            <div>
+                                <Checkbox
+                                    checked={allChecked}
+                                    onCheckedChange={toggleAll}
+                                    data-testid="team-select-all"
+                                />
+                            </div>
+                        )}
                         {visibleColumns.includes("name") && (
                             <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("name")}>
                                 Team Name <SortIcon columnKey="name" />
@@ -292,7 +315,7 @@ export default function CategoryTable({
                         )}
                         <div />
                     </div>
-
+ 
                     {/* Rows */}
                     <div className="flex-1 overflow-y-auto hover-scrollbar min-h-0">
                         {pageRows.map((cat) => (
@@ -306,15 +329,28 @@ export default function CategoryTable({
                                 )}
                                 data-testid={`team-row-${cat.id}`}
                             >
-                                <div className="absolute top-5 right-5 md:static md:block" onClick={(e) => e.stopPropagation()}>
-                                    <div className="hidden md:block">
-                                        <Checkbox
-                                            checked={selected.has(cat.id)}
-                                            onCheckedChange={() => toggleOne(cat.id)}
-                                            data-testid={`team-select-row-${cat.id}`}
-                                        />
+                                {canSelect ? (
+                                    <div className="absolute top-5 right-5 md:static md:block" onClick={(e) => e.stopPropagation()}>
+                                        <div className="hidden md:block">
+                                            <Checkbox
+                                                checked={selected.has(cat.id)}
+                                                onCheckedChange={() => toggleOne(cat.id)}
+                                                data-testid={`team-select-row-${cat.id}`}
+                                            />
+                                        </div>
+                                        <div className="md:hidden">
+                                            <RowMenu
+                                                category={cat}
+                                                onDelete={(id) => setConfirmDeleteId(id)}
+                                                onEdit={onEdit}
+                                                onView={onView}
+                                                onAddEmployees={onAddEmployees}
+                                                onArchive={onArchive}
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="md:hidden">
+                                ) : (
+                                    <div className="absolute top-5 right-5 md:hidden" onClick={(e) => e.stopPropagation()}>
                                         <RowMenu
                                             category={cat}
                                             onDelete={(id) => setConfirmDeleteId(id)}
@@ -324,17 +360,19 @@ export default function CategoryTable({
                                             onArchive={onArchive}
                                         />
                                     </div>
-                                </div>
-
+                                )}
+ 
                                 {visibleColumns.includes("name") && (
                                     <div className="truncate min-w-0 w-full md:w-auto flex items-center gap-3">
-                                        <div className="md:hidden">
-                                            <Checkbox
-                                                checked={selected.has(cat.id)}
-                                                onCheckedChange={() => toggleOne(cat.id)}
-                                                data-testid={`team-select-row-mobile-${cat.id}`}
-                                            />
-                                        </div>
+                                        {canSelect && (
+                                            <div className="md:hidden">
+                                                <Checkbox
+                                                    checked={selected.has(cat.id)}
+                                                    onCheckedChange={() => toggleOne(cat.id)}
+                                                    data-testid={`team-select-row-mobile-${cat.id}`}
+                                                />
+                                            </div>
+                                        )}
                                         <div className="truncate">
                                             <TooltipProvider delayDuration={200}>
                                                 <Tooltip>

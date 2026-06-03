@@ -4,9 +4,11 @@ import { lazy, Suspense } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import LandingPage from "@/pages/LandingPage";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import PermissionRoute from "@/components/auth/PermissionRoute";
 import AuthInitializer from "@/components/auth/AuthInitializer";
 import { Toaster } from "@/components/ui/sonner";
 import { useTokenExpiration } from "@/hooks/useTokenExpiration";
+import { PERMISSIONS } from "@/utils/rbacConfig";
 import type { JSX } from "react";
 
 // ✅ CODE SPLITTING: Lazy load all route pages
@@ -20,6 +22,7 @@ const SubscriptionPage = lazy(() => import("@/pages/SubscriptionPage"));
 const BillingPage = lazy(() => import("@/pages/PlaceholderPage").then(m => ({ default: () => m.default({ title: "Billing" }) })));
 const ChatPage = lazy(() => import("@/pages/NewChatPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
+const InviteAcceptancePage = lazy(() => import("@/pages/InviteAcceptancePage"));
 
 /**
  * Loading fallback component shown while chunks are being loaded
@@ -55,6 +58,16 @@ function AppRoutes(): JSX.Element {
                 }
             />
 
+            {/* Public Invite Acceptance (no auth required) */}
+            <Route
+                path="/invite/accept"
+                element={
+                    <Suspense fallback={<PageLoader />}>
+                        <InviteAcceptancePage />
+                    </Suspense>
+                }
+            />
+
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
@@ -71,7 +84,9 @@ function AppRoutes(): JSX.Element {
                         path="/employees"
                         element={
                             <Suspense fallback={<PageLoader />}>
-                                <EmployeesPage />
+                                <PermissionRoute permission={PERMISSIONS.EMPLOYEE_VIEW}>
+                                    <EmployeesPage />
+                                </PermissionRoute>
                             </Suspense>
                         }
                     />
@@ -80,7 +95,9 @@ function AppRoutes(): JSX.Element {
                         path="/teams"
                         element={
                             <Suspense fallback={<PageLoader />}>
-                                <CategoryPage />
+                                <PermissionRoute permission={PERMISSIONS.GROUP_VIEW}>
+                                    <CategoryPage />
+                                </PermissionRoute>
                             </Suspense>
                         }
                     />
@@ -89,7 +106,9 @@ function AppRoutes(): JSX.Element {
                         path="/knowledge-base"
                         element={
                             <Suspense fallback={<PageLoader />}>
-                                <KnowledgeBasePage />
+                                <PermissionRoute permission={PERMISSIONS.FOLDER_VIEW}>
+                                    <KnowledgeBasePage />
+                                </PermissionRoute>
                             </Suspense>
                         }
                     />
@@ -98,7 +117,9 @@ function AppRoutes(): JSX.Element {
                         path="/integration"
                         element={
                             <Suspense fallback={<PageLoader />}>
-                                <IntegrationPage />
+                                <PermissionRoute permission={PERMISSIONS.INTEGRATION_VIEW}>
+                                    <IntegrationPage />
+                                </PermissionRoute>
                             </Suspense>
                         }
                     />
@@ -107,7 +128,9 @@ function AppRoutes(): JSX.Element {
                         path="/subscription"
                         element={
                             <Suspense fallback={<PageLoader />}>
-                                <SubscriptionPage />
+                                <PermissionRoute permission={PERMISSIONS.BILLING_VIEW}>
+                                    <SubscriptionPage />
+                                </PermissionRoute>
                             </Suspense>
                         }
                     />
@@ -116,7 +139,9 @@ function AppRoutes(): JSX.Element {
                         path="/billing"
                         element={
                             <Suspense fallback={<PageLoader />}>
-                                <BillingPage />
+                                <PermissionRoute permission={PERMISSIONS.BILLING_VIEW}>
+                                    <BillingPage />
+                                </PermissionRoute>
                             </Suspense>
                         }
                     />

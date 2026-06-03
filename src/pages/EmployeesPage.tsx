@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
-import { Plus, Download, Upload, RefreshCw, Search, X, Trash2, Mail } from "lucide-react";
+import { Plus, RefreshCw, Search, X, Trash2, Mail } from "lucide-react";
 import { PageActionButton } from "@/components/ui/page-action-button";
+import { PermissionGate } from "@/components/PermissionGate";
+import { PERMISSIONS } from "@/utils/rbacConfig";
 import {
     Tooltip,
     TooltipContent,
@@ -445,319 +447,339 @@ export default function EmployeesPage() {
     };
 
     return (
-        <div className="p-4 sm:p-8 flex flex-col h-full w-full bg-transparent overflow-hidden" data-testid="employees-page" data-tour="employees-page">
-            {/* Header - Fixed */}
-            <div className="shrink-0 flex flex-col gap-1">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-                            Employees
-                        </h1>
-
-                        {!isLoading && (
-                            <Badge className="rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
-                                {employees.length}
-                            </Badge>
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" className="w-full sm:w-auto border-[#E7E7E0] bg-[#FEFFFA] hover:bg-[#F5F5F0] dark:border-zinc-700 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold" onClick={fetchEmployees} disabled={isLoading}>
-                            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-                            Refresh
-                        </Button>
-                    </div>
+        <PermissionGate
+            permission={PERMISSIONS.EMPLOYEE_EDIT}
+            fallback={
+                <div className="p-4 sm:p-8 flex flex-col h-full w-full bg-transparent overflow-hidden">
+                    <UnifiedEmptyState
+                        title="Access Denied"
+                        description="You don't have permission to view the employees page. Only managers and above can access this page."
+                        testId="employees-access-denied"
+                    />
                 </div>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    Manage your team members, their roles, access permissions, and track their activity.
-                </p>
-            </div>
+            }
+        >
+            <div className="p-4 sm:p-8 flex flex-col h-full w-full bg-transparent overflow-hidden" data-testid="employees-page" data-tour="employees-page">
+                {/* Header - Fixed */}
+                <div className="shrink-0 flex flex-col gap-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                                Employees
+                            </h1>
 
-            {/* Actions - Fixed */}
-            <div className="mt-6 shrink-0 flex flex-wrap gap-3">
-                <PageActionButton
-                    data-tour="add-employee-btn"
-                    icon={<Plus className="h-3.5 w-3.5" />}
-                    label="Add"
-                    onClick={() => setDrawerOpen(true)}
-                />
+                            {!isLoading && (
+                                <Badge className="rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                    {employees.length}
+                                </Badge>
+                            )}
+                        </div>
 
-                <TooltipProvider delayDuration={200}>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <span>
-                                <PageActionButton
-                                    icon={<Download className="h-3.5 w-3.5" />}
-                                    label="Import"
-                                    disabled
-                                />
-                            </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">
-                            Coming soon
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider delayDuration={200}>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <span>
-                                <PageActionButton
-                                    icon={<Upload className="h-3.5 w-3.5" />}
-                                    label="Export"
-                                    disabled
-                                />
-                            </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">
-                            Coming soon
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            </div>
-
-            {/* Search - Fixed */}
-            <div className="relative mt-5 shrink-0">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
-                <Input
-                    value={search}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setSearch(e.target.value)
-                    }
-                    placeholder="Search employees by name or email..."
-                    className="h-10 rounded-lg border-[#E7E7E0] dark:border-zinc-700 bg-[#FEFFFA] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 pr-10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-blue-500/20"
-                />
-                {search && (
-                    <button
-                        type="button"
-                        onClick={() => setSearch("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                        aria-label="Clear search"
-                    >
-                        <X className="h-4 w-4" />
-                    </button>
-                )}
-            </div>
-
-            {/* Filters or Batch Actions */}
-            {selected.size > 0 ? (
-                <div className="mt-4 shrink-0 flex items-center justify-between gap-3 bg-transparent select-none">
-                    <div className="flex items-center gap-3">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={isBatchProcessing}
-                            onClick={() => setConfirmBatchDelete(true)}
-                            className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-red-650 hover:text-red-700 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-sm font-semibold rounded-lg shadow-sm"
-                        >
-                            <Trash2 className="h-4 w-4 mr-2 text-red-500" />
-                            Delete
-                        </Button>
-                        {allPending && (
-                            <>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={isBatchProcessing}
-                                    onClick={handleBatchResend}
-                                    className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 text-sm font-semibold rounded-lg shadow-sm"
-                                >
-                                    <Mail className="h-4 w-4 mr-2 text-zinc-500" />
-                                    Resend Invite
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={isBatchProcessing}
-                                    onClick={() => setConfirmBatchRevoke(true)}
-                                    className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-red-650 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-sm font-semibold rounded-lg shadow-sm"
-                                >
-                                    <X className="h-4 w-4 mr-2 text-zinc-500" />
-                                    Revoke
-                                </Button>
-                            </>
-                        )}
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" className="w-full sm:w-auto border-[#E7E7E0] bg-[#FEFFFA] hover:bg-[#F5F5F0] dark:border-zinc-700 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold" onClick={fetchEmployees} disabled={isLoading}>
+                                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+                                Refresh
+                            </Button>
+                        </div>
                     </div>
-                    {/* Right side selection badge */}
-                    <div className="flex items-center gap-2 px-3 py-2 border border-[#E7E7E0] dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900 rounded-lg text-sm text-zinc-650 dark:text-zinc-300 font-medium shadow-xs">
-                        <span>{selected.size} selected</span>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                        Manage your team members, their roles, access permissions, and track their activity.
+                    </p>
+                </div>
+
+                {/* Actions - Fixed */}
+                <div className="mt-6 shrink-0 flex flex-wrap gap-3">
+                    <PermissionGate
+                        permission={PERMISSIONS.EMPLOYEE_INVITE}
+                        fallback={
+                            <TooltipProvider delayDuration={200}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span>
+                                            <PageActionButton
+                                                icon={<Plus className="h-3.5 w-3.5" />}
+                                                label="Add"
+                                                disabled
+                                            />
+                                        </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="text-xs">
+                                        You don't have permission to invite users
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        }
+                    >
+                        <PageActionButton
+                            data-tour="add-employee-btn"
+                            icon={<Plus className="h-3.5 w-3.5" />}
+                            label="Add"
+                            onClick={() => setDrawerOpen(true)}
+                        />
+                    </PermissionGate>
+
+
+                </div>
+
+                {/* Search - Fixed */}
+                <div className="relative mt-5 shrink-0">
+                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+                    <Input
+                        value={search}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            setSearch(e.target.value)
+                        }
+                        placeholder="Search employees by name or email..."
+                        className="h-10 rounded-lg border-[#E7E7E0] dark:border-zinc-700 bg-[#FEFFFA] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 pr-10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-blue-500/20"
+                    />
+                    {search && (
                         <button
                             type="button"
-                            onClick={() => setSelected(new Set())}
-                            className="text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200 transition-colors ml-1 cursor-pointer"
-                            aria-label="Clear selection"
+                            onClick={() => setSearch("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                            aria-label="Clear search"
                         >
                             <X className="h-4 w-4" />
                         </button>
-                    </div>
+                    )}
                 </div>
-            ) : (
-                <div data-tour="employee-filters" className="mt-4 shrink-0 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap gap-2">
-                        <FilterDropdown
-                            label="Status"
-                            value={filters.status}
-                            options={uniqueStatuses.length > 0 ? uniqueStatuses : ["Online", "Away", "Offline"]}
-                            onChange={(v: any) =>
-                                setFilters((f) => ({ ...f, status: v }))
-                            }
-                        />
 
-                        <FilterDropdown
-                            label="Role"
-                            value={filters.role}
-                            options={uniqueRoles.length > 0 ? uniqueRoles : ["Super Admin", "Admin", "Editor", "Member"]}
-                            onChange={(v: string) =>
-                                setFilters((f) => ({ ...f, role: v }))
-                            }
-                        />
+                {/* Filters or Batch Actions */}
+                {selected.size > 0 ? (
+                    <div className="mt-4 shrink-0 flex items-center justify-between gap-3 bg-transparent select-none">
+                        <div className="flex items-center gap-3">
+                            <PermissionGate
+                                permission={PERMISSIONS.EMPLOYEE_DELETE}
+                                fallback={null}
+                            >
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isBatchProcessing}
+                                    onClick={() => setConfirmBatchDelete(true)}
+                                    className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-red-650 hover:text-red-700 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-sm font-semibold rounded-lg shadow-sm"
+                                >
+                                    <Trash2 className="h-4 w-4 mr-2 text-red-500" />
+                                    Delete
+                                </Button>
+                            </PermissionGate>
 
-                        <FilterDropdown
-                            label="Team"
-                            value={filters.category}
-                            options={teams.length > 0 ? teams : (uniqueCategories.length > 0 ? uniqueCategories : ["Engineering", "Marketing", "Sales", "HR"])}
-                            onChange={(v: string) =>
-                                setFilters((f) => ({ ...f, category: v }))
-                            }
-                        />
+                            {allPending && (
+                                <>
+                                    <PermissionGate
+                                        permission={PERMISSIONS.INVITE_RESEND}
+                                        fallback={null}
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={isBatchProcessing}
+                                            onClick={handleBatchResend}
+                                            className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 text-sm font-semibold rounded-lg shadow-sm"
+                                        >
+                                            <Mail className="h-4 w-4 mr-2 text-zinc-500" />
+                                            Resend Invite
+                                        </Button>
+                                    </PermissionGate>
 
-                        <FilterDropdown
-                            label="Creator"
-                            value={filters.creator}
-                            options={uniqueCreators.length > 0 ? uniqueCreators : ["Admin"]}
-                            onChange={(v: string) =>
-                                setFilters((f) => ({ ...f, creator: v }))
-                            }
-                        />
+                                    <PermissionGate
+                                        permission={PERMISSIONS.INVITE_REVOKE}
+                                        fallback={null}
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={isBatchProcessing}
+                                            onClick={() => setConfirmBatchRevoke(true)}
+                                            className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-red-650 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-sm font-semibold rounded-lg shadow-sm"
+                                        >
+                                            <X className="h-4 w-4 mr-2 text-zinc-500" />
+                                            Revoke
+                                        </Button>
+                                    </PermissionGate>
+                                </>
+                            )}
+                        </div>
+                        {/* Right side selection badge */}
+                        <div className="flex items-center gap-2 px-3 py-2 border border-[#E7E7E0] dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900 rounded-lg text-sm text-zinc-650 dark:text-zinc-300 font-medium shadow-xs">
+                            <span>{selected.size} selected</span>
+                            <button
+                                type="button"
+                                onClick={() => setSelected(new Set())}
+                                className="text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200 transition-colors ml-1 cursor-pointer"
+                                aria-label="Clear selection"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
                     </div>
-                    <ColumnSettings
-                        columns={EMPLOYEE_COLUMNS}
-                        visibleColumns={visibleColumns}
-                        onApply={setVisibleColumns}
-                        defaultColumns={DEFAULT_EMPLOYEE_COLUMNS}
-                    />
-                </div>
-            )}
-
-            {/* Body - Pinned Layout */}
-            <div className="mt-4 flex-1 flex flex-col min-h-0">
-                {isLoading ? (
-                    <SkeletonTable
-                        gridCols="[2.5fr_1.5fr_1.5fr_1.5fr_56px]"
-                        headers={[
-                            "Employee Name",
-                            "No. Of KB Files",
-                            "Simple Interaction",
-                            "Complex Interaction",
-                            "",
-                        ]}
-                        columns={[
-                            {
-                                width: "w-40",
-                                render: () => (
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-9 w-9 rounded-full bg-zinc-100 dark:bg-zinc-800 animate-pulse shrink-0" />
-                                        <div className="space-y-1.5 flex-1">
-                                            <div className="h-4 w-32 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" />
-                                            <div className="h-3 w-20 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" />
-                                        </div>
-                                    </div>
-                                ),
-                            },
-                            { width: "w-8" },
-                            { width: "w-12" },
-                            { width: "w-12" },
-                            { width: "w-8", render: () => <div className="h-8 w-8 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" /> },
-                        ]}
-                    />
-                ) : isEmpty ? (
-                    <EmptyState />
-                ) : isNoResults ? (
-                    <UnifiedEmptyState
-                        title={search ? `No results found for "${search}"` : "No results found"}
-                        description="Try adjusting your filters or search terms."
-                        testId="employees-search-empty-state"
-                    />
                 ) : (
-                    <EmployeeTable
-                        employees={filteredEmployees}
-                        onDelete={handleDeleteEmployee}
-                        onView={(emp) => {
-                            setSelectedEmployee(emp);
-                            setDetailDrawerOpen(true);
-                        }}
-                        onResendInvite={handleResendInvite}
-                        onRevokeInvite={handleRevokeInvite}
-                        currentUserEmail={user?.email ?? undefined}
-                        selected={selected}
-                        setSelected={setSelected}
-                        visibleColumns={visibleColumns}
-                    />
+                    <div data-tour="employee-filters" className="mt-4 shrink-0 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap gap-2">
+                            <FilterDropdown
+                                label="Status"
+                                value={filters.status}
+                                options={uniqueStatuses.length > 0 ? uniqueStatuses : ["Online", "Away", "Offline"]}
+                                onChange={(v: any) =>
+                                    setFilters((f) => ({ ...f, status: v }))
+                                }
+                            />
+
+                            <FilterDropdown
+                                label="Role"
+                                value={filters.role}
+                                options={uniqueRoles.length > 0 ? uniqueRoles : ["Super Admin", "Admin", "Editor", "Member"]}
+                                onChange={(v: string) =>
+                                    setFilters((f) => ({ ...f, role: v }))
+                                }
+                            />
+
+                            <FilterDropdown
+                                label="Team"
+                                value={filters.category}
+                                options={teams.length > 0 ? teams : (uniqueCategories.length > 0 ? uniqueCategories : ["Engineering", "Marketing", "Sales", "HR"])}
+                                onChange={(v: string) =>
+                                    setFilters((f) => ({ ...f, category: v }))
+                                }
+                            />
+
+                            <FilterDropdown
+                                label="Creator"
+                                value={filters.creator}
+                                options={uniqueCreators.length > 0 ? uniqueCreators : ["Admin"]}
+                                onChange={(v: string) =>
+                                    setFilters((f) => ({ ...f, creator: v }))
+                                }
+                            />
+                        </div>
+                        <ColumnSettings
+                            columns={EMPLOYEE_COLUMNS}
+                            visibleColumns={visibleColumns}
+                            onApply={setVisibleColumns}
+                            defaultColumns={DEFAULT_EMPLOYEE_COLUMNS}
+                        />
+                    </div>
                 )}
+
+                {/* Body - Pinned Layout */}
+                <div className="mt-4 flex-1 flex flex-col min-h-0">
+                    {isLoading ? (
+                        <SkeletonTable
+                            gridCols="[2.5fr_1.5fr_1.5fr_1.5fr_56px]"
+                            headers={[
+                                "Employee Name",
+                                "No. Of KB Files",
+                                "Simple Interaction",
+                                "Complex Interaction",
+                                "",
+                            ]}
+                            columns={[
+                                {
+                                    width: "w-40",
+                                    render: () => (
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-9 w-9 rounded-full bg-zinc-100 dark:bg-zinc-800 animate-pulse shrink-0" />
+                                            <div className="space-y-1.5 flex-1">
+                                                <div className="h-4 w-32 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" />
+                                                <div className="h-3 w-20 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" />
+                                            </div>
+                                        </div>
+                                    ),
+                                },
+                                { width: "w-8" },
+                                { width: "w-12" },
+                                { width: "w-12" },
+                                { width: "w-8", render: () => <div className="h-8 w-8 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" /> },
+                            ]}
+                        />
+                    ) : isEmpty ? (
+                        <EmptyState />
+                    ) : isNoResults ? (
+                        <UnifiedEmptyState
+                            title={search ? `No results found for "${search}"` : "No results found"}
+                            description="Try adjusting your filters or search terms."
+                            testId="employees-search-empty-state"
+                        />
+                    ) : (
+                        <EmployeeTable
+                            employees={filteredEmployees}
+                            onDelete={handleDeleteEmployee}
+                            onView={(emp) => {
+                                setSelectedEmployee(emp);
+                                setDetailDrawerOpen(true);
+                            }}
+                            onResendInvite={handleResendInvite}
+                            onRevokeInvite={handleRevokeInvite}
+                            currentUserEmail={user?.email ?? undefined}
+                            selected={selected}
+                            setSelected={setSelected}
+                            visibleColumns={visibleColumns}
+                        />
+                    )}
+                </div>
+
+                <AddEmployeeDrawer
+                    open={drawerOpen}
+                    onOpenChange={setDrawerOpen}
+                    onSubmit={handleAddEmployee}
+                />
+
+                <EmployeeDetailsDrawer
+                    open={detailDrawerOpen}
+                    onOpenChange={setDetailDrawerOpen}
+                    employee={selectedEmployee}
+                />
+
+                {/* Batch Delete Confirmation Dialog */}
+                <Dialog open={confirmBatchDelete} onOpenChange={(open) => !open && setConfirmBatchDelete(false)}>
+                    <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md border border-zinc-150 dark:border-zinc-800 shadow-xl p-6">
+                        <DialogHeader>
+                            <DialogTitle className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">Delete Selected Employees</DialogTitle>
+                            <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-2">
+                                Are you sure you want to delete the {selected.size} selected employees? This action cannot be undone and will permanently remove their access or revoke their invites.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="mt-6 gap-2">
+                            <Button variant="outline" onClick={() => setConfirmBatchDelete(false)} disabled={isBatchProcessing} className="rounded-lg text-zinc-700 dark:text-zinc-300">
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                className="bg-red-650 hover:bg-red-700 text-white rounded-lg"
+                                disabled={isBatchProcessing}
+                                onClick={handleBatchDelete}
+                            >
+                                {isBatchProcessing ? "Deleting..." : "Confirm Delete"}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Batch Revoke Confirmation Dialog */}
+                <Dialog open={confirmBatchRevoke} onOpenChange={(open) => !open && setConfirmBatchRevoke(false)}>
+                    <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md border border-zinc-150 dark:border-zinc-800 shadow-xl p-6">
+                        <DialogHeader>
+                            <DialogTitle className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">Revoke Selected Invitations</DialogTitle>
+                            <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-2">
+                                Are you sure you want to revoke invitations for the {selected.size} selected pending invitees? The invite links will no longer be valid.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="mt-6 gap-2">
+                            <Button variant="outline" onClick={() => setConfirmBatchRevoke(false)} disabled={isBatchProcessing} className="rounded-lg text-zinc-700 dark:text-zinc-300">
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                className="bg-red-650 hover:bg-red-700 text-white rounded-lg"
+                                disabled={isBatchProcessing}
+                                onClick={handleBatchRevoke}
+                            >
+                                {isBatchProcessing ? "Revoking..." : "Confirm Revoke"}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
-
-            <AddEmployeeDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                onSubmit={handleAddEmployee}
-            />
-
-            <EmployeeDetailsDrawer
-                open={detailDrawerOpen}
-                onOpenChange={setDetailDrawerOpen}
-                employee={selectedEmployee}
-            />
-
-            {/* Batch Delete Confirmation Dialog */}
-            <Dialog open={confirmBatchDelete} onOpenChange={(open) => !open && setConfirmBatchDelete(false)}>
-                <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md border border-zinc-150 dark:border-zinc-800 shadow-xl p-6">
-                    <DialogHeader>
-                        <DialogTitle className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">Delete Selected Employees</DialogTitle>
-                        <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-2">
-                            Are you sure you want to delete the {selected.size} selected employees? This action cannot be undone and will permanently remove their access or revoke their invites.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter className="mt-6 gap-2">
-                        <Button variant="outline" onClick={() => setConfirmBatchDelete(false)} disabled={isBatchProcessing} className="rounded-lg text-zinc-700 dark:text-zinc-300">
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            className="bg-red-650 hover:bg-red-700 text-white rounded-lg"
-                            disabled={isBatchProcessing}
-                            onClick={handleBatchDelete}
-                        >
-                            {isBatchProcessing ? "Deleting..." : "Confirm Delete"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Batch Revoke Confirmation Dialog */}
-            <Dialog open={confirmBatchRevoke} onOpenChange={(open) => !open && setConfirmBatchRevoke(false)}>
-                <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md border border-zinc-150 dark:border-zinc-800 shadow-xl p-6">
-                    <DialogHeader>
-                        <DialogTitle className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">Revoke Selected Invitations</DialogTitle>
-                        <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-2">
-                            Are you sure you want to revoke invitations for the {selected.size} selected pending invitees? The invite links will no longer be valid.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter className="mt-6 gap-2">
-                        <Button variant="outline" onClick={() => setConfirmBatchRevoke(false)} disabled={isBatchProcessing} className="rounded-lg text-zinc-700 dark:text-zinc-300">
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            className="bg-red-650 hover:bg-red-700 text-white rounded-lg"
-                            disabled={isBatchProcessing}
-                            onClick={handleBatchRevoke}
-                        >
-                            {isBatchProcessing ? "Revoking..." : "Confirm Revoke"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
+        </PermissionGate>
     );
 }

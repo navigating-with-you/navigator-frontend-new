@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-import { createOrganization } from "@/lib/api";
+import { createOrganization, uploadLogo } from "@/lib/api";
 import { toast } from "sonner";
 import { Building, Loader2, Sun, Moon, Image as ImageIcon } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -55,7 +55,7 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const [stateProvince, setStateProvince] = useState("");
     const [country, setCountry] = useState("US");
     const [postalCode, setPostalCode] = useState("");
-    const [, setLogoFile] = useState<File | null>(null);
+    const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,7 +67,6 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 toast.error("File size exceeds 5MB limit");
                 return;
             }
-            toast.warning("Logo upload is not yet supported.");
             setLogoFile(file);
             setLogoPreview(URL.createObjectURL(file));
         }
@@ -92,8 +91,20 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 return;
             }
 
+            let uploadedLogoUrl: string | undefined = undefined;
+            if (logoFile) {
+                try {
+                    const uploadRes = await uploadLogo(logoFile, token);
+                    uploadedLogoUrl = uploadRes.s3_key;
+                } catch (uploadErr: any) {
+                    console.error("Logo upload failed:", uploadErr);
+                    toast.error("Failed to upload organization logo, but continuing creation...");
+                }
+            }
+
             const response = await createOrganization({
                 name: orgName,
+                logo_url: uploadedLogoUrl,
                 billing_address: {
                     line1: address,
                     city: city,

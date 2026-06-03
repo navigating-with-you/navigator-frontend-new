@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Settings } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { PermissionGate } from "@/components/PermissionGate";
+import { PERMISSIONS } from "@/utils/rbacConfig";
 
 type Integration = {
     id: string | number;
@@ -51,14 +53,19 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({ integration }) => {
 
             {/* Footer: settings + status + toggle */}
             <div className="mt-4 flex items-center justify-between w-full gap-2">
-                <button
-                    type="button"
-                    aria-label={`Settings for ${name}`}
-                    data-testid={`integration-settings-${id}`}
-                    className="rounded-md p-1.5 text-neutral-400 dark:text-zinc-500 transition-colors hover:bg-neutral-100 dark:hover:bg-zinc-700 hover:text-neutral-700 dark:hover:text-zinc-300 focus:outline-none shrink-0"
+                <PermissionGate
+                    permission={PERMISSIONS.INTEGRATION_CONNECT}
+                    fallback={<div className="w-10 h-10" />}
                 >
-                    <Settings className="h-[18px] w-[18px]" />
-                </button>
+                    <button
+                        type="button"
+                        aria-label={`Settings for ${name}`}
+                        data-testid={`integration-settings-${id}`}
+                        className="rounded-md p-1.5 text-neutral-400 dark:text-zinc-500 transition-colors hover:bg-neutral-100 dark:hover:bg-zinc-700 hover:text-neutral-700 dark:hover:text-zinc-300 focus:outline-none shrink-0"
+                    >
+                        <Settings className="h-[18px] w-[18px]" />
+                    </button>
+                </PermissionGate>
 
                 <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
                     <span
@@ -68,12 +75,17 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({ integration }) => {
                         {enabled ? "Connected" : "Disconnected"}
                     </span>
 
-                    <Switch
-                        checked={enabled}
-                        onCheckedChange={setEnabled}
-                        data-testid={`integration-toggle-${id}`}
-                        className="data-[state=checked]:bg-blue-600 scale-90 sm:scale-100"
-                    />
+                    <PermissionGate
+                        permissions={[PERMISSIONS.INTEGRATION_CONNECT, PERMISSIONS.INTEGRATION_DISCONNECT]}
+                        fallback={<div className="w-8 h-5" />}
+                    >
+                        <Switch
+                            checked={enabled}
+                            onCheckedChange={setEnabled}
+                            data-testid={`integration-toggle-${id}`}
+                            className="data-[state=checked]:bg-blue-600 scale-90 sm:scale-100"
+                        />
+                    </PermissionGate>
                 </div>
             </div>
         </div>

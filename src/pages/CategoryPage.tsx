@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { Plus, Download, Upload, RefreshCw, Search, FolderClosed, X, Trash2, Users, FileText } from "lucide-react";
+import { Plus, RefreshCw, Search, FolderClosed, X, Trash2, Users, FileText } from "lucide-react";
 import { PageActionButton } from "@/components/ui/page-action-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { cn } from "@/lib/utils";
+import { PermissionGate } from "@/components/PermissionGate";
+import { PERMISSIONS } from "@/utils/rbacConfig";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import {
     Tooltip,
@@ -39,6 +42,8 @@ const TEAM_COLUMNS = [
 ];
 
 const DEFAULT_TEAM_COLUMNS = ["name", "managerName", "kbCount", "employeeCount"];
+const MEMBER_TEAM_COLUMNS = ["name", "kbCount"];
+
 import CategoryDrawer from "@/components/category/CategoryDrawer";
 import FilterDropdown from "@/components/FilterDropdown";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
@@ -80,6 +85,8 @@ import {
 
 export default function CategoryPage() {
     const { getToken, isAuthenticated } = useKindeAuth();
+    const { role, isLoading: isPermissionsLoading } = usePermissions();
+    const isMember = role === "member";
 
     const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
         const saved = localStorage.getItem("team_visible_columns");
@@ -140,16 +147,21 @@ export default function CategoryPage() {
             const token = await getToken();
             if (!token) return;
 
-            // Fetch employees and roles in parallel
-            const [employeesResult, rolesResult, groupsResult] = await Promise.allSettled([
-                listEmployees(token),
-                listRoles(token),
-                listGroups(token),
-            ]);
+            // Members don't have employee:view permission — skip employee/role fetches
+            let employeesData: any = [];
+            let rolesData: any = [];
+            const groupsResult = await listGroups(token).catch(() => null);
+            const groupsData = groupsResult ?? [];
 
-            const employeesData = employeesResult.status === "fulfilled" ? employeesResult.value : [];
-            const rolesData = rolesResult.status === "fulfilled" ? rolesResult.value : [];
-            const groupsData = groupsResult.status === "fulfilled" ? groupsResult.value : [];
+            if (!isMember) {
+                const [empResult, rolesResult] = await Promise.allSettled([
+                    listEmployees(token),
+                    listRoles(token),
+                ]);
+                employeesData = empResult.status === "fulfilled" ? empResult.value : [];
+                rolesData = rolesResult.status === "fulfilled" ? rolesResult.value : [];
+            }
+
 
             const currentEmployees = Array.isArray(employeesData)
                 ? employeesData
@@ -160,12 +172,15 @@ export default function CategoryPage() {
             const groupsList = Array.isArray(groupsData) ? groupsData : (groupsData?.groups || []);
 
             // Map employees for display
-            const mappedEmployees = currentEmployees.map((emp: any) => ({
-                id: emp.id,
-                name: emp.display_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || emp.name || emp.email?.split("@")[0] || "Unknown",
-                role: emp.role?.name || "Member",
-                avatar: emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=random`
-            }));
+            const mappedEmployees = currentEmployees.map((emp: any) => {
+                const name = emp.display_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || emp.name || emp.email?.split("@")[0] || "Unknown";
+                return {
+                    id: emp.id,
+                    name,
+                    role: emp.role?.name || "Member",
+                    avatar: emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+                };
+            });
             setEmployeesList(mappedEmployees);
 
             // Load categories with member details
@@ -268,14 +283,14 @@ export default function CategoryPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [isAuthenticated, getToken]);
+    }, [isAuthenticated, getToken, isMember]);
 
     // Load categories on mount and when dependencies change
     useEffect(() => {
-        if (isAuthenticated) {
+        if (isAuthenticated && !isPermissionsLoading) {
             loadCategories();
         }
-    }, [isAuthenticated, loadCategories]);
+    }, [isAuthenticated, isPermissionsLoading, loadCategories]);
 
     // Fetch all KB files from every folder so the drawer file-pool is complete
     const loadAllKBFiles = useCallback(async () => {
@@ -414,7 +429,7 @@ export default function CategoryPage() {
                 const token = await getToken();
                 if (token) {
                     const exists = categories.some((c) => c.id === newCat.id);
-                    
+
                     const formatFileSize = (bytes: number): string => {
                         if (!bytes) return "0 B";
                         const k = 1024;
@@ -784,110 +799,87 @@ export default function CategoryPage() {
     return (
         <div className="p-4 sm:p-8 flex flex-col h-full w-full bg-transparent dark:bg-zinc-950/20 overflow-hidden" data-testid="teams-page" data-tour="teams-page">
 
-                {/* Header */}
-                <div className="shrink-0 flex flex-col gap-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-2.5">
-                            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-                                Teams
-                            </h1>
-                            {!isLoading && (
-                                <Badge className="rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400 animate-fade-in">
-                                    {categories.length}
-                                </Badge>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                className="w-full sm:w-auto border-[#E7E7E0] bg-[#FEFFFA] hover:bg-[#F5F5F0] dark:border-zinc-700 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold"
-                                onClick={handleRefresh}
-                                disabled={isLoading}
-                            >
-                                <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-                                Refresh
-                            </Button>
-                        </div>
+            {/* Header */}
+            <div className="shrink-0 flex flex-col gap-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-2.5">
+                        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                            Teams
+                        </h1>
+                        {!isLoading && (
+                            <Badge className="rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400 animate-fade-in">
+                                {categories.length}
+                            </Badge>
+                        )}
                     </div>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                        Group employees and select which folders from the Knowledge Base they can access.
-                    </p>
-                </div>
 
-                {/* Toolbar Buttons */}
-                <div className="mt-6 shrink-0 flex flex-wrap gap-3">
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            className="w-full sm:w-auto border-[#E7E7E0] bg-[#FEFFFA] hover:bg-[#F5F5F0] dark:border-zinc-700 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold"
+                            onClick={handleRefresh}
+                            disabled={isLoading}
+                        >
+                            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                            Refresh
+                        </Button>
+                    </div>
+                </div>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    Group employees and select which folders from the Knowledge Base they can access.
+                </p>
+            </div>
+
+            {/* Toolbar Buttons */}
+            <div className="mt-6 shrink-0 flex flex-wrap gap-3">
+                <PermissionGate
+                    permission={PERMISSIONS.GROUP_CREATE}
+                    fallback={null}
+                >
                     <PageActionButton
                         data-tour="add-team-btn"
                         icon={<Plus className="h-3.5 w-3.5" />}
                         label="Add"
                         onClick={triggerAddMode}
                     />
+                </PermissionGate>
 
-                    <TooltipProvider delayDuration={200}>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <span>
-                                    <PageActionButton
-                                        icon={<Download className="h-3.5 w-3.5" />}
-                                        label="Import"
-                                        disabled
-                                    />
-                                </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs">
-                                Coming soon
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
 
-                    <TooltipProvider delayDuration={200}>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <span>
-                                    <PageActionButton
-                                        icon={<Upload className="h-3.5 w-3.5" />}
-                                        label="Export"
-                                        disabled
-                                    />
-                                </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs">
-                                Coming soon
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                </div>
+            </div>
 
-                {/* Search Bar */}
-                <div className="relative mt-5 shrink-0 select-none">
-                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
-                    <Input
-                        value={search}
-                        onChange={(e) => {
-                            setSearch(e.target.value);
-                            setSelected(new Set());
-                        }}
-                        placeholder="Search teams..."
-                        className="h-10 rounded-lg border-[#E7E7E0] dark:border-zinc-700 bg-[#FEFFFA] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 pr-10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-550 focus:ring-blue-500/20"
-                        data-testid="team-search-input"
-                    />
-                    {search && (
-                        <button
-                            type="button"
-                            onClick={() => setSearch("")}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                            aria-label="Clear search"
+            {/* Search Bar */}
+            <div className="relative mt-5 shrink-0 select-none">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+                <Input
+                    value={search}
+                    onChange={(e) => {
+                        setSearch(e.target.value);
+                        setSelected(new Set());
+                    }}
+                    placeholder="Search teams..."
+                    className="h-10 rounded-lg border-[#E7E7E0] dark:border-zinc-700 bg-[#FEFFFA] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 pr-10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-550 focus:ring-blue-500/20"
+                    data-testid="team-search-input"
+                />
+                {search && (
+                    <button
+                        type="button"
+                        onClick={() => setSearch("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                        aria-label="Clear search"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                )}
+            </div>
+
+            {/* Filters or Batch Actions */}
+            {selected.size > 0 ? (
+                <div className="mt-4 shrink-0 flex items-center justify-between gap-3 bg-transparent select-none animate-fade-in">
+                    <div className="flex items-center gap-3">
+                        <PermissionGate
+                            permission={PERMISSIONS.GROUP_DELETE}
+                            fallback={null}
                         >
-                            <X className="h-4 w-4" />
-                        </button>
-                    )}
-                </div>
-
-                {/* Filters or Batch Actions */}
-                {selected.size > 0 ? (
-                    <div className="mt-4 shrink-0 flex items-center justify-between gap-3 bg-transparent select-none animate-fade-in">
-                        <div className="flex items-center gap-3">
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -898,6 +890,11 @@ export default function CategoryPage() {
                                 <Trash2 className="h-4 w-4 mr-2 text-red-500" />
                                 Delete
                             </Button>
+                        </PermissionGate>
+                        <PermissionGate
+                            permission={PERMISSIONS.GROUP_MANAGE_MEMBERS}
+                            fallback={null}
+                        >
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -908,6 +905,11 @@ export default function CategoryPage() {
                                 <FileText className="h-4 w-4 mr-2 text-zinc-500" />
                                 Add Files
                             </Button>
+                        </PermissionGate>
+                        <PermissionGate
+                            permission={PERMISSIONS.GROUP_MANAGE_MEMBERS}
+                            fallback={null}
+                        >
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -918,175 +920,176 @@ export default function CategoryPage() {
                                 <Users className="h-4 w-4 mr-2 text-zinc-500" />
                                 Assign Employees
                             </Button>
-                        </div>
-                        {/* Right side selection badge */}
-                        <div className="flex items-center gap-2 px-3 py-2 border border-[#E7E7E0] dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900 rounded-lg text-sm text-zinc-650 dark:text-zinc-300 font-medium shadow-xs">
-                            <span>{selected.size} selected</span>
-                            <button
-                                type="button"
-                                onClick={() => setSelected(new Set())}
-                                className="text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200 transition-colors ml-1 cursor-pointer"
-                                aria-label="Clear selection"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
-                        </div>
+                        </PermissionGate>
                     </div>
-                ) : (
-                    <div data-tour="team-filters" className="mt-4 shrink-0 flex flex-wrap items-center justify-between gap-2 select-none">
-                        <div className="flex flex-wrap gap-2">
-                            <FilterDropdown
-                                label="Type"
-                                value={filters.type}
-                                options={typeOptions}
-                                onChange={(v) => setFilters((f) => ({ ...f, type: v }))}
-                                testId="filter-type"
-                            />
-
-                            <FilterDropdown
-                                label="Creator"
-                                value={filters.creator}
-                                options={creatorOptions}
-                                onChange={(v) => setFilters((f) => ({ ...f, creator: v }))}
-                                testId="filter-creator"
-                            />
-
-                            <FilterDropdown
-                                label="Manager"
-                                value={filters.manager}
-                                options={managerOptions}
-                                onChange={(v) => setFilters((f) => ({ ...f, manager: v }))}
-                                testId="filter-manager"
-                            />
-
-                            <FilterDropdown
-                                label="Knowledge Base"
-                                value={filters.kbFiles}
-                                options={kbFilesOptions}
-                                onChange={(v) => setFilters((f) => ({ ...f, kbFiles: v }))}
-                                testId="filter-kb-files"
-                            />
-                        </div>
-                        <ColumnSettings
-                            columns={TEAM_COLUMNS}
-                            visibleColumns={visibleColumns}
-                            onApply={setVisibleColumns}
-                            defaultColumns={DEFAULT_TEAM_COLUMNS}
-                        />
-                    </div>
-                )}
-
-                {/* Body Table Container */}
-                <div className="mt-4 flex-1 flex flex-col min-h-0 animate-fade-in">
-                    {isLoading ? (
-                        <SkeletonTable
-                            gridCols="[48px_2.5fr_2fr_1.8fr_1.5fr_56px]"
-                            headers={[
-                                <div className="h-4 w-4 rounded bg-zinc-200 dark:bg-zinc-700 animate-pulse" />,
-                                "Team Name",
-                                "Manager",
-                                "No. Of Knowledge Base",
-                                "No. Of Employees",
-                                "",
-                            ]}
-                            columns={[
-                                { width: "w-4", render: () => <div className="h-4 w-4 rounded bg-zinc-100 dark:bg-zinc-800 animate-pulse" /> },
-                                { width: "w-48", render: () => <div className="h-4 w-40 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" /> },
-                                { width: "w-32", render: () => <div className="h-4 w-28 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" /> },
-                                { width: "w-16" },
-                                { width: "w-16" },
-                                { width: "w-8", render: () => <div className="h-8 w-8 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" /> },
-                            ]}
-                        />
-                    ) : isEmpty ? (
-                        <UnifiedEmptyState
-                            title="No Data Found"
-                            description="No teams have been added yet."
-                            icon={<FolderClosed className="h-8 w-8 text-[#60646B] dark:text-zinc-400" />}
-                            testId="teams-empty-state"
-                        />
-                    ) : isNoResults ? (
-                        <UnifiedEmptyState
-                            title={search ? `No results found for "${search}"` : "No results found"}
-                            description="Try adjusting your filters or clearing search parameters."
-                            testId="teams-search-empty-state"
+                    {/* Right side selection badge */}
+                    <div className="flex items-center gap-2 px-3 py-2 border border-[#E7E7E0] dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900 rounded-lg text-sm text-zinc-650 dark:text-zinc-300 font-medium shadow-xs">
+                        <span>{selected.size} selected</span>
+                        <button
+                            type="button"
+                            onClick={() => setSelected(new Set())}
+                            className="text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200 transition-colors ml-1 cursor-pointer"
+                            aria-label="Clear selection"
                         >
-                            <Button
-                                variant="link"
-                                className="text-blue-600 font-semibold text-sm hover:underline p-0 h-auto"
-                                onClick={() => {
-                                    setSearch("");
-                                    setFilters({ type: "", creator: "", manager: "", kbFiles: "" });
-                                }}
-                            >
-                                Clear All Search & Filters
-                            </Button>
-                        </UnifiedEmptyState>
-                    ) : (
-                        /* Render Interactive Table */
-                        <CategoryTable
-                            categories={filteredCategories}
-                            onDelete={handleDeleteCategory}
-                            onEdit={triggerEditMode}
-                            onView={triggerViewMode}
-                            onAddEmployees={triggerAddEmployeesMode}
-                            onArchive={handleArchiveCategory}
-                            visibleColumns={visibleColumns}
-                            selected={selected}
-                            setSelected={setSelected}
-                        />
-                    )}
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
                 </div>
+            ) : (
+                <div data-tour="team-filters" className="mt-4 shrink-0 flex flex-wrap items-center justify-between gap-2 select-none">
+                    <div className="flex flex-wrap gap-2">
+                        <FilterDropdown
+                            label="Type"
+                            value={filters.type}
+                            options={typeOptions}
+                            onChange={(v) => setFilters((f) => ({ ...f, type: v }))}
+                            testId="filter-type"
+                        />
 
-                {/* Detail and Creation Drawer */}
-                <CategoryDrawer
-                    open={drawerOpen}
-                    onOpenChange={setDrawerOpen}
-                    onSubmit={handleCreateOrUpdateCategory}
-                    category={selectedCategory}
-                    mode={drawerMode}
-                    allEmployees={employeesList}
-                    allFiles={allKBFiles}
-                />
+                        <FilterDropdown
+                            label="Creator"
+                            value={filters.creator}
+                            options={creatorOptions}
+                            onChange={(v) => setFilters((f) => ({ ...f, creator: v }))}
+                            testId="filter-creator"
+                        />
 
-                <AddEmployeesDialog
-                    open={batchAddEmployeesOpen}
-                    onOpenChange={setBatchAddEmployeesOpen}
-                    unselectedEmployees={employeesList}
-                    onAdd={handleBatchAddEmployees}
-                />
+                        <FilterDropdown
+                            label="Manager"
+                            value={filters.manager}
+                            options={managerOptions}
+                            onChange={(v) => setFilters((f) => ({ ...f, manager: v }))}
+                            testId="filter-manager"
+                        />
 
-                <AddFilesDialog
-                    open={batchAddFilesOpen}
-                    onOpenChange={setBatchAddFilesOpen}
-                    unselectedFiles={allKBFiles}
-                    onAdd={handleBatchAddFiles}
-                />
+                        <FilterDropdown
+                            label="Knowledge Base"
+                            value={filters.kbFiles}
+                            options={kbFilesOptions}
+                            onChange={(v) => setFilters((f) => ({ ...f, kbFiles: v }))}
+                            testId="filter-kb-files"
+                        />
+                    </div>
+                    <ColumnSettings
+                        columns={TEAM_COLUMNS}
+                        visibleColumns={visibleColumns}
+                        onApply={setVisibleColumns}
+                        defaultColumns={DEFAULT_TEAM_COLUMNS}
+                    />
+                </div>
+            )}
 
-                {/* Batch Delete Confirmation Dialog */}
-                <Dialog open={confirmBatchDelete} onOpenChange={(open) => !open && setConfirmBatchDelete(false)}>
-                    <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md border border-zinc-150 dark:border-zinc-800 shadow-xl p-6">
-                        <DialogHeader>
-                            <DialogTitle className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">Delete Selected Teams</DialogTitle>
-                            <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-2">
-                                Are you sure you want to delete the {selected.size} selected teams? This action cannot be undone and will permanently remove them.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter className="mt-6 gap-2">
-                            <Button variant="outline" onClick={() => setConfirmBatchDelete(false)} disabled={isBatchProcessing} className="rounded-lg text-zinc-700 dark:text-zinc-300">
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                className="bg-red-650 hover:bg-red-700 text-white rounded-lg"
-                                disabled={isBatchProcessing}
-                                onClick={handleBatchDelete}
-                            >
-                                {isBatchProcessing ? "Deleting..." : "Confirm Delete"}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+            {/* Body Table Container */}
+            <div className="mt-4 flex-1 flex flex-col min-h-0 animate-fade-in">
+                {isLoading ? (
+                    <SkeletonTable
+                        gridCols="[48px_2.5fr_2fr_1.8fr_1.5fr_56px]"
+                        headers={[
+                            <div className="h-4 w-4 rounded bg-zinc-200 dark:bg-zinc-700 animate-pulse" />,
+                            "Team Name",
+                            "Manager",
+                            "No. Of Knowledge Base",
+                            "No. Of Employees",
+                            "",
+                        ]}
+                        columns={[
+                            { width: "w-4", render: () => <div className="h-4 w-4 rounded bg-zinc-100 dark:bg-zinc-800 animate-pulse" /> },
+                            { width: "w-48", render: () => <div className="h-4 w-40 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" /> },
+                            { width: "w-32", render: () => <div className="h-4 w-28 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" /> },
+                            { width: "w-16" },
+                            { width: "w-16" },
+                            { width: "w-8", render: () => <div className="h-8 w-8 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" /> },
+                        ]}
+                    />
+                ) : isEmpty ? (
+                    <UnifiedEmptyState
+                        title="No Data Found"
+                        description="No teams have been added yet."
+                        icon={<FolderClosed className="h-8 w-8 text-[#60646B] dark:text-zinc-400" />}
+                        testId="teams-empty-state"
+                    />
+                ) : isNoResults ? (
+                    <UnifiedEmptyState
+                        title={search ? `No results found for "${search}"` : "No results found"}
+                        description="Try adjusting your filters or clearing search parameters."
+                        testId="teams-search-empty-state"
+                    >
+                        <Button
+                            variant="link"
+                            className="text-blue-600 font-semibold text-sm hover:underline p-0 h-auto"
+                            onClick={() => {
+                                setSearch("");
+                                setFilters({ type: "", creator: "", manager: "", kbFiles: "" });
+                            }}
+                        >
+                            Clear All Search & Filters
+                        </Button>
+                    </UnifiedEmptyState>
+                ) : (
+                    /* Render Interactive Table */
+                    <CategoryTable
+                        categories={filteredCategories}
+                        onDelete={handleDeleteCategory}
+                        onEdit={triggerEditMode}
+                        onView={triggerViewMode}
+                        onAddEmployees={triggerAddEmployeesMode}
+                        onArchive={handleArchiveCategory}
+                        visibleColumns={isMember ? MEMBER_TEAM_COLUMNS : visibleColumns}
+                        selected={selected}
+                        setSelected={setSelected}
+                    />
+                )}
             </div>
+
+            {/* Detail and Creation Drawer */}
+            <CategoryDrawer
+                open={drawerOpen}
+                onOpenChange={setDrawerOpen}
+                onSubmit={handleCreateOrUpdateCategory}
+                category={selectedCategory}
+                mode={drawerMode}
+                allEmployees={employeesList}
+                allFiles={allKBFiles}
+            />
+
+            <AddEmployeesDialog
+                open={batchAddEmployeesOpen}
+                onOpenChange={setBatchAddEmployeesOpen}
+                unselectedEmployees={employeesList}
+                onAdd={handleBatchAddEmployees}
+            />
+
+            <AddFilesDialog
+                open={batchAddFilesOpen}
+                onOpenChange={setBatchAddFilesOpen}
+                unselectedFiles={allKBFiles}
+                onAdd={handleBatchAddFiles}
+            />
+
+            {/* Batch Delete Confirmation Dialog */}
+            <Dialog open={confirmBatchDelete} onOpenChange={(open) => !open && setConfirmBatchDelete(false)}>
+                <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md border border-zinc-150 dark:border-zinc-800 shadow-xl p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">Delete Selected Teams</DialogTitle>
+                        <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-2">
+                            Are you sure you want to delete the {selected.size} selected teams? This action cannot be undone and will permanently remove them.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="mt-6 gap-2">
+                        <Button variant="outline" onClick={() => setConfirmBatchDelete(false)} disabled={isBatchProcessing} className="rounded-lg text-zinc-700 dark:text-zinc-300">
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            className="bg-red-650 hover:bg-red-700 text-white rounded-lg"
+                            disabled={isBatchProcessing}
+                            onClick={handleBatchDelete}
+                        >
+                            {isBatchProcessing ? "Deleting..." : "Confirm Delete"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
     );
 }

@@ -24,6 +24,7 @@ import { type Category, type CategoryEmployee, type CategoryFile } from "@/types
 import { cn } from "@/lib/utils";
 import AddEmployeesDialog from "./AddEmployeesDialog";
 import AddFilesDialog from "./AddFilesDialog";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface CategoryDrawerProps {
     open: boolean;
@@ -45,6 +46,8 @@ export default function CategoryDrawer({
     allFiles,
 }: CategoryDrawerProps): JSX.Element {
     const isReadOnly = mode === "view";
+    const { role } = usePermissions();
+    const isMember = role === "member";
 
     // Form fields
     const [name, setName] = useState("");
@@ -84,7 +87,7 @@ export default function CategoryDrawer({
                 setSelectedFiles([]);
             }
             setTouched({});
-            setActiveTab("employees");
+            setActiveTab(isMember ? "files" : "employees");
             setEmployeeSearch("");
             setFileSearch("");
             setManagerSearch("");
@@ -93,7 +96,7 @@ export default function CategoryDrawer({
             setFilePage(1);
             setIsSubmitting(false);
         }
-    }, [open, category, mode]);
+    }, [open, category, mode, isMember]);
 
     const handleBlur = (field: "name" | "managerId") => {
         setTouched((prev) => ({ ...prev, [field]: true }));
@@ -326,68 +329,70 @@ export default function CategoryDrawer({
                         </div>
 
                         {/* Manager */}
-                        <div className="space-y-1.5 flex flex-col">
-                            <Label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                                Manager <span className="text-red-500 ml-0.5">*</span>
-                            </Label>
-                            <Popover open={managerOpen} onOpenChange={setManagerOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        aria-expanded={managerOpen}
-                                        disabled={isReadOnly}
-                                        className={cn("h-11 justify-between w-full rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-normal hover:bg-zinc-50 dark:hover:bg-zinc-700",
-                                            !managerId && "text-zinc-400"
-                                        )}
-                                    >
-                                        {managerId
-                                            ? managerOptions.find((m) => m.id === managerId)?.name
-                                            : "Select manager..."}
-                                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 shadow-md">
-                                    <div className="flex flex-col">
-                                        <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-700">
-                                            <Input
-                                                value={managerSearch}
-                                                onChange={(e) => setManagerSearch(e.target.value)}
-                                                placeholder="Search manager..."
-                                                className="h-8 border-none focus-visible:ring-0 px-0 rounded-none shadow-none text-sm bg-transparent placeholder:text-zinc-400 text-zinc-900 dark:text-zinc-100"
-                                            />
-                                        </div>
-                                        <div className="max-h-56 overflow-y-auto py-1">
-                                            {managerOptions.filter(m => (m.name ?? "").toLowerCase().includes(managerSearch.toLowerCase())).map((emp) => (
-                                                <div
-                                                    key={emp.id}
-                                                    className="px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center justify-between"
-                                                    onClick={() => {
-                                                        setManagerId(emp.id);
-                                                        setManagerOpen(false);
-                                                        setManagerSearch("");
-                                                        setTouched((p) => ({ ...p, managerId: true }));
-                                                    }}
-                                                >
-                                                    {emp.name}
-                                                </div>
-                                            ))}
-                                            {managerOptions.filter(m => (m.name ?? "").toLowerCase().includes(managerSearch.toLowerCase())).length === 0 && (
-                                                <div className="px-3 py-4 text-center text-sm text-zinc-500">
-                                                    No results found.
-                                                </div>
+                        {!isMember && (
+                            <div className="space-y-1.5 flex flex-col">
+                                <Label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                                    Manager <span className="text-red-500 ml-0.5">*</span>
+                                </Label>
+                                <Popover open={managerOpen} onOpenChange={setManagerOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={managerOpen}
+                                            disabled={isReadOnly}
+                                            className={cn("h-11 justify-between w-full rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-normal hover:bg-zinc-50 dark:hover:bg-zinc-700",
+                                                !managerId && "text-zinc-400"
                                             )}
+                                        >
+                                            {managerId
+                                                ? managerOptions.find((m) => m.id === managerId)?.name
+                                                : "Select manager..."}
+                                            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 shadow-md">
+                                        <div className="flex flex-col">
+                                            <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-700">
+                                                <Input
+                                                    value={managerSearch}
+                                                    onChange={(e) => setManagerSearch(e.target.value)}
+                                                    placeholder="Search manager..."
+                                                    className="h-8 border-none focus-visible:ring-0 px-0 rounded-none shadow-none text-sm bg-transparent placeholder:text-zinc-400 text-zinc-900 dark:text-zinc-100"
+                                                />
+                                            </div>
+                                            <div className="max-h-56 overflow-y-auto py-1">
+                                                {managerOptions.filter(m => (m.name ?? "").toLowerCase().includes(managerSearch.toLowerCase())).map((emp) => (
+                                                    <div
+                                                        key={emp.id}
+                                                        className="px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center justify-between"
+                                                        onClick={() => {
+                                                            setManagerId(emp.id);
+                                                            setManagerOpen(false);
+                                                            setManagerSearch("");
+                                                            setTouched((p) => ({ ...p, managerId: true }));
+                                                        }}
+                                                    >
+                                                        {emp.name}
+                                                    </div>
+                                                ))}
+                                                {managerOptions.filter(m => (m.name ?? "").toLowerCase().includes(managerSearch.toLowerCase())).length === 0 && (
+                                                    <div className="px-3 py-4 text-center text-sm text-zinc-500">
+                                                        No results found.
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
+                                    </PopoverContent>
+                                </Popover>
+                                {touched.managerId && !isManagerValid && (
+                                    <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                        <span>Please select a manager.</span>
                                     </div>
-                                </PopoverContent>
-                            </Popover>
-                            {touched.managerId && !isManagerValid && (
-                                <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
-                                    <AlertCircle className="h-3.5 w-3.5" />
-                                    <span>Please select a manager.</span>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* RIGHT PANEL: Files and Employees Tabs with Lists */}
@@ -403,7 +408,7 @@ export default function CategoryDrawer({
                                     aria-controls="files-panel"
                                     onClick={() => setActiveTab("files")}
                                     onKeyDown={(e) => {
-                                        if (e.key === "ArrowRight") {
+                                        if (e.key === "ArrowRight" && !isMember) {
                                             setActiveTab("employees");
                                             document.getElementById("tab-employees-btn")?.focus();
                                         }
@@ -424,35 +429,37 @@ export default function CategoryDrawer({
                                         {selectedFiles.length}
                                     </span>
                                 </button>
-                                <button
-                                    type="button"
-                                    id="tab-employees-btn"
-                                    role="tab"
-                                    aria-selected={activeTab === "employees"}
-                                    aria-controls="employees-panel"
-                                    onClick={() => setActiveTab("employees")}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "ArrowLeft") {
-                                            setActiveTab("files");
-                                            document.getElementById("tab-files-btn")?.focus();
-                                        }
-                                    }}
-                                    className={cn(
-                                        "px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5",
-                                        activeTab === "employees"
-                                            ? "bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shadow-xs"
-                                            : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 hover:bg-zinc-100/50"
-                                    )}
-                                    data-testid="tab-employees-btn"
-                                >
-                                    Employees
-                                    <span className={cn(
-                                        "px-1.5 py-0.5 rounded font-mono font-medium scale-90",
-                                        activeTab === "employees" ? "bg-blue-100 dark:bg-blue-900/60" : "bg-zinc-200 dark:bg-zinc-800"
-                                    )}>
-                                        {selectedEmployees.length}
-                                    </span>
-                                </button>
+                                {!isMember && (
+                                    <button
+                                        type="button"
+                                        id="tab-employees-btn"
+                                        role="tab"
+                                        aria-selected={activeTab === "employees"}
+                                        aria-controls="employees-panel"
+                                        onClick={() => setActiveTab("employees")}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "ArrowLeft") {
+                                                setActiveTab("files");
+                                                document.getElementById("tab-files-btn")?.focus();
+                                            }
+                                        }}
+                                        className={cn(
+                                            "px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5",
+                                            activeTab === "employees"
+                                                ? "bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shadow-xs"
+                                                : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 hover:bg-zinc-100/50"
+                                        )}
+                                        data-testid="tab-employees-btn"
+                                    >
+                                        Employees
+                                        <span className={cn(
+                                            "px-1.5 py-0.5 rounded font-mono font-medium scale-90",
+                                            activeTab === "employees" ? "bg-blue-100 dark:bg-blue-900/60" : "bg-zinc-200 dark:bg-zinc-800"
+                                        )}>
+                                            {selectedEmployees.length}
+                                        </span>
+                                    </button>
+                                )}
                             </div>
 
                             {/* Add Item button */}
@@ -488,9 +495,9 @@ export default function CategoryDrawer({
                             <div className="relative">
                                 <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
                                 <Input
-                                    value={activeTab === "employees" ? employeeSearch : fileSearch}
+                                    value={activeTab === "employees" && !isMember ? employeeSearch : fileSearch}
                                     onChange={(e) => {
-                                        if (activeTab === "employees") {
+                                        if (activeTab === "employees" && !isMember) {
                                             setEmployeeSearch(e.target.value);
                                             setEmpPage(1);
                                         } else {
@@ -499,7 +506,7 @@ export default function CategoryDrawer({
                                         }
                                     }}
                                     placeholder={
-                                        activeTab === "employees"
+                                        activeTab === "employees" && !isMember
                                             ? "Search Employee Name..."
                                             : "Search File Name."
                                     }
@@ -510,8 +517,8 @@ export default function CategoryDrawer({
                         </div>
 
                         {/* Active list container */}
-                        <div className="flex-1 overflow-y-auto bg-[#FEFFFA] dark:bg-zinc-900 min-h-0 flex flex-col" role="tabpanel" id={activeTab === "employees" ? "employees-panel" : "files-panel"} aria-labelledby={activeTab === "employees" ? "tab-employees-btn" : "tab-files-btn"}>
-                            {activeTab === "employees" ? (
+                        <div className="flex-1 overflow-y-auto bg-[#FEFFFA] dark:bg-zinc-900 min-h-0 flex flex-col" role="tabpanel" id={activeTab === "employees" && !isMember ? "employees-panel" : "files-panel"} aria-labelledby={activeTab === "employees" && !isMember ? "tab-employees-btn" : "tab-files-btn"}>
+                            {activeTab === "employees" && !isMember ? (
                                 paginatedEmployees.length === 0 ? (
                                     /* Employees Empty State */
                                     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#FEFFFA] dark:bg-zinc-900">
@@ -521,7 +528,7 @@ export default function CategoryDrawer({
                                         <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                                             No Data Found
                                         </h3>
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-[240px] leading-relaxed">
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-405 mt-1 max-w-[240px] leading-relaxed">
                                             No employees have been added yet.
                                         </p>
                                     </div>
@@ -554,7 +561,7 @@ export default function CategoryDrawer({
                                                                 <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">
                                                                     {emp.name}
                                                                 </span>
-                                                                <span className="text-[11px] text-zinc-500 dark:text-zinc-450 truncate mt-0.5 max-w-[200px]">
+                                                                <span className="text-[11px] text-zinc-505 dark:text-zinc-450 truncate mt-0.5 max-w-[200px]">
                                                                     {emp.role}
                                                                 </span>
                                                             </div>
@@ -580,13 +587,13 @@ export default function CategoryDrawer({
                                 paginatedFiles.length === 0 ? (
                                     /* Files Empty State */
                                     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#FEFFFA] dark:bg-zinc-900">
-                                        <div className="h-14 w-14 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 mb-4 animate-pulse">
+                                        <div className="h-14 w-14 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-505 mb-4 animate-pulse">
                                             <FileText className="h-7 w-7" />
                                         </div>
                                         <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                                             No Data Found
                                         </h3>
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-405 mt-1 max-w-[240px] leading-relaxed">
+                                        <p className="text-xs text-zinc-505 dark:text-zinc-405 mt-1 max-w-[240px] leading-relaxed">
                                             No files have been added yet.
                                         </p>
                                     </div>
@@ -613,7 +620,7 @@ export default function CategoryDrawer({
                                                                 <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">
                                                                     {file.name}
                                                                 </span>
-                                                                <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-450 truncate mt-0.5">
+                                                                <span className="text-[11px] font-mono text-zinc-505 dark:text-zinc-450 truncate mt-0.5">
                                                                     {file.size}
                                                                 </span>
                                                             </div>
@@ -639,7 +646,7 @@ export default function CategoryDrawer({
                         </div>
 
                         {/* Pagination Footer inside drawer tabs */}
-                        {activeTab === "employees" && empTotal > 0 && (
+                        {activeTab === "employees" && !isMember && empTotal > 0 && (
                             <div className="px-8 py-3 bg-[#FEFFFA] dark:bg-zinc-900 flex items-center justify-between text-xs text-zinc-555 select-none shrink-0">
                                 <div className="flex items-center gap-1">
                                     <span>Rows per Page:</span>

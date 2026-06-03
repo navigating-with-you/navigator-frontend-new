@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
 import { PageActionButton } from "@/components/ui/page-action-button";
+import { PermissionGate } from "@/components/PermissionGate";
+import { PERMISSIONS } from "@/utils/rbacConfig";
 import {
     FolderPlus,
     FilePlus2,
@@ -55,6 +57,7 @@ import {
     listEmployees,
 } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
+import { usePermissions } from "@/hooks/usePermissions";
 import type {
     KBEntry,
     CreateFolderPayload,
@@ -121,7 +124,20 @@ interface Filters {
 /** ---------------- Component ---------------- */
 
 export default function KnowledgeBasePage() {
-    const { getToken } = useKindeAuth();
+    const { getToken, user } = useKindeAuth();
+    const { role, isLoading: isPermissionsLoading } = usePermissions();
+    const isMember = role === "member";
+    const [profile, setProfile] = useState<any>(null);
+
+    useEffect(() => {
+        const stored = sessionStorage.getItem("navigator_user_profile");
+        if (stored) {
+            try { setProfile(JSON.parse(stored)); } catch { /* ignore */ }
+        }
+    }, [user]);
+
+    const currentUserName = profile?.display_name || (user?.givenName ? `${user.givenName} ${user.familyName || ""}`.trim() : user?.email?.split("@")[0] || "Admin");
+    const currentUserEmail = profile?.email || user?.email || "";
 
     const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
         const saved = localStorage.getItem("kb_visible_columns");
@@ -194,6 +210,7 @@ export default function KnowledgeBasePage() {
 
     useEffect(() => {
         const fetchEmployeesData = async () => {
+            if (isPermissionsLoading || isMember) return;
             try {
                 const token = await getToken();
                 if (!token) return;
@@ -205,7 +222,7 @@ export default function KnowledgeBasePage() {
             }
         };
         fetchEmployeesData();
-    }, [getToken]);
+    }, [getToken, isMember, isPermissionsLoading]);
 
     // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -379,8 +396,8 @@ export default function KnowledgeBasePage() {
                 created_at: f.created_at,
                 mime_type: f.mime_type || "application/octet-stream",
                 uploader: {
-                    display_name: "Admin",
-                    email: ""
+                    display_name: currentUserName,
+                    email: currentUserEmail
                 }
             }));
 
@@ -420,8 +437,8 @@ export default function KnowledgeBasePage() {
                     created_at: uploadedFile.created_at,
                     mime_type: "text/plain",
                     uploader: {
-                        display_name: "Admin",
-                        email: ""
+                        display_name: currentUserName,
+                        email: currentUserEmail
                     }
                 };
                 setChildFiles((prev) => [...prev, newFileObj]);
@@ -464,8 +481,8 @@ export default function KnowledgeBasePage() {
                     created_at: uploadedFile.created_at,
                     mime_type: "text/plain",
                     uploader: {
-                        display_name: "Admin",
-                        email: ""
+                        display_name: currentUserName,
+                        email: currentUserEmail
                     }
                 };
                 setChildFiles((prev) => [...prev, newFileObj]);
@@ -646,34 +663,57 @@ export default function KnowledgeBasePage() {
 
             {/* Action toolbar — always visible */}
             <div className="flex-shrink-0 mt-6 flex flex-wrap items-center gap-3">
-                {/* Create Folder always available */}
-                <PageActionButton
-                    icon={<FolderPlus className="h-3.5 w-3.5" />}
-                    label="Create Folder"
-                    onClick={() => setFolderOpen(true)}
-                    data-testid="create-folder-btn"
-                />
+                {/* Create Folder */}
+                <PermissionGate
+                    permission={PERMISSIONS.FOLDER_CREATE}
+                    fallback={null}
+                >
+                    <PageActionButton
+                        icon={<FolderPlus className="h-3.5 w-3.5" />}
+                        label="Create Folder"
+                        onClick={() => setFolderOpen(true)}
+                        data-testid="create-folder-btn"
+                    />
+                </PermissionGate>
 
-                <PageActionButton
-                    icon={<FilePlus2 className="h-3.5 w-3.5" />}
-                    label="Add Files"
-                    onClick={() => setFilesOpen(true)}
-                    data-testid="add-files-btn"
-                />
+                {/* Add Files */}
+                <PermissionGate
+                    permission={PERMISSIONS.FILE_UPLOAD}
+                    fallback={null}
+                >
+                    <PageActionButton
+                        icon={<FilePlus2 className="h-3.5 w-3.5" />}
+                        label="Add Files"
+                        onClick={() => setFilesOpen(true)}
+                        data-testid="add-files-btn"
+                    />
+                </PermissionGate>
 
-                <PageActionButton
-                    icon={<Type className="h-3.5 w-3.5" />}
-                    label="Add Text"
-                    onClick={() => setTextOpen(true)}
-                    data-testid="add-text-btn"
-                />
+                {/* Add Text */}
+                <PermissionGate
+                    permission={PERMISSIONS.FILE_UPLOAD}
+                    fallback={null}
+                >
+                    <PageActionButton
+                        icon={<Type className="h-3.5 w-3.5" />}
+                        label="Add Text"
+                        onClick={() => setTextOpen(true)}
+                        data-testid="add-text-btn"
+                    />
+                </PermissionGate>
 
-                <PageActionButton
-                    icon={<Globe className="h-3.5 w-3.5" />}
-                    label="Add URL"
-                    onClick={() => setUrlOpen(true)}
-                    data-testid="add-url-btn"
-                />
+                {/* Add URL */}
+                <PermissionGate
+                    permission={PERMISSIONS.FILE_UPLOAD}
+                    fallback={null}
+                >
+                    <PageActionButton
+                        icon={<Globe className="h-3.5 w-3.5" />}
+                        label="Add URL"
+                        onClick={() => setUrlOpen(true)}
+                        data-testid="add-url-btn"
+                    />
+                </PermissionGate>
             </div>
 
             {/* Search */}
@@ -704,16 +744,21 @@ export default function KnowledgeBasePage() {
             {selected.size > 0 ? (
                 <div className="flex-shrink-0 mt-4 flex items-center justify-between gap-3 bg-transparent select-none animate-fade-in">
                     <div className="flex items-center gap-3">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={isBatchProcessing}
-                            onClick={() => setConfirmBatchDelete(true)}
-                            className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-red-650 hover:text-red-700 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-sm font-semibold rounded-lg shadow-sm"
+                        <PermissionGate
+                            permissions={[PERMISSIONS.FILE_DELETE, PERMISSIONS.FOLDER_DELETE]}
+                            fallback={null}
                         >
-                            <Trash2 className="h-4 w-4 mr-2 text-red-500" />
-                            Delete
-                        </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={isBatchProcessing}
+                                onClick={() => setConfirmBatchDelete(true)}
+                                className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-red-650 hover:text-red-700 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-sm font-semibold rounded-lg shadow-sm"
+                            >
+                                <Trash2 className="h-4 w-4 mr-2 text-red-500" />
+                                Delete
+                            </Button>
+                        </PermissionGate>
                     </div>
                     {/* Right side selection badge */}
                     <div className="flex items-center gap-2 px-3 py-2 border border-[#E7E7E0] dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900 rounded-lg text-sm text-zinc-650 dark:text-zinc-300 font-medium shadow-xs">

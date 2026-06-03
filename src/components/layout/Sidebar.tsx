@@ -17,6 +17,8 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useHasPermission } from "@/hooks/useHasPermission";
+import { PERMISSIONS } from "@/utils/rbacConfig";
 
 import {
     Tooltip,
@@ -44,6 +46,7 @@ type NavItemType = {
     to: string;
     label: string;
     icon: LucideIcon;
+    permission?: string; // Optional permission required to view this item
 };
 
 type NavItemProps = NavItemType & {
@@ -56,11 +59,11 @@ type SidebarProps = {
 };
 
 const mainNav: NavItemType[] = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutGrid },
-    { to: "/employees", label: "Employees", icon: Users },
-    { to: "/teams", label: "Teams", icon: ListTree },
-    { to: "/knowledge-base", label: "Knowledge Base", icon: FileStack },
-    { to: "/integration", label: "Integration", icon: Plug },
+    { to: "/dashboard", label: "Dashboard", icon: LayoutGrid }, // Available to all
+    { to: "/employees", label: "Employees", icon: Users, permission: PERMISSIONS.EMPLOYEE_EDIT }, // Restricted to Admin/Editor/Super-Admin, not Members
+    { to: "/teams", label: "Teams", icon: ListTree, permission: PERMISSIONS.GROUP_VIEW },
+    { to: "/knowledge-base", label: "Knowledge Base", icon: FileStack, permission: PERMISSIONS.FOLDER_VIEW },
+    { to: "/integration", label: "Integration", icon: Plug }, // Visible to all roles (Member, Editor, Admin, Super-Admin)
 ];
 
 const chatNav: NavItemType[] = [
@@ -413,6 +416,7 @@ export default function Sidebar({
 }: SidebarProps): JSX.Element {
     const location = useLocation();
     const collapsed = !open;
+    const { can } = useHasPermission();
 
     const isItemActive = (targetTo: string) => {
         if (targetTo === "/chat") {
@@ -420,6 +424,11 @@ export default function Sidebar({
         }
         return location.pathname === targetTo;
     };
+
+    // Filter navigation items based on permissions
+    const visibleNav = mainNav.filter(item =>
+        !item.permission || can(item.permission)
+    );
 
     if (collapsed) {
         return (
@@ -438,7 +447,7 @@ export default function Sidebar({
                 <div className="flex-1 overflow-y-auto w-full hover-scrollbar">
                     <div className="flex flex-col items-center pb-2 gap-0.5 w-full">
                         {/* Main Nav */}
-                        {mainNav.map((item) => {
+                        {visibleNav.map((item) => {
                             const active = isItemActive(item.to);
                             return (
                                 <TooltipProvider key={item.to} delayDuration={100}>
@@ -493,8 +502,8 @@ export default function Sidebar({
                                                     cn(
                                                         "mx-auto flex items-center justify-center h-10 w-10 rounded-xl transition-all",
                                                         isItemActive(item.to)
-                                                        ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
-                                                        : "text-zinc-550 dark:text-zinc-400 hover:bg-[#E7E7E0] dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100"
+                                                            ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
+                                                            : "text-zinc-550 dark:text-zinc-400 hover:bg-[#E7E7E0] dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100"
                                                     )
                                                 }
                                             >
@@ -532,7 +541,7 @@ export default function Sidebar({
 
             {/* Main Nav */}
             <nav className="flex flex-col gap-1 px-2 pb-2 shrink-0">
-                {mainNav.map((item) => (
+                {visibleNav.map((item) => (
                     <NavItem
                         key={item.to}
                         {...item}
@@ -568,19 +577,19 @@ export default function Sidebar({
                     // For "New Chat" link, add 'end' prop to only highlight on exact /chat match
                     if (item.to === "/chat") {
                         return (
-                             <NavLink
-                                 key={item.to}
-                                 to={item.to}
-                                 data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                                 className={
-                                     cn(
-                                         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                                         isItemActive(item.to)
-                                             ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                                             : "text-zinc-600 dark:text-zinc-400 hover:bg-[#E7E7E0] hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                                     )
-                                 }
-                             >
+                            <NavLink
+                                key={item.to}
+                                to={item.to}
+                                data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                                className={
+                                    cn(
+                                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                                        isItemActive(item.to)
+                                            ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                                            : "text-zinc-600 dark:text-zinc-400 hover:bg-[#E7E7E0] hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                                    )
+                                }
+                            >
                                 <div className="flex h-5 w-5 items-center justify-center shrink-0">
                                     <item.icon className="h-5 w-5" />
                                 </div>

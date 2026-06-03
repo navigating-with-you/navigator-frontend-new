@@ -40,6 +40,28 @@ export async function revokeInvite(inviteId: string, token: string) {
     return apiClient.delete<any>(`/invite/${inviteId}/revoke`, undefined, { token });
 }
 
+export async function verifyInviteToken(token: string) {
+    return apiClient.get<{
+        valid: boolean;
+        message: string;
+        email?: string;
+        first_name?: string;
+        last_name?: string;
+    }>(`/invite/verify?token=${token}`, {});
+}
+
+export async function acceptInvite(payload: {
+    token: string;
+    password: string;
+}) {
+    return apiClient.post<{
+        message: string;
+        user_id: string;
+        email: string;
+        organization_id: string;
+    }>("/invite/accept", payload, {});
+}
+
 // ── RBAC ──────────────────────────────────────────────────────────────────────
 
 export async function listRoles(token: string) {
@@ -415,10 +437,20 @@ export async function updateConversation(conversationId: string, payload: { titl
     return apiClient.patch<any>(`/chat/conversations/${conversationId}`, payload, { token });
 }
 
+/** Upload organization logo to S3 */
+export async function uploadLogo(file: File, token: string) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient.post<{ logo_url: string; s3_key: string }>("/org/logo", formData, { token });
+}
+
 /** Create a new organization */
 export async function createOrganization(
     payload: {
         name: string;
+        logo_url?: string;
+        email?: string;
+        contact_number?: string;
         billing_address?: {
             line1: string;
             line2?: string;
