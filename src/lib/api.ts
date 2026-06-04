@@ -491,6 +491,25 @@ export async function truncateConversation(
     );
 }
 
+/** Upload user profile avatar image to S3 */
+export async function uploadAvatar(file: File, token: string) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient.post<{ avatar_url: string }>("/auth/avatar", formData, { token });
+}
+
+/** Delete user profile avatar image */
+export async function deleteAvatar(token: string) {
+    return apiClient.delete<{ message: string }>("/auth/avatar", undefined, { token });
+}
+
+/** Update user profile first and last names */
+export async function updateProfile(payload: { first_name: string; last_name: string }, token: string) {
+    return apiClient.patch<any>("/auth/profile", payload, { token });
+}
+
+
+
 /** Clear all messages in a conversation */
 export async function clearConversationMessages(
     conversationId: string,
@@ -503,3 +522,21 @@ export async function clearConversationMessages(
     );
 }
 
+// ── Usage ─────────────────────────────────────────────────────────────────────
+
+export interface UsageStat {
+    used: number;
+    limit: number;
+}
+
+export interface UsageData {
+    plan: string;
+    pages: UsageStat;
+    simple_interactions: UsageStat;
+    complex_interactions: UsageStat;
+}
+
+/** Fetch organisation usage statistics (pages, simple & complex interactions) */
+export async function getUsage(token: string): Promise<UsageData> {
+    return apiClient.get<UsageData>("/auth/usage", { token, cache: false });
+}

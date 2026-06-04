@@ -23,6 +23,7 @@ const BillingPage = lazy(() => import("@/pages/PlaceholderPage").then(m => ({ de
 const ChatPage = lazy(() => import("@/pages/NewChatPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 const InviteAcceptancePage = lazy(() => import("@/pages/InviteAcceptancePage"));
+const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
 
 /**
  * Loading fallback component shown while chunks are being loaded
@@ -151,6 +152,15 @@ function AppRoutes(): JSX.Element {
                         element={
                             <Suspense fallback={<PageLoader />}>
                                 <ChatPage />
+                            </Suspense>
+                        }
+                    />
+
+                    <Route
+                        path="/profile"
+                        element={
+                            <Suspense fallback={<PageLoader />}>
+                                <ProfilePage />
                             </Suspense>
                         }
                     />

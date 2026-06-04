@@ -25,9 +25,10 @@ import {
     AvatarImage,
     AvatarFallback,
 } from "@/components/ui/avatar";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { getUsage, type UsageData } from "@/lib/api";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -45,6 +46,57 @@ import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 
 
+// ── UsageRow ─────────────────────────────────────────────────────────────────
+// A single row in the Overall Usage card with a variable-width progress bar.
+// The bar width is driven by a CSS custom property `--pct` so it animates
+// smoothly when the data arrives and stays fully declarative.
+
+function usageBarColor(pct: number): string {
+    if (pct >= 90) return "#ef4444"; // red-500
+    if (pct >= 70) return "#f97316"; // orange-500
+    return "#3b82f6";               // blue-500
+}
+
+interface UsageRowProps {
+    label: string;
+    used: number | undefined;
+    limit: number;
+}
+
+function UsageRow({ label, used, limit }: UsageRowProps): JSX.Element {
+    const pct = used != null ? Math.min((used / limit) * 100, 100) : 0;
+    const color = usageBarColor(pct);
+    const displayText = used != null ? `${used}/${limit}` : `—/${limit}`;
+
+    return (
+        <div className="space-y-1">
+            <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
+                <span>{label}</span>
+                <span
+                    className="font-medium tabular-nums"
+                    style={{ color: used != null && pct >= 70 ? color : undefined }}
+                >
+                    {displayText}
+                </span>
+            </div>
+            {/* Variable-width progress bar */}
+            <div className="h-1 w-full rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+                <div
+                    className="h-full rounded-full transition-all duration-700 ease-out"
+                    style={
+                        {
+                            "--pct": `${pct}%`,
+                            width: "var(--pct)",
+                            backgroundColor: color,
+                        } as React.CSSProperties
+                    }
+                />
+            </div>
+        </div>
+    );
+}
+
+
 type TopBarProps = {
     onToggleSidebar: () => void;
 };
@@ -52,21 +104,49 @@ type TopBarProps = {
 export default function TopBar({
     onToggleSidebar,
 }: TopBarProps): JSX.Element {
-    const { logout, user, isLoading } = useKindeAuth();
+    const { logout, user, isLoading, getToken } = useKindeAuth();
+    const [usage, setUsage] = useState<UsageData | null>(null);
     const [profile, setProfile] = useState<any>(null);
     const navigate = useNavigate();
     const { theme, toggleTheme } = useTheme();
 
 
     useEffect(() => {
-        const stored = sessionStorage.getItem("navigator_user_profile");
-        if (stored) {
-            try {
-                setProfile(JSON.parse(stored));
-            } catch (e) {
-                console.error("Failed to parse stored profile", e);
+        const loadProfile = () => {
+            const stored = sessionStorage.getItem("navigator_user_profile");
+            if (stored) {
+                try {
+                    setProfile(JSON.parse(stored));
+                } catch (e) {
+                    console.error("Failed to parse stored profile", e);
+                }
             }
-        }
+        };
+        loadProfile();
+
+        // Listen for profile changes from ProfilePage
+        window.addEventListener("storage", loadProfile);
+        return () => window.removeEventListener("storage", loadProfile);
+    }, [user]);
+
+    // Fetch live usage stats whenever the dropdown user changes
+    useEffect(() => {
+        let cancelled = false;
+        const fetchUsage = async () => {
+            try {
+                const token = await getToken();
+                if (token && !cancelled) {
+                    const data = await getUsage(token);
+                    if (!cancelled) setUsage(data);
+                }
+            } catch (e) {
+                // Non-critical — usage card will fall back to dashes
+                console.warn("Failed to fetch usage stats", e);
+            }
+        };
+        fetchUsage();
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     const fullName = profile?.display_name || (user?.givenName ? `${user.givenName} ${user.familyName || ""}`.trim() : (isLoading ? "Loading..." : "User"));
@@ -181,7 +261,13 @@ export default function TopBar({
                             data-tour="profile"
                         >
                             <Avatar className="h-9 w-9">
-                                {user?.picture ? (
+                                {profile?.avatar_url ? (
+                                    <AvatarImage
+                                        src={profile.avatar_url}
+                                        alt={fullName}
+                                        className="object-cover h-full w-full"
+                                    />
+                                ) : user?.picture ? (
                                     <AvatarImage
                                         src={user.picture}
                                         alt={fullName}
@@ -212,23 +298,32 @@ export default function TopBar({
                                     Upgrade
                                 </Button>
                             </div>
-                            <div className="space-y-2 text-xs">
+                            <div className="space-y-2.5 text-xs">
+                                {/* Plan row */}
                                 <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
                                     <span>Plan</span>
-                                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">Core</span>
+                                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                                        {usage?.plan ?? "Core"}
+                                    </span>
                                 </div>
-                                <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
-                                    <span>Pages</span>
-                                    <span className="font-medium text-zinc-800 dark:text-zinc-200">180/500</span>
-                                </div>
-                                <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
-                                    <span>Simple Interactions</span>
-                                    <span className="font-medium text-zinc-800 dark:text-zinc-200">127/350</span>
-                                </div>
-                                <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
-                                    <span>Complex Interactions</span>
-                                    <span className="font-medium text-zinc-800 dark:text-zinc-200">63/100</span>
-                                </div>
+                                {/* Pages */}
+                                <UsageRow
+                                    label="Pages"
+                                    used={usage?.pages.used}
+                                    limit={usage?.pages.limit ?? 500}
+                                />
+                                {/* Simple Interactions */}
+                                <UsageRow
+                                    label="Simple Interactions"
+                                    used={usage?.simple_interactions.used}
+                                    limit={usage?.simple_interactions.limit ?? 350}
+                                />
+                                {/* Complex Interactions */}
+                                <UsageRow
+                                    label="Complex Interactions"
+                                    used={usage?.complex_interactions.used}
+                                    limit={usage?.complex_interactions.limit ?? 100}
+                                />
                             </div>
                         </div>
 

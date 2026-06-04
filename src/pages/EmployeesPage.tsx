@@ -237,7 +237,7 @@ export default function EmployeesPage() {
                     name: fullName,
                     role: roleName,
                     category: emp.category || "-",
-                    avatar: emp.avatar || "",
+                    avatar: emp.avatar_url || emp.avatar || "",
                     status: "Accepted",
                     kbFiles: emp.kb_files !== undefined && emp.kb_files !== null ? emp.kb_files : "-",
                     simpleInteraction: emp.simple_interaction !== undefined && emp.simple_interaction !== null ? emp.simple_interaction : "-",
