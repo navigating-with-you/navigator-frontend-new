@@ -133,6 +133,9 @@ class CacheWebSocketManager {
             case "ocr:job_updated":
             case "ocr:job_completed":
                 cacheManager.invalidatePattern("/ocr");
+                cacheManager.invalidatePattern("/folders");
+                cacheManager.invalidatePattern("/api/root-folder");
+                cacheManager.invalidatePattern("/files");
                 break;
 
             default:

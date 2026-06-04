@@ -10,11 +10,19 @@ export async function syncUser(token: string) {
 // ── Employees ─────────────────────────────────────────────────────────────────
 
 export async function listEmployees(token: string) {
-    return apiClient.get<any>("/auth/employees", { token, cacheTTL: 300000 });
+    return apiClient.get<any>("/auth/employees", { token, cache: false });
 }
 
 export async function deleteEmployee(employeeId: string, token: string) {
     return apiClient.delete<any>(`/auth/employees/${employeeId}`, undefined, { token });
+}
+
+export async function changeEmployeeRole(userId: string, roleName: string, token: string) {
+    return apiClient.patch<any>(`/auth/employees/${userId}/role`, { role_name: roleName.toLowerCase() }, { token });
+}
+
+export async function toggleEmployeeStatus(userId: string, isActive: boolean, token: string) {
+    return apiClient.patch<any>(`/auth/employees/${userId}/status`, { is_active: isActive }, { token });
 }
 
 // ── Invites ───────────────────────────────────────────────────────────────────
@@ -75,11 +83,11 @@ export async function listFolders(token: string) {
 }
 
 export async function getRootContents(token: string) {
-    return apiClient.get<any>("/api/root-folder/contents", { token, cacheTTL: 300000 });
+    return apiClient.get<any>("/api/root-folder/contents", { token, cache: false });
 }
 
 export async function getFolderContents(folderId: string, token: string) {
-    return apiClient.get<any>(`/api/root-folder/folders/${folderId}/contents`, { token, cacheTTL: 300000 });
+    return apiClient.get<any>(`/api/root-folder/folders/${folderId}/contents`, { token, cache: false });
 }
 
 export async function createFolder(payload: { name: string; description?: string; parent_folder_id?: string }, token: string) {

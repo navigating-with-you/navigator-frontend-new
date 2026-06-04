@@ -74,17 +74,38 @@ export default function CategoryDrawer({
     // Reset drawer state on open/close or category changes
     useEffect(() => {
         if (open) {
+            const superAdmins = allEmployees
+                .filter((emp) => {
+                    const r = (emp.role || "").toLowerCase().replace("_", "");
+                    return r === "superadmin";
+                })
+                .map((emp) => ({
+                    id: emp.id,
+                    name: emp.name,
+                    role: emp.role || "Super Admin",
+                    avatar: emp.avatar || "",
+                }));
+
             if (category && (mode === "edit" || mode === "view")) {
                 setName(category.name);
                 setDescription(category.description || "");
                 setManagerId(category.managerId || "");
-                setSelectedEmployees(category.employees || []);
+                
+                // Merge existing members and all super admins, avoiding duplicates
+                const existing = category.employees || [];
+                const merged = [...existing];
+                superAdmins.forEach((sa) => {
+                    if (!merged.some((m) => m.id === sa.id)) {
+                        merged.push(sa);
+                    }
+                });
+                setSelectedEmployees(merged);
                 setSelectedFiles(category.files || []);
             } else {
                 setName("");
                 setDescription("");
                 setManagerId("");
-                setSelectedEmployees([]);
+                setSelectedEmployees(superAdmins);
                 setSelectedFiles([]);
             }
             setTouched({});
@@ -97,7 +118,7 @@ export default function CategoryDrawer({
             setFilePage(1);
             setIsSubmitting(false);
         }
-    }, [open, category, mode, isMember]);
+    }, [open, category, mode, isMember, allEmployees]);
 
     const handleBlur = (field: "name" | "managerId") => {
         setTouched((prev) => ({ ...prev, [field]: true }));
@@ -106,7 +127,11 @@ export default function CategoryDrawer({
     // Filter available managers (all employees list)
     const managerOptions = useMemo(() => {
         return allEmployees
-            .filter((emp) => emp.id && emp.name)
+            .filter((emp) => {
+                if (!emp.id || !emp.name) return false;
+                const r = (emp.role || "").toLowerCase().replace("_", "");
+                return r === "admin" || r === "superadmin";
+            })
             .map((emp) => ({
                 id: emp.id,
                 name: emp.name,
@@ -608,11 +633,11 @@ export default function CategoryDrawer({
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                        {!isReadOnly && (
+                                                        {!isReadOnly && (emp.role || "").toLowerCase().replace("_", "") !== "superadmin" && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleRemoveEmployee(emp.id)}
-                                                                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 ml-4 shrink-0 transition-colors"
+                                                                className="text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-300 ml-4 shrink-0 transition-colors"
                                                                 title="Remove employee"
                                                                 aria-label={`Remove employee ${emp.name}`}
                                                             >

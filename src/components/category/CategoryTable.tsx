@@ -267,12 +267,12 @@ export default function CategoryTable({
             className="overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 flex flex-col h-full"
             data-testid="teams-table"
         >
-            <div className="w-full flex-1 flex flex-col min-h-0">
+            <div className="w-full flex-1 flex flex-col min-h-0 overflow-x-auto">
                 <div className="w-full flex-1 flex flex-col min-h-0">
                     {/* Header */}
                     <div
                         style={{ gridTemplateColumns: computedGridCols }}
-                        className="hidden md:grid items-center gap-2 bg-[#60646B]/10 rounded-t-[10px] px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none"
+                        className="hidden md:grid items-center gap-2 bg-[#60646B]/10 rounded-t-[10px] px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none md:min-w-[800px] lg:min-w-full"
                     >
                         {canSelect && (
                             <div>
@@ -317,14 +317,14 @@ export default function CategoryTable({
                     </div>
  
                     {/* Rows */}
-                    <div className="flex-1 overflow-y-auto hover-scrollbar min-h-0">
+                    <div className="flex-1 overflow-y-auto hover-scrollbar min-h-0 md:min-w-[800px] lg:min-w-full">
                         {pageRows.map((cat) => (
                             <div
                                 key={cat.id}
                                 onClick={() => onView(cat)}
                                 style={{ gridTemplateColumns: computedGridCols }}
                                 className={cn(
-                                    "flex flex-col md:grid items-start md:items-center gap-3 md:gap-2 px-5 py-4 transition-all hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 cursor-pointer group relative",
+                                    "flex flex-col md:grid items-start md:items-center gap-3 md:gap-2 px-5 py-4 transition-all hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 cursor-pointer group relative border-b border-zinc-100 dark:border-zinc-800/50 last:border-b-0",
                                     cat.isArchived && "opacity-60 bg-zinc-50/30 dark:bg-zinc-900/30"
                                 )}
                                 data-testid={`team-row-${cat.id}`}

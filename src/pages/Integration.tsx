@@ -76,7 +76,7 @@ const Integration: React.FC<IntegrationProps> = ({ variant = "populated" }) => {
         <section
             data-testid="integration-screen"
             data-tour="integration-page"
-            className="p-4 sm:p-8 flex flex-col h-full w-full bg-transparent dark:bg-zinc-950 overflow-hidden"
+            className="p-3 sm:p-6 md:p-8 flex flex-col h-full w-full bg-transparent dark:bg-zinc-950 overflow-hidden"
         >
             {/* Title row */}
             <div className="flex flex-col gap-1 shrink-0">

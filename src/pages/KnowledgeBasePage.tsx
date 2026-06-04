@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
+import { cn } from "@/lib/utils";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
 import { PageActionButton } from "@/components/ui/page-action-button";
 import { PermissionGate } from "@/components/PermissionGate";
@@ -24,20 +25,20 @@ import ColumnSettings from "@/components/ui/ColumnSettings";
 
 const KB_COLUMNS = [
     { key: "name", label: "Knowledge Base Name" },
-    { key: "type", label: "Type" },
     { key: "folder", label: "Size / Description" },
     { key: "owner", label: "Creator" },
     { key: "createdDate", label: "Created Date" },
-    { key: "ocr_status", label: "OCR Status" },
+    { key: "ocr_status", label: "Status" },
 ];
 
-const DEFAULT_KB_COLUMNS = ["name", "folder", "owner"];
+const DEFAULT_KB_COLUMNS = ["name", "folder", "owner", "ocr_status"];
 import CreateFolderDrawer from "@/components/knowledge-base/CreateFolderDrawer";
 import AddFilesDrawer from "@/components/knowledge-base/AddFilesDrawer";
 import AddTextDrawer from "@/components/knowledge-base/AddTextDrawer";
 import AddUrlDrawer from "@/components/knowledge-base/AddUrlDrawer";
 
 import KnowledgeBaseDetailDrawer from "@/components/knowledge-base/KnowledgeBaseDetailDrawer";
+import { cacheWebSocket } from "@/utils/cacheWebSocket";
 import {
     Dialog,
     DialogContent,
@@ -55,9 +56,14 @@ import {
     uploadFiles,
     deleteFiles,
     listEmployees,
+    createOcrJob,
+    retryOcrJob,
+    getFileOcrJob,
+    listFolderOcrJobs,
 } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useRealTimeFileProcessing } from "@/hooks/useRealTimeFileProcessing";
 import type {
     KBEntry,
     CreateFolderPayload,
@@ -105,7 +111,7 @@ function rawFileToEntry(file: any, ocrStatusMap?: Record<string, string>): KBEnt
         createdDate: file.created_at ? formatDate(file.created_at) : "-",
         file_size: file.file_size,
         mime_type: file.mime_type,
-        ocr_status: (ocrStatusMap?.[file.id] as any) ?? null,
+        ocr_status: (ocrStatusMap?.[file.id] as any) ?? file.ocr_status ?? null,
         description: file.description,
     };
 }
@@ -177,6 +183,7 @@ export default function KnowledgeBasePage() {
 
     // Root folder ID returned by backend
     const [rootFolderId, setRootFolderId] = useState<string | null>(null);
+    const [folderJobs, setFolderJobs] = useState<any[]>([]);
 
     // PERFORMANCE: Search with debouncing
     // searchInput is updated immediately for responsive UI
@@ -203,9 +210,6 @@ export default function KnowledgeBasePage() {
     const currentFolderId = folderStack.length > 0 ? folderStack[folderStack.length - 1].id : null;
     const currentFolderEntry = folderStack.length > 0 ? folderStack[folderStack.length - 1] : null;
 
-    // File processing state management (simplified - no WebSocket)
-    const getFileProcessingState = (_fileId: string): { status: string } | null => null;
-
     // Employees list for creator filter options
     const [employeesList, setEmployeesList] = useState<any[]>([]);
 
@@ -230,6 +234,7 @@ export default function KnowledgeBasePage() {
     const fetchContents = useCallback(async (folderId: string | null) => {
         try {
             setIsLoading(true);
+            setFolderJobs([]);
             const token = await getToken();
             if (!token) return;
 
@@ -247,21 +252,126 @@ export default function KnowledgeBasePage() {
                 setRootFolderId(data.root_folder_id);
             }
 
-            // Real-time OCR status is handled via useRealTimeFileProcessing hook
-            // No need to fetch here - WebSocket will provide updates
+            const targetFolderId = folderId || data.root_folder_id || rootFolderId;
+            // Members don't have access to OCR job status — skip the fetch
+            if (targetFolderId && !isMember) {
+                try {
+                    const jobsData = await listFolderOcrJobs(targetFolderId, token);
+                    setFolderJobs(jobsData.jobs || []);
+                } catch (jobsErr) {
+                    console.error("Error fetching folder OCR jobs:", jobsErr);
+                }
+            }
         } catch (err: any) {
             console.error("Error fetching contents:", err);
             toast.error(err.message || "Failed to load contents");
         } finally {
             setIsLoading(false);
         }
-    }, [getToken]);
+    }, [getToken, rootFolderId, isMember]);
+
+    const fileIds = useMemo(() => childFiles.map(f => f.id), [childFiles]);
+
+    const { getFileProcessingState } = useRealTimeFileProcessing({
+        folderId: currentFolderId,
+        fileIds,
+        enabled: !isLoading && fileIds.length > 0,
+        onStatusChange: useCallback((state: any) => {
+            if (state.status === "completed" || state.status === "failed" || state.status === "cancelled") {
+                fetchContents(currentFolderId);
+            }
+        }, [currentFolderId, fetchContents]),
+    });
+
+    const handleRetryOcr = async (fileId: string) => {
+        try {
+            const token = await getToken();
+            if (!token) return;
+            toast.loading("Retrying OCR extraction...", { id: "retry-ocr" });
+            
+            let job: any = null;
+            try {
+                job = await getFileOcrJob(fileId, token);
+            } catch (err) {
+                // If no job exists, we will create one below
+            }
+
+            if (job && job.job_id) {
+                await retryOcrJob(job.job_id, token);
+            } else {
+                await createOcrJob({ file_id: fileId, extraction_type: "standard" }, token);
+            }
+            toast.success("OCR job retried successfully", { id: "retry-ocr" });
+            fetchContents(currentFolderId);
+        } catch (err: any) {
+            console.error("Error retrying OCR:", err);
+            toast.error(err.message || "Failed to retry OCR", { id: "retry-ocr" });
+        }
+    };
 
     useEffect(() => {
         fetchContents(currentFolderId);
     }, [currentFolderId, fetchContents]);
 
-    // Manual refresh will be triggered via UI actions instead of WebSocket
+    useEffect(() => {
+        const handleWsChange = (event: any) => {
+            console.log("[KBPage] WS Event received:", event);
+
+            // Directly update the OCR status of the file in the state in real-time
+            if (event && (event.event === "ocr:job_created" || event.event === "ocr:job_updated" || event.event === "ocr:job_completed")) {
+                const fileId = event.metadata?.file_id || event.resource_id;
+                const rawStatus = event.metadata?.status || event.metadata?.ocr_status || "";
+                
+                let status = "processing";
+                if (event.event === "ocr:job_completed" || rawStatus === "completed" || rawStatus === "success") {
+                    status = "completed";
+                } else if (event.event === "ocr:job_created" || rawStatus === "pending" || rawStatus === "queued") {
+                    status = "pending";
+                } else if (rawStatus === "failed") {
+                    status = "failed";
+                } else if (rawStatus === "cancelled") {
+                    status = "cancelled";
+                } else if (rawStatus === "processing") {
+                    status = "processing";
+                }
+
+                if (fileId) {
+                    setChildFiles((prevFiles) =>
+                        prevFiles.map((file) => {
+                            if (file.id === fileId) {
+                                return {
+                                    ...file,
+                                    ocr_status: status,
+                                };
+                            }
+                            return file;
+                        })
+                    );
+                }
+            }
+
+            // Always call fetchContents to make sure we refresh the whole list for created/deleted/completed events
+            if (event && (event.event === "file:created" || event.event === "file:deleted" || event.event === "ocr:job_completed")) {
+                fetchContents(currentFolderId);
+            }
+        };
+
+        cacheWebSocket.on("file:created", handleWsChange);
+        cacheWebSocket.on("file:updated", handleWsChange);
+        cacheWebSocket.on("file:deleted", handleWsChange);
+        cacheWebSocket.on("ocr:job_created", handleWsChange);
+        cacheWebSocket.on("ocr:job_updated", handleWsChange);
+        cacheWebSocket.on("ocr:job_completed", handleWsChange);
+
+        return () => {
+            cacheWebSocket.off("file:created", handleWsChange);
+            cacheWebSocket.off("file:updated", handleWsChange);
+            cacheWebSocket.off("file:deleted", handleWsChange);
+            cacheWebSocket.off("ocr:job_created", handleWsChange);
+            cacheWebSocket.off("ocr:job_updated", handleWsChange);
+            cacheWebSocket.off("ocr:job_completed", handleWsChange);
+        };
+    }, [currentFolderId, fetchContents]);
 
     // ── Derived data ───────────────────────────────────────────────────────────
 
@@ -270,42 +380,68 @@ export default function KnowledgeBasePage() {
         [childFolders]
     );
 
+    const ocrJobsMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        // Since folderJobs is sorted from newest to oldest (created_at desc),
+        // we only store the first job status we see for a file.
+        folderJobs.forEach((job) => {
+            if (job.file_id && !map[job.file_id]) {
+                map[job.file_id] = job.status;
+            }
+        });
+        return map;
+    }, [folderJobs]);
+
     const fileEntries = useMemo<KBEntry[]>(
         () => childFiles.map((f) => {
             const processingState = getFileProcessingState(f.id);
             return rawFileToEntry(f, {
-                [f.id]: processingState?.status || f.ocr_status,
+                [f.id]: processingState?.status || ocrJobsMap[f.id] || f.ocr_status,
             });
         }),
-        [childFiles, getFileProcessingState]
+        [childFiles, getFileProcessingState, ocrJobsMap]
     );
 
     const allCreators = useMemo(() => {
-        const names = new Set<string>();
-        // Add all active employees from organization
-        employeesList.forEach((emp: any) => {
-            const firstName = emp.first_name || emp.given_name || "";
-            const lastName = emp.last_name || emp.family_name || "";
-            const fullName = emp.display_name || `${firstName} ${lastName}`.trim() || emp.name || emp.email?.split("@")[0];
-            if (fullName) names.add(fullName);
-        });
-        // Also ensure any direct creator/uploader names from local files/folders are included
-        [...childFolders, ...childFiles].forEach((item) => {
-            const name =
-                item.creator?.display_name || item.creator?.email ||
-                item.uploader?.display_name || item.uploader?.email;
-            if (name) names.add(name);
-        });
-        return Array.from(names).sort();
-    }, [childFolders, childFiles, employeesList]);
+        return employeesList
+            .filter((emp: any) => {
+                let rawRole = "member";
+                if (emp.role && typeof emp.role === "object") {
+                    rawRole = emp.role.name;
+                } else if (emp.role && typeof emp.role === "string") {
+                    rawRole = emp.role;
+                }
+                const r = (rawRole || "").toLowerCase().replace("_", "");
+                return r === "admin" || r === "superadmin";
+            })
+            .map((emp: any) => {
+                const firstName = emp.first_name || emp.given_name || "";
+                const lastName = emp.last_name || emp.family_name || "";
+                return emp.display_name || `${firstName} ${lastName}`.trim() || emp.name || emp.email?.split("@")[0];
+            })
+            .filter(Boolean)
+            .sort();
+    }, [employeesList]);
+
+    const OCR_STATUS_OPTIONS = ["Queued", "Processing", "Indexed", "Failed", "Cancelled"];
+    const OCR_STATUS_FILTER_MAP: Record<string, string> = {
+        "queued": "pending",
+        "processing": "processing",
+        "indexed": "completed",
+        "failed": "failed",
+        "cancelled": "cancelled"
+    };
 
     const allEntries = useMemo<KBEntry[]>(() => {
         return [...folderEntries, ...fileEntries].filter((e) => {
             // ✅ Use debouncedSearch for filtering (not searchInput)
             if (debouncedSearch && !e.name.toLowerCase().includes(debouncedSearch.toLowerCase())) return false;
             if (filters.creator && e.owner !== filters.creator) return false;
-            if (filters.type && e.type.toLowerCase() !== filters.type.toLowerCase()) return false;
-            if (filters.ocrStatus && e.ocr_status !== filters.ocrStatus.toLowerCase()) return false;
+            if (filters.ocrStatus) {
+                const filterVal = filters.ocrStatus.toLowerCase();
+                const targetStatus = OCR_STATUS_FILTER_MAP[filterVal] || filterVal;
+                if (e.ocr_status !== targetStatus) return false;
+            }
             return true;
         });
     }, [folderEntries, fileEntries, debouncedSearch, filters]);
@@ -589,7 +725,7 @@ export default function KnowledgeBasePage() {
     // ── Render ─────────────────────────────────────────────────────────────────
 
     return (
-        <div className="p-4 sm:p-8 flex flex-col h-full w-full overflow-hidden" data-testid="knowledge-base-page" data-tour="knowledge-base-page">
+        <div className="p-3 sm:p-6 md:p-8 flex flex-col h-full w-full overflow-hidden" data-testid="knowledge-base-page" data-tour="knowledge-base-page">
 
             {/* Header / Breadcrumbs */}
             <div className="flex-shrink-0 flex flex-col gap-1">
@@ -652,8 +788,8 @@ export default function KnowledgeBasePage() {
                             data-testid="kb-refresh-btn"
                             onClick={() => { fetchContents(currentFolderId); }}
                         >
-                            <RefreshCw className="h-4 w-4" />
-                            Refresh
+                            <RefreshCw className={cn("h-4 w-4 text-zinc-500 dark:text-zinc-400", isLoading && "animate-spin")} />
+                            <span className="hidden sm:inline">Refresh</span>
                         </Button>
                     </div>
                 </div>
@@ -780,32 +916,27 @@ export default function KnowledgeBasePage() {
                 <div className="flex-shrink-0 mt-4 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2">
                         <FilterDropdown
-                            label="Type"
-                            value={filters.type}
-                            options={["Folder", "File"]}
-                            onChange={(v) => setFilters((f) => ({ ...f, type: v }))}
-                            testId="kb-filter-type"
-                        />
-
-                        <FilterDropdown
                             label="Creator"
                             value={filters.creator}
-                            options={allCreators.length > 0 ? allCreators : ["Admin"]}
+                            options={allCreators}
                             onChange={(v) => setFilters((f) => ({ ...f, creator: v }))}
                             testId="kb-filter-creator"
                         />
 
-                        <FilterDropdown
-                            label="OCR Status"
-                            value={filters.ocrStatus}
-                            options={["Pending", "Processing", "Completed", "Failed"]}
-                            onChange={(v) => setFilters((f) => ({ ...f, ocrStatus: v }))}
-                            testId="kb-filter-ocr"
-                        />
+                        {/* Status filter — hidden for members (no OCR access) */}
+                        {!isMember && (
+                            <FilterDropdown
+                                label="Status"
+                                value={filters.ocrStatus}
+                                options={OCR_STATUS_OPTIONS}
+                                onChange={(v) => setFilters((f) => ({ ...f, ocrStatus: v }))}
+                                testId="kb-filter-ocr"
+                            />
+                        )}
                     </div>
                     <ColumnSettings
-                        columns={KB_COLUMNS}
-                        visibleColumns={visibleColumns}
+                        columns={isMember ? KB_COLUMNS.filter(c => c.key !== "ocr_status") : KB_COLUMNS}
+                        visibleColumns={isMember ? visibleColumns.filter(c => c !== "ocr_status") : visibleColumns}
                         onApply={setVisibleColumns}
                         defaultColumns={DEFAULT_KB_COLUMNS}
                     />
@@ -849,8 +980,9 @@ export default function KnowledgeBasePage() {
                             setDetailEntry(entry);
                             setDetailOpen(true);
                         }}
+                        onRetryOcr={handleRetryOcr}
                         isInsideFolder={!!currentFolderId}
-                        visibleColumns={visibleColumns}
+                        visibleColumns={isMember ? visibleColumns.filter(c => c !== "ocr_status") : visibleColumns}
                         selected={selected}
                         setSelected={setSelected}
                     />

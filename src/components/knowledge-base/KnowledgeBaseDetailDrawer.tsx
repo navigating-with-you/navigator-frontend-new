@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from "react";
-import { X, FileText, Loader2, Plus, Search, Minus, Download } from "lucide-react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { X, FileText, Loader2, Plus, Search, Minus, Download, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,54 @@ import { getFolder, uploadFiles, deleteFiles, updateFolder, getFile, getFileDown
 import { cn } from "@/lib/utils";
 import { useRealTimeFileProcessing } from "@/hooks/useRealTimeFileProcessing";
 import type { KBEntry } from "@/types/knowledge-base";
+import { cacheWebSocket } from "@/utils/cacheWebSocket";
+
+function OcrStatusBadge({ status }: { status?: string | null }) {
+    if (!status) return null;
+
+    const cfg: Record<string, { icon: React.ReactNode; label: string; cls: string; desc: string }> = {
+        pending: {
+            icon: <Clock className="h-3.5 w-3.5" />,
+            label: "Queued",
+            cls: "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
+            desc: "File is in queue waiting to be processed by the OCR engine.",
+        },
+        processing: {
+            icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
+            label: "Processing",
+            cls: "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
+            desc: "Gemini is currently reading the document, extracting text, and generating vector embeddings.",
+        },
+        completed: {
+            icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+            label: "Indexed",
+            cls: "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
+            desc: "OCR processing is complete. The document text is extracted, indexed, and ready for search.",
+        },
+        failed: {
+            icon: <XCircle className="h-3.5 w-3.5" />,
+            label: "Failed",
+            cls: "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400",
+            desc: "OCR processing failed. The document text could not be read or extracted.",
+        },
+        cancelled: {
+            icon: <XCircle className="h-3.5 w-3.5" />,
+            label: "Cancelled",
+            cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
+            desc: "OCR processing was cancelled.",
+        },
+    };
+
+    const c = cfg[status];
+    if (!c) return null;
+
+    return (
+        <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold", c.cls)} title={c.desc}>
+            {c.icon}
+            {c.label}
+        </span>
+    );
+}
 
 interface KBDetailDrawerProps {
     open: boolean;
@@ -94,7 +142,7 @@ export default function KnowledgeBaseDetailDrawer({
         }
     };
 
-    const fetchExtractedText = async (fileId: string) => {
+    const fetchExtractedText = useCallback(async (fileId: string) => {
         try {
             const token = await getToken();
             if (!token) return;
@@ -107,9 +155,9 @@ export default function KnowledgeBaseDetailDrawer({
         } finally {
             setIsOcrLoading(false);
         }
-    };
+    }, [getToken]);
 
-    const checkOrStartOcrJob = async (fileId: string) => {
+    const checkOrStartOcrJob = useCallback(async (fileId: string) => {
         try {
             const token = await getToken();
             if (!token) return;
@@ -129,7 +177,7 @@ export default function KnowledgeBaseDetailDrawer({
                 setOcrError(job.error_message || "OCR extraction failed.");
                 setIsOcrLoading(false);
             } else if (job.status === "pending" || job.status === "processing") {
-                // Real-time updates now handled by useRealTimeFileProcessing hook
+                // Real-time updates now handled by WebSocket listener
             } else {
                 setIsOcrLoading(false);
             }
@@ -138,10 +186,10 @@ export default function KnowledgeBaseDetailDrawer({
             setOcrError(err.message || "Failed to process OCR job.");
             setIsOcrLoading(false);
         }
-    };
+    }, [getToken, fetchExtractedText]);
 
     // Fetch file metadata and OCR text content
-    const fetchFileAllDetails = async () => {
+    const fetchFileAllDetails = useCallback(async () => {
         if (!entry || entry.type !== "file") return;
         try {
             setIsLoading(true);
@@ -189,7 +237,63 @@ export default function KnowledgeBaseDetailDrawer({
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [entry, getToken, checkOrStartOcrJob]);
+
+    // Listen to real-time events from WebSocket to update status and text dynamically
+    useEffect(() => {
+        if (!open || !entry || entry.type !== "file") return;
+
+        const handleWsEvent = (event: any) => {
+            console.log("[DetailDrawer] WS Event received:", event);
+            
+            // Check if this event belongs to the currently active file/job
+            const isForCurrentFile = event.resource_id === entry.id || event.metadata?.file_id === entry.id;
+            const isForCurrentJob = ocrJob && (event.resource_id === ocrJob.job_id || event.resource_id === ocrJob.id);
+
+            if (isForCurrentFile || isForCurrentJob) {
+                if (event.event === "ocr:job_completed") {
+                    // Refetch file details and extracted text when completed
+                    fetchFileAllDetails();
+                } else if (event.event === "ocr:job_updated" || event.event === "ocr:job_created") {
+                    // Update OCR job progress in real-time
+                    setOcrJob((prev: any) => {
+                        const newJob = {
+                            ...(prev || {}),
+                            status: event.metadata?.status || prev?.status || "processing",
+                            progress_percentage: event.metadata?.progress_percentage !== undefined ? event.metadata.progress_percentage : prev?.progress_percentage || 0,
+                            progress_message: event.metadata?.progress_message || prev?.progress_message || "",
+                            error_message: event.metadata?.error_message || prev?.error_message || null,
+                        };
+                        return newJob;
+                    });
+
+                    // Update ocr_status on fileDetails so badge updates instantly
+                    setFileDetails((prev: any) => {
+                        if (!prev) return prev;
+                        return {
+                            ...prev,
+                            ocr_status: event.metadata?.status || prev.ocr_status,
+                        };
+                    });
+                } else if (event.event === "file:updated") {
+                    // Refetch if the file metadata changed
+                    fetchFileAllDetails();
+                }
+            }
+        };
+
+        cacheWebSocket.on("file:updated", handleWsEvent);
+        cacheWebSocket.on("ocr:job_created", handleWsEvent);
+        cacheWebSocket.on("ocr:job_updated", handleWsEvent);
+        cacheWebSocket.on("ocr:job_completed", handleWsEvent);
+
+        return () => {
+            cacheWebSocket.off("file:updated", handleWsEvent);
+            cacheWebSocket.off("ocr:job_created", handleWsEvent);
+            cacheWebSocket.off("ocr:job_updated", handleWsEvent);
+            cacheWebSocket.off("ocr:job_completed", handleWsEvent);
+        };
+    }, [open, entry, ocrJob, fetchFileAllDetails]);
 
     const handleRetryOcr = async () => {
         if (!entry) return;
@@ -238,7 +342,7 @@ export default function KnowledgeBaseDetailDrawer({
     };
 
     // Fetch the S3 files dynamically from the backend for the opened folder
-    const fetchFolderFiles = async () => {
+    const fetchFolderFiles = useCallback(async () => {
         if (!entry || entry.type !== "folder") return;
         try {
             setIsLoading(true);
@@ -256,7 +360,7 @@ export default function KnowledgeBaseDetailDrawer({
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [entry, getToken]);
 
     // Reset mode and fetch files on open/entry changes
     useEffect(() => {
@@ -281,7 +385,7 @@ export default function KnowledgeBaseDetailDrawer({
             setOcrError(null);
             setOcrJob(null);
         }
-    }, [open, entry]);
+    }, [open, entry, fetchFolderFiles, fetchFileAllDetails]);
 
     // Handle single file deletion (minus icon)
     const handleDeleteFile = async (fileId: string, filename: string) => {
@@ -404,6 +508,19 @@ export default function KnowledgeBaseDetailDrawer({
                                         ) : (
                                             `${Math.max(1, Math.ceil((ocrText?.length || 0) / 2500))} pages`
                                         )}
+                                    </span>
+                                </div>
+
+                                {/* OCR Status */}
+                                <div className="flex flex-col">
+                                    <span className="text-[12px] text-zinc-400 dark:text-zinc-500 font-medium">
+                                        OCR Status
+                                    </span>
+                                    <span className="mt-1">
+                                        {(() => {
+                                            const status = ocrJob?.status || fileDetails?.ocr_status || entry.ocr_status;
+                                            return status ? <OcrStatusBadge status={status} /> : <span className="text-[13px] text-zinc-900 dark:text-zinc-100 font-normal">—</span>;
+                                        })()}
                                     </span>
                                 </div>
 

@@ -138,7 +138,7 @@ export default function SubscriptionPage(): JSX.Element {
     };
 
     return (
-        <div className="flex flex-col min-h-full w-full max-w-7xl mx-auto p-4 sm:p-8 space-y-5 bg-transparent select-none shrink-0">
+        <div className="flex flex-col min-h-full w-full max-w-7xl mx-auto p-3 sm:p-6 md:p-8 space-y-5 bg-transparent select-none shrink-0">
             {/* Header Title Row */}
             <div className="flex flex-row items-center w-full shrink-0">
                 <h1 className="text-[22px] font-bold text-zinc-900 dark:text-zinc-100">Subscription</h1>

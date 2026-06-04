@@ -1070,7 +1070,7 @@ export default function NewChatPage(): JSX.Element {
             >
                 {showEmptyState ? (
                     /* ── Empty / Welcome State ────────────────────────── */
-                    <div className="flex flex-col items-center justify-center min-h-full text-center px-4 py-8 max-w-3xl mx-auto">
+                    <div className="flex flex-col items-center justify-center min-h-full text-center px-3 sm:px-6 py-6 md:py-10 max-w-5xl mx-auto">
                         {/* Logo */}
                         <div className="mb-6 select-none pointer-events-none">
                             <img 
@@ -1086,7 +1086,7 @@ export default function NewChatPage(): JSX.Element {
                         </h1>
 
                         {/* Centered Input Box */}
-                        <div className="w-full max-w-2xl mb-10">
+                        <div className="w-full max-w-4xl mb-6 md:mb-10">
                             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-full shadow-md focus-within:shadow-lg focus-within:border-zinc-300 dark:focus-within:border-zinc-700 transition-all p-2 pl-5 pr-2 flex items-center gap-2">
                                 <textarea
                                     value={inputVal}
@@ -1135,18 +1135,18 @@ export default function NewChatPage(): JSX.Element {
                         </div>
 
                         {/* Suggestions Label */}
-                        <div className="text-zinc-500 dark:text-zinc-400 text-xs font-semibold tracking-wide mb-6 select-none">
+                        <div className="text-zinc-500 dark:text-zinc-400 text-xs font-semibold tracking-wide mb-4 md:mb-6 select-none">
                             Suggestions:
                         </div>
 
                         {/* Suggestions Cards Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-3xl">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 w-full max-w-5xl">
                             {suggestions.map((s, idx) => (
                                 <button
                                     key={idx}
                                     type="button"
                                     onClick={() => handleSendMessage(s.text)}
-                                    className="relative flex flex-col items-start text-left bg-zinc-50/50 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800/80 hover:border-blue-200 dark:hover:border-blue-800/60 hover:bg-blue-50/10 dark:hover:bg-blue-950/10 rounded-2xl p-5 cursor-pointer transition-all hover:scale-[1.01] shadow-sm group min-h-[140px]"
+                                    className="relative flex flex-col items-start text-left bg-zinc-50/50 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800/80 hover:border-blue-200 dark:hover:border-blue-800/60 hover:bg-blue-50/10 dark:hover:bg-blue-950/10 rounded-2xl p-4 sm:p-5 cursor-pointer transition-all hover:scale-[1.01] shadow-sm group min-h-[110px] md:min-h-[140px]"
                                 >
 
 
@@ -1163,7 +1163,7 @@ export default function NewChatPage(): JSX.Element {
                     </div>
                 ) : isLoadingMessages ? (
                     /* ── Loading Skeleton ─────────────────────────────── */
-                    <div className="max-w-2xl mx-auto px-4 pt-6 pb-6 space-y-8">
+                    <div className="max-w-5xl mx-auto px-3 sm:px-6 md:px-8 pt-4 sm:pt-6 pb-6 space-y-6 md:space-y-8">
                         {[1, 2, 3].map((i) => {
                             const isUser = i % 2 === 0;
                             return (
@@ -1181,7 +1181,7 @@ export default function NewChatPage(): JSX.Element {
                     </div>
                 ) : (
                     /* ── Messages Thread ──────────────────────────────── */
-                    <div className="max-w-2xl mx-auto px-4 pt-6 pb-6">
+                    <div className="max-w-5xl mx-auto px-3 sm:px-6 md:px-8 pt-4 sm:pt-6 pb-6">
                         <div className="space-y-8">
                             {messages.map((m) => {
                                 const timeStr = m.timestamp.toLocaleTimeString("en-US", {
@@ -1308,10 +1308,10 @@ export default function NewChatPage(): JSX.Element {
 
             {/* ── Fixed Bottom Input Bar ────────────────────────────────── */}
             {!showEmptyState && (
-                <div className="shrink-0 px-4 pb-4 pt-2 bg-[#FEFFFA] dark:bg-zinc-950">
+                <div className="shrink-0 px-3 sm:px-6 pb-3 sm:pb-5 pt-2 bg-[#FEFFFA] dark:bg-zinc-950">
                     <div
                         data-tour="chat-input"
-                        className="max-w-2xl mx-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm focus-within:shadow-md focus-within:border-zinc-300 dark:focus-within:border-zinc-700 transition-all p-3 flex flex-col gap-2"
+                        className="max-w-4xl mx-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm focus-within:shadow-md focus-within:border-zinc-300 dark:focus-within:border-zinc-700 transition-all p-2.5 sm:p-3.5 flex flex-col gap-1.5 sm:gap-2"
                     >
                         <textarea
                             ref={textareaRef}

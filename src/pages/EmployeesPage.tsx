@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
+import { cn } from "@/lib/utils";
 import { Plus, RefreshCw, Search, X, Trash2, Mail } from "lucide-react";
 import { PageActionButton } from "@/components/ui/page-action-button";
 import { PermissionGate } from "@/components/PermissionGate";
@@ -43,6 +44,7 @@ import EmptyState from "@/components/employees/EmptyState";
 import UnifiedEmptyState from "@/components/ui/empty-state";
 import AddEmployeeDrawer from "@/components/employees/AddEmployeeDrawer";
 import EmployeeDetailsDrawer from "@/components/employees/EmployeeDrawer";
+import EditEmployeeDrawer from "@/components/employees/EditEmployeeDrawer";
 import FilterDropdown from "@/components/FilterDropdown";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { listEmployees, listInvites, resendInvite, revokeInvite, listRoles, deleteEmployee, listGroups } from "@/lib/api";
@@ -83,9 +85,11 @@ export default function EmployeesPage() {
     }, [visibleColumns]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [teams, setTeams] = useState<string[]>([]);
+    const [roleOptions, setRoleOptions] = useState<string[]>([]);
 
     const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
     const [detailDrawerOpen, setDetailDrawerOpen] = useState<boolean>(false);
+    const [editDrawerOpen, setEditDrawerOpen] = useState<boolean>(false);
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [search, setSearch] = useState<string>("");
 
@@ -199,6 +203,13 @@ export default function EmployeesPage() {
             const groupNames = groupsList.map((g: any) => g.name);
             setTeams(groupNames);
 
+            const roleNames = rolesList.map((r: any) => {
+                return r.name === "super_admin"
+                    ? "Super Admin"
+                    : r.name.charAt(0).toUpperCase() + r.name.slice(1);
+            });
+            setRoleOptions(roleNames);
+
             const mappedEmployees: Employee[] = employeeList.map((emp: any) => {
                 const firstName = emp.first_name || emp.given_name || "";
                 const lastName = emp.last_name || emp.family_name || "";
@@ -227,7 +238,7 @@ export default function EmployeesPage() {
                     role: roleName,
                     category: emp.category || "-",
                     avatar: emp.avatar || "",
-                    status: emp.status || (emp.is_active ? "online" : "offline"),
+                    status: "Accepted",
                     kbFiles: emp.kb_files !== undefined && emp.kb_files !== null ? emp.kb_files : "-",
                     simpleInteraction: emp.simple_interaction !== undefined && emp.simple_interaction !== null ? emp.simple_interaction : "-",
                     complexInteraction: emp.complex_interaction !== undefined && emp.complex_interaction !== null ? emp.complex_interaction : "-",
@@ -270,7 +281,7 @@ export default function EmployeesPage() {
                         role: roleName,
                         category: "-",
                         avatar: "",
-                        status: "pending",
+                        status: "Pending",
                         kbFiles: "-",
                         simpleInteraction: "-",
                         complexInteraction: "-",
@@ -354,28 +365,14 @@ export default function EmployeesPage() {
         return Array.from(list).sort();
     }, [employees]);
 
-    const uniqueRoles = useMemo(() => {
-        const list = new Set<string>();
-        employees.forEach((emp) => {
-            if (emp.role) list.add(emp.role);
-        });
-        return Array.from(list).sort();
-    }, [employees]);
-
-    const uniqueCategories = useMemo(() => {
-        const list = new Set<string>();
-        employees.forEach((emp) => {
-            if (emp.category && emp.category !== "-") list.add(emp.category);
-        });
-        return Array.from(list).sort();
-    }, [employees]);
-
     const uniqueCreators = useMemo(() => {
-        const list = new Set<string>();
-        employees.forEach((emp) => {
-            if (emp.createdBy && emp.createdBy !== "-") list.add(emp.createdBy);
-        });
-        return Array.from(list).sort();
+        return employees
+            .filter((emp) => {
+                const r = (emp.role || "").toLowerCase().replace("_", "");
+                return (r === "admin" || r === "superadmin") && emp.status === "Accepted";
+            })
+            .map((emp) => emp.name)
+            .sort();
     }, [employees]);
 
     const filteredEmployees = useMemo(() => {
@@ -450,7 +447,7 @@ export default function EmployeesPage() {
         <PermissionGate
             permission={PERMISSIONS.EMPLOYEE_EDIT}
             fallback={
-                <div className="p-4 sm:p-8 flex flex-col h-full w-full bg-transparent overflow-hidden">
+                <div className="p-3 sm:p-6 md:p-8 flex flex-col h-full w-full bg-transparent overflow-hidden">
                     <UnifiedEmptyState
                         title="Access Denied"
                         description="You don't have permission to view the employees page. Only managers and above can access this page."
@@ -459,10 +456,10 @@ export default function EmployeesPage() {
                 </div>
             }
         >
-            <div className="p-4 sm:p-8 flex flex-col h-full w-full bg-transparent overflow-hidden" data-testid="employees-page" data-tour="employees-page">
+            <div className="p-3 sm:p-6 md:p-8 flex flex-col h-full w-full bg-transparent overflow-hidden" data-testid="employees-page" data-tour="employees-page">
                 {/* Header - Fixed */}
                 <div className="shrink-0 flex flex-col gap-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
                             <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
                                 Employees
@@ -474,11 +471,15 @@ export default function EmployeesPage() {
                                 </Badge>
                             )}
                         </div>
-
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" className="w-full sm:w-auto border-[#E7E7E0] bg-[#FEFFFA] hover:bg-[#F5F5F0] dark:border-zinc-700 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold" onClick={fetchEmployees} disabled={isLoading}>
-                                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-                                Refresh
+                        <div className="flex items-center">
+                            <Button
+                                variant="outline"
+                                className="gap-2 rounded-lg border-[#E7E7E0] bg-[#FEFFFA] hover:bg-[#F5F5F0] dark:border-zinc-700 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold"
+                                onClick={fetchEmployees}
+                                disabled={isLoading}
+                            >
+                                <RefreshCw className={cn("h-4 w-4 text-zinc-500 dark:text-zinc-400", isLoading && "animate-spin")} />
+                                <span className="hidden sm:inline">Refresh</span>
                             </Button>
                         </div>
                     </div>
@@ -546,8 +547,8 @@ export default function EmployeesPage() {
 
                 {/* Filters or Batch Actions */}
                 {selected.size > 0 ? (
-                    <div className="mt-4 shrink-0 flex items-center justify-between gap-3 bg-transparent select-none">
-                        <div className="flex items-center gap-3">
+                    <div className="mt-4 shrink-0 flex items-center justify-between gap-2 bg-transparent select-none">
+                        <div className="flex items-center gap-2">
                             <PermissionGate
                                 permission={PERMISSIONS.EMPLOYEE_DELETE}
                                 fallback={null}
@@ -557,9 +558,9 @@ export default function EmployeesPage() {
                                     size="sm"
                                     disabled={isBatchProcessing}
                                     onClick={() => setConfirmBatchDelete(true)}
-                                    className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-red-650 hover:text-red-700 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-sm font-semibold rounded-lg shadow-sm"
+                                    className="h-6 px-2.5 border-[#E7E7E0] dark:border-zinc-700 text-red-650 hover:text-red-700 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
                                 >
-                                    <Trash2 className="h-4 w-4 mr-2 text-red-500" />
+                                    <Trash2 className="h-3.5 w-3.5 text-red-500" />
                                     Delete
                                 </Button>
                             </PermissionGate>
@@ -575,9 +576,9 @@ export default function EmployeesPage() {
                                             size="sm"
                                             disabled={isBatchProcessing}
                                             onClick={handleBatchResend}
-                                            className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 text-sm font-semibold rounded-lg shadow-sm"
+                                            className="h-6 px-2.5 border-[#E7E7E0] dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
                                         >
-                                            <Mail className="h-4 w-4 mr-2 text-zinc-500" />
+                                            <Mail className="h-3.5 w-3.5 text-zinc-500" />
                                             Resend Invite
                                         </Button>
                                     </PermissionGate>
@@ -591,9 +592,9 @@ export default function EmployeesPage() {
                                             size="sm"
                                             disabled={isBatchProcessing}
                                             onClick={() => setConfirmBatchRevoke(true)}
-                                            className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-red-650 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-sm font-semibold rounded-lg shadow-sm"
+                                            className="h-6 px-2.5 border-[#E7E7E0] dark:border-zinc-700 text-red-650 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
                                         >
-                                            <X className="h-4 w-4 mr-2 text-zinc-500" />
+                                            <X className="h-3.5 w-3.5 text-zinc-500" />
                                             Revoke
                                         </Button>
                                     </PermissionGate>
@@ -601,7 +602,7 @@ export default function EmployeesPage() {
                             )}
                         </div>
                         {/* Right side selection badge */}
-                        <div className="flex items-center gap-2 px-3 py-2 border border-[#E7E7E0] dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900 rounded-lg text-sm text-zinc-650 dark:text-zinc-300 font-medium shadow-xs">
+                        <div className="flex items-center gap-1.5 px-2.5 h-6 border border-[#E7E7E0] dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900 rounded-md text-xs text-zinc-650 dark:text-zinc-300 font-normal shadow-sm">
                             <span>{selected.size} selected</span>
                             <button
                                 type="button"
@@ -609,17 +610,17 @@ export default function EmployeesPage() {
                                 className="text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200 transition-colors ml-1 cursor-pointer"
                                 aria-label="Clear selection"
                             >
-                                <X className="h-4 w-4" />
+                                <X className="h-3 w-3" />
                             </button>
                         </div>
                     </div>
                 ) : (
-                    <div data-tour="employee-filters" className="mt-4 shrink-0 flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex flex-wrap gap-2">
+                    <div data-tour="employee-filters" className="mt-4 shrink-0 flex items-center justify-between gap-3 w-full select-none">
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar flex-1 min-w-0">
                             <FilterDropdown
                                 label="Status"
                                 value={filters.status}
-                                options={uniqueStatuses.length > 0 ? uniqueStatuses : ["Online", "Away", "Offline"]}
+                                options={uniqueStatuses}
                                 onChange={(v: any) =>
                                     setFilters((f) => ({ ...f, status: v }))
                                 }
@@ -628,7 +629,7 @@ export default function EmployeesPage() {
                             <FilterDropdown
                                 label="Role"
                                 value={filters.role}
-                                options={uniqueRoles.length > 0 ? uniqueRoles : ["Super Admin", "Admin", "Editor", "Member"]}
+                                options={roleOptions}
                                 onChange={(v: string) =>
                                     setFilters((f) => ({ ...f, role: v }))
                                 }
@@ -637,7 +638,7 @@ export default function EmployeesPage() {
                             <FilterDropdown
                                 label="Team"
                                 value={filters.category}
-                                options={teams.length > 0 ? teams : (uniqueCategories.length > 0 ? uniqueCategories : ["Engineering", "Marketing", "Sales", "HR"])}
+                                options={teams}
                                 onChange={(v: string) =>
                                     setFilters((f) => ({ ...f, category: v }))
                                 }
@@ -646,18 +647,20 @@ export default function EmployeesPage() {
                             <FilterDropdown
                                 label="Creator"
                                 value={filters.creator}
-                                options={uniqueCreators.length > 0 ? uniqueCreators : ["Admin"]}
+                                options={uniqueCreators}
                                 onChange={(v: string) =>
                                     setFilters((f) => ({ ...f, creator: v }))
                                 }
                             />
                         </div>
-                        <ColumnSettings
-                            columns={EMPLOYEE_COLUMNS}
-                            visibleColumns={visibleColumns}
-                            onApply={setVisibleColumns}
-                            defaultColumns={DEFAULT_EMPLOYEE_COLUMNS}
-                        />
+                        <div className="shrink-0 pb-1 flex items-center gap-2">
+                            <ColumnSettings
+                                columns={EMPLOYEE_COLUMNS}
+                                visibleColumns={visibleColumns}
+                                onApply={setVisibleColumns}
+                                defaultColumns={DEFAULT_EMPLOYEE_COLUMNS}
+                            />
+                        </div>
                     </div>
                 )}
 
@@ -708,6 +711,10 @@ export default function EmployeesPage() {
                                 setSelectedEmployee(emp);
                                 setDetailDrawerOpen(true);
                             }}
+                            onEdit={(emp) => {
+                                setSelectedEmployee(emp);
+                                setEditDrawerOpen(true);
+                            }}
                             onResendInvite={handleResendInvite}
                             onRevokeInvite={handleRevokeInvite}
                             currentUserEmail={user?.email ?? undefined}
@@ -728,6 +735,15 @@ export default function EmployeesPage() {
                     open={detailDrawerOpen}
                     onOpenChange={setDetailDrawerOpen}
                     employee={selectedEmployee}
+                />
+
+                <EditEmployeeDrawer
+                    open={editDrawerOpen}
+                    onOpenChange={setEditDrawerOpen}
+                    employee={selectedEmployee}
+                    onSave={(updated) => {
+                        setEmployees(prev => prev.map(emp => emp.id === updated.id ? updated : emp));
+                    }}
                 />
 
                 {/* Batch Delete Confirmation Dialog */}

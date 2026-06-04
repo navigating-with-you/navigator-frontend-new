@@ -96,9 +96,9 @@ export default function ColumnSettings({
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
-                    className="flex items-center gap-2 h-10 rounded-lg border-[#E7E7E0] dark:border-zinc-700 bg-[#FEFFFA] dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-[#F5F5F0] dark:hover:bg-zinc-800"
+                    className="flex items-center gap-1.5 h-6 px-2.5 rounded-md border-[#E7E7E0] dark:border-zinc-700 bg-[#FEFFFA] dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 text-xs font-normal hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 shadow-sm"
                 >
-                    <Columns3 className="h-4 w-4" />
+                    <Columns3 className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
                     Column Settings
                 </Button>
             </PopoverTrigger>

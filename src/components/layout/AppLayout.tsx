@@ -7,6 +7,7 @@ import TopBar from "./TopBar";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { listConversations, type Conversation } from "@/lib/api";
 import OnboardingPage from "@/pages/OnboardingPage";
+import { cn } from "@/lib/utils";
 
 /** Group conversations into time buckets */
 function groupByTime(conversations: Conversation[]) {
@@ -202,20 +203,23 @@ export default function AppLayout(): JSX.Element {
     }
 
     return (
-        <div
-            className="flex h-dvh w-full overflow-hidden bg-[#FEFFFA] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 relative select-none"
-            data-testid="app-layout"
-        >
+        <div className="w-full bg-[#FEFFFA] dark:bg-zinc-950 flex justify-center">
+            <div
+                className="flex h-dvh w-full overflow-hidden bg-[#FEFFFA] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 relative select-none"
+                data-testid="app-layout"
+            >
             {/* Sidebar mobile overlay backdrop */}
-            {sidebarOpen && (
-                <div
-                    onClick={() => setSidebarOpen(false)}
-                    className="fixed inset-0 bg-zinc-950/40 backdrop-blur-xs z-30 lg:hidden transition-opacity duration-300"
-                />
-            )}
+            <div
+                onClick={() => setSidebarOpen(false)}
+                className={cn(
+                    "fixed inset-0 bg-zinc-950/45 backdrop-blur-xs z-30 lg:hidden transition-opacity duration-300",
+                    sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                )}
+            />
 
             <Sidebar 
                 open={sidebarOpen} 
+                onClose={() => setSidebarOpen(false)}
                 onSearchClick={() => setSearchOpen(true)}
             />
 
@@ -359,6 +363,7 @@ export default function AppLayout(): JSX.Element {
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }

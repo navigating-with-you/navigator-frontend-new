@@ -52,17 +52,24 @@
 @layer base {
   * {
     border-color: hsl(var(--border));
+    font-feature-settings: "cv01" 1, "cv10" 1, "calt" 1, "liga" 1;
   }
 
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     font-family: 'Inter Display', 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.05em;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   input, textarea, button, select {
     font-family: 'Inter Display', 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.05em;
+  }
+
+  strong, b {
+    font-weight: 600;
   }
 }
 
@@ -95,6 +102,18 @@
     background-color: hsl(222 47% 17%) !important;
   }
 
+  .dark .bg-zinc-800 {
+    background-color: hsl(222 47% 13%) !important;
+  }
+
+  .dark .bg-zinc-900 {
+    background-color: hsl(222 47% 11%) !important;
+  }
+
+  .dark .bg-zinc-950 {
+    background-color: hsl(222 47% 8%) !important;
+  }
+
   /* Text colors */
   .dark .text-zinc-900 {
     color: hsl(210 40% 96%) !important;
@@ -123,6 +142,18 @@
 
   .dark .border-zinc-200 {
     border-color: hsl(222 47% 20%) !important;
+  }
+
+  .dark .border-zinc-300 {
+    border-color: hsl(222 47% 22%) !important;
+  }
+
+  .dark .border-zinc-700 {
+    border-color: hsl(222 47% 22%) !important;
+  }
+
+  .dark .border-zinc-800 {
+    border-color: hsl(222 47% 18%) !important;
   }
 
   /* Input & search */
@@ -211,3 +242,24 @@
     transform: translateY(0);
   }
 }
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Limit layout to 80% on screens above 1920x1080 */
+@media (min-width: 1921px) and (min-height: 1081px) {
+  [data-testid="app-layout"] {
+    max-width: 80vw !important;
+    border-left: 1px solid hsl(var(--border)) !important;
+    border-right: 1px solid hsl(var(--border)) !important;
+    margin: 0 auto;
+  }
+}
+

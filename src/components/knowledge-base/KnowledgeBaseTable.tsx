@@ -15,6 +15,7 @@ import {
     ArrowUpDown,
     ArrowUp,
     ArrowDown,
+    RefreshCw,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -51,6 +52,7 @@ interface KnowledgeBaseTableProps {
     visibleColumns?: string[];
     selected: Set<string>;
     setSelected: React.Dispatch<React.SetStateAction<Set<string>>>;
+    onRetryOcr?: (id: string) => void;
 }
 
 function TypeIcon({ type }: { type: KBEntry["type"] }) {
@@ -62,31 +64,36 @@ function TypeIcon({ type }: { type: KBEntry["type"] }) {
 function OcrStatusBadge({ status }: { status?: string | null }) {
     if (!status) return null;
 
-    const cfg: Record<string, { icon: React.ReactNode; label: string; cls: string }> = {
+    const cfg: Record<string, { icon: React.ReactNode; label: string; cls: string; desc: string }> = {
         pending: {
             icon: <Clock className="h-3 w-3" />,
             label: "Queued",
             cls: "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
+            desc: "File is in queue waiting to be processed by the OCR engine.",
         },
         processing: {
             icon: <Loader2 className="h-3 w-3 animate-spin" />,
             label: "Processing",
             cls: "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
+            desc: "Gemini is currently reading the document, extracting text, and generating vector embeddings.",
         },
         completed: {
             icon: <CheckCircle2 className="h-3 w-3" />,
             label: "Indexed",
             cls: "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
+            desc: "OCR processing is complete. The document text is extracted, indexed, and ready for search.",
         },
         failed: {
             icon: <XCircle className="h-3 w-3" />,
             label: "Failed",
             cls: "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400",
+            desc: "OCR processing failed. The document text could not be read or extracted.",
         },
         cancelled: {
             icon: <XCircle className="h-3 w-3" />,
             label: "Cancelled",
             cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
+            desc: "OCR processing was cancelled.",
         },
     };
 
@@ -94,7 +101,7 @@ function OcrStatusBadge({ status }: { status?: string | null }) {
     if (!c) return null;
 
     return (
-        <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold", c.cls)}>
+        <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold", c.cls)} title={c.desc}>
             {c.icon}
             {c.label}
         </span>
@@ -115,6 +122,7 @@ export default function KnowledgeBaseTable({
     onDelete,
     onView,
     onViewFolderDetails,
+    onRetryOcr,
     isInsideFolder = false,
     visibleColumns = ["name", "folder", "owner"],
     selected,
@@ -208,12 +216,12 @@ export default function KnowledgeBaseTable({
             className="overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 flex flex-col h-full"
             data-testid="kb-table"
         >
-            <div className="w-full flex-1 flex flex-col min-h-0">
+            <div className="w-full flex-1 flex flex-col min-h-0 overflow-x-auto">
                 <div className="w-full flex-1 flex flex-col min-h-0">
                     {/* Header */}
                     <div
                         style={{ gridTemplateColumns: computedGridCols }}
-                        className="hidden md:grid items-center gap-2 bg-[#60646B]/10 rounded-t-[10px] px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none"
+                        className="hidden md:grid items-center gap-2 bg-[#60646B]/10 rounded-t-[10px] px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none md:min-w-[800px] lg:min-w-full"
                     >
                         <div>
                             <Checkbox
@@ -248,22 +256,22 @@ export default function KnowledgeBaseTable({
                             </div>
                         )}
                         {visibleColumns.includes("ocr_status") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("ocr_status")}>
-                                OCR Status <SortIcon columnKey="ocr_status" />
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("ocr_status")} title="Status of document text extraction and indexing. Hover over status badges to see detailed descriptions.">
+                                Status <SortIcon columnKey="ocr_status" />
                             </div>
                         )}
                         <div />
                     </div>
 
                     {/* Scrollable Body */}
-                    <div className="flex-1 overflow-y-auto hover-scrollbar min-h-0">
+                    <div className="flex-1 overflow-y-auto hover-scrollbar min-h-0 md:min-w-[800px] lg:min-w-full">
                         {pageRows.map((kb) => (
                             <div
                                 key={kb.id}
                                 data-testid={`kb-row-${kb.id}`}
                                 onClick={() => onView(kb)}
                                 style={{ gridTemplateColumns: computedGridCols }}
-                                className="flex flex-col md:grid items-start md:items-center gap-3 md:gap-2 px-5 py-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 cursor-pointer relative"
+                                className="flex flex-col md:grid items-start md:items-center gap-3 md:gap-2 px-5 py-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 cursor-pointer relative border-b border-zinc-100 dark:border-zinc-800/50 last:border-b-0"
                             >
                                 {/* Checkbox Column Desktop */}
                                 <div className="hidden md:block" onClick={(e) => e.stopPropagation()}>
@@ -313,15 +321,28 @@ export default function KnowledgeBaseTable({
                                                 </DropdownMenuItem>
                                             )}
 
+                                            {kb.type === "file" && kb.ocr_status === "failed" && onRetryOcr && (
+                                                <DropdownMenuItem
+                                                    className="dark:text-zinc-200 dark:focus:bg-zinc-800"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onRetryOcr(kb.id);
+                                                    }}
+                                                >
+                                                    <RefreshCw className="h-4 w-4 text-zinc-650 dark:text-zinc-400" />
+                                                    Retry OCR
+                                                </DropdownMenuItem>
+                                            )}
+
                                             <DropdownMenuItem
-                                                className="text-red-650 focus:text-red-650 cursor-pointer dark:focus:bg-zinc-800"
+                                                className="text-red-655 focus:text-red-655 cursor-pointer dark:focus:bg-zinc-800"
                                                 data-testid={`kb-delete-${kb.id}`}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setConfirmDeleteId(kb.id);
                                                 }}
                                             >
-                                                <Trash2 className="h-4 w-4 text-red-650" />
+                                                <Trash2 className="h-4 w-4 text-red-655" />
                                                 Delete
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
@@ -401,10 +422,10 @@ export default function KnowledgeBaseTable({
                                     </div>
                                 )}
 
-                                {/* Col: OCR Status */}
+                                 {/* Col: Status */}
                                 {visibleColumns.includes("ocr_status") && (
                                     <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                        <span className="md:hidden text-zinc-505 font-medium mr-2">OCR Status:</span>
+                                        <span className="md:hidden text-zinc-505 font-medium mr-2">Status:</span>
                                         {kb.ocr_status ? <OcrStatusBadge status={kb.ocr_status} /> : <span className="text-zinc-505 dark:text-zinc-500">—</span>}
                                     </div>
                                 )}
@@ -445,6 +466,19 @@ export default function KnowledgeBaseTable({
                                                 >
                                                     <Info className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                                     Folder Details
+                                                </DropdownMenuItem>
+                                            )}
+
+                                            {kb.type === "file" && kb.ocr_status === "failed" && onRetryOcr && (
+                                                <DropdownMenuItem
+                                                    className="dark:text-zinc-200 dark:focus:bg-zinc-800"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onRetryOcr(kb.id);
+                                                    }}
+                                                >
+                                                    <RefreshCw className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                                    Retry OCR
                                                 </DropdownMenuItem>
                                             )}
 

@@ -13,6 +13,7 @@ import {
     Loader2,
     Trash2,
     Pencil,
+    X,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -55,6 +56,7 @@ type NavItemProps = NavItemType & {
 
 type SidebarProps = {
     open: boolean;
+    onClose?: () => void;
     onSearchClick?: () => void;
 };
 
@@ -112,7 +114,7 @@ function NavItem({
                                 )
                             }
                         >
-                            <Icon className="h-5 w-5" />
+                            <Icon className="h-4 w-4" />
                         </NavLink>
                     </TooltipTrigger>
 
@@ -137,8 +139,8 @@ function NavItem({
                 )
             }
         >
-            <div className="flex h-5 w-5 items-center justify-center shrink-0">
-                <Icon className="h-5 w-5" />
+            <div className="flex h-4 w-4 items-center justify-center shrink-0">
+                <Icon className="h-4 w-4" />
             </div>
             <span>{label}</span>
         </NavLink>
@@ -412,10 +414,10 @@ function ChatHistoryList({ onConversationDeleted }: { onConversationDeleted?: ()
 
 export default function Sidebar({
     open,
+    onClose,
     onSearchClick,
 }: SidebarProps): JSX.Element {
     const location = useLocation();
-    const collapsed = !open;
     const { can } = useHasPermission();
 
     const isItemActive = (targetTo: string) => {
@@ -430,10 +432,14 @@ export default function Sidebar({
         !item.permission || can(item.permission)
     );
 
-    if (collapsed) {
-        return (
+    return (
+        <>
+            {/* Collapsed Sidebar (desktop only) */}
             <aside
-                className="hidden lg:flex h-full w-[72px] flex-col items-center border-r border-zinc-200 dark:border-zinc-800 bg-[#E7E7E0]/40 dark:bg-zinc-900 overflow-hidden shrink-0 select-none"
+                className={cn(
+                    "hidden h-full w-[72px] flex-col items-center border-r border-zinc-200 dark:border-zinc-800 bg-[#E7E7E0]/40 dark:bg-zinc-900 overflow-hidden shrink-0 select-none",
+                    !open ? "lg:flex" : "lg:hidden"
+                )}
                 data-testid="sidebar-collapsed"
             >
                 {/* Logo */}
@@ -465,7 +471,7 @@ export default function Sidebar({
                                                     )
                                                 }
                                             >
-                                                <item.icon className="h-[18px] w-[18px]" />
+                                                <item.icon className="h-4 w-4" />
                                             </NavLink>
                                         </TooltipTrigger>
                                         <TooltipContent side="right" className="text-xs">
@@ -477,7 +483,8 @@ export default function Sidebar({
                         })}
 
                         {/* Divider */}
-                        <div className="w-8 border-t border-zinc-200 dark:border-zinc-800 my-2" />                        {/* Chat Label */}
+                        <div className="w-8 border-t border-zinc-200 dark:border-zinc-800 my-2" />
+                        {/* Chat Label */}
                         <span className="text-[9px] font-semibold text-zinc-450 dark:text-zinc-550 uppercase tracking-widest mb-1 select-none">Chat</span>
 
                         {/* Chat Nav */}
@@ -492,7 +499,7 @@ export default function Sidebar({
                                                 data-testid="nav-search-chats"
                                                 className="mx-auto flex items-center justify-center h-10 w-10 rounded-xl transition-all text-zinc-550 dark:text-zinc-400 hover:bg-[#E7E7E0] dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100 cursor-pointer"
                                             >
-                                                <item.icon className="h-[18px] w-[18px]" />
+                                                <item.icon className="h-4 w-4" />
                                             </button>
                                         ) : (
                                             <NavLink
@@ -507,7 +514,7 @@ export default function Sidebar({
                                                     )
                                                 }
                                             >
-                                                <item.icon className="h-[18px] w-[18px]" />
+                                                <item.icon className="h-4 w-4" />
                                             </NavLink>
                                         )}
                                     </TooltipTrigger>
@@ -519,104 +526,116 @@ export default function Sidebar({
                         ))}
                     </div>
                 </div>
-
             </aside>
-        );
-    }
 
+            {/* Expanded Sidebar (mobile slide-over drawer, desktop static sidebar) */}
+            <aside
+                className={cn(
+                    "fixed inset-y-0 left-0 z-40 flex h-full w-[260px] flex-col border-r border-zinc-200 dark:border-zinc-800 bg-[#E7E7E0]/80 dark:bg-zinc-900/80 backdrop-blur-lg lg:bg-[#E7E7E0]/40 lg:dark:bg-zinc-900 lg:backdrop-blur-none overflow-hidden shadow-2xl lg:static lg:shadow-none transition-transform duration-300 shrink-0 select-none",
+                    open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+                    open ? "lg:flex" : "lg:hidden"
+                )}
+                data-testid="sidebar"
+            >
+                {/* Logo and Close Button */}
+                <div className="h-[68px] flex items-center justify-between px-5 shrink-0">
+                    <NavLink to="/dashboard" className="flex items-center">
+                        <img
+                            src="/navigator-logo.svg"
+                            alt="Navigator"
+                            className="h-7 w-auto object-contain block dark:brightness-110"
+                        />
+                    </NavLink>
+                    {onClose && (
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="lg:hidden p-1.5 rounded-lg text-zinc-500 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            aria-label="Close sidebar"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    )}
+                </div>
 
-    return (
-        <aside
-            className="fixed inset-y-0 left-0 z-40 flex h-full w-[260px] flex-col border-r border-zinc-200 dark:border-zinc-800 bg-[#E7E7E0]/40 dark:bg-zinc-900 overflow-hidden shadow-2xl lg:static lg:shadow-none transition-transform duration-300 shrink-0 select-none"
-            data-testid="sidebar"
-        >
-            {/* Logo */}
-            <NavLink to="/dashboard" className="h-[68px] flex items-center px-5 shrink-0">
-                <img
-                    src="/navigator-logo.svg"
-                    alt="Navigator"
-                    className="h-7 w-auto object-contain block dark:brightness-110"
-                />
-            </NavLink>
-
-            {/* Main Nav */}
-            <nav className="flex flex-col gap-1 px-2 pb-2 shrink-0">
-                {visibleNav.map((item) => (
-                    <NavItem
-                        key={item.to}
-                        {...item}
-                    />
-                ))}
-            </nav>
-
-            <div className="my-2 border-t border-zinc-200 dark:border-zinc-800 shrink-0" />
-
-            {/* Chat Section */}
-            <div className="px-5 pb-1 pt-1 text-[11px] font-bold text-zinc-450 dark:text-zinc-550 uppercase tracking-widest shrink-0 select-none">
-                Chat
-            </div>
-
-            <nav className="flex flex-col gap-1 px-2 shrink-0">
-                {chatNav.map((item) => {
-                    if (item.to === "chatsearch") {
-                        return (
-                            <button
-                                key={item.to}
-                                type="button"
-                                onClick={onSearchClick}
-                                data-testid="nav-search-chats"
-                                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-zinc-600 hover:bg-[#E7E7E0] hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 cursor-pointer text-left w-full"
-                            >
-                                <div className="flex h-5 w-5 items-center justify-center shrink-0">
-                                    <item.icon className="h-[18px] w-[18px] text-zinc-500 dark:text-zinc-400" />
-                                </div>
-                                <span>{item.label}</span>
-                            </button>
-                        );
-                    }
-                    // For "New Chat" link, add 'end' prop to only highlight on exact /chat match
-                    if (item.to === "/chat") {
-                        return (
-                            <NavLink
-                                key={item.to}
-                                to={item.to}
-                                data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                                className={
-                                    cn(
-                                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                                        isItemActive(item.to)
-                                            ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                                            : "text-zinc-600 dark:text-zinc-400 hover:bg-[#E7E7E0] hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                                    )
-                                }
-                            >
-                                <div className="flex h-5 w-5 items-center justify-center shrink-0">
-                                    <item.icon className="h-5 w-5" />
-                                </div>
-                                <span>{item.label}</span>
-                            </NavLink>
-                        );
-                    }
-                    return (
+                {/* Main Nav */}
+                <nav className="flex flex-col gap-1 px-2 pb-2 shrink-0">
+                    {visibleNav.map((item) => (
                         <NavItem
                             key={item.to}
                             {...item}
                         />
-                    );
-                })}
-            </nav>
+                    ))}
+                </nav>
 
-            <div className="my-2 border-t border-zinc-200 dark:border-zinc-800 shrink-0" />
+                <div className="my-2 border-t border-zinc-200 dark:border-zinc-800 shrink-0" />
 
-            {/* Chat History */}
-            <div className="px-5 pb-1 text-sm font-medium text-zinc-500 shrink-0">
-                Chat History
-            </div>
+                {/* Chat Section */}
+                <div className="px-5 pb-1 pt-1 text-[11px] font-bold text-zinc-450 dark:text-zinc-550 uppercase tracking-widest shrink-0 select-none">
+                    Chat
+                </div>
 
-            <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-1 hover-scrollbar min-h-0">
-                <ChatHistoryList />
-            </div>
+                <nav className="flex flex-col gap-1 px-2 shrink-0">
+                    {chatNav.map((item) => {
+                        if (item.to === "chatsearch") {
+                            return (
+                                <button
+                                    key={item.to}
+                                    type="button"
+                                    onClick={onSearchClick}
+                                    data-testid="nav-search-chats"
+                                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-zinc-600 hover:bg-[#E7E7E0] hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 cursor-pointer text-left w-full"
+                                >
+                                    <div className="flex h-4 w-4 items-center justify-center shrink-0">
+                                        <item.icon className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+                                    </div>
+                                    <span>{item.label}</span>
+                                </button>
+                            );
+                        }
+                        // For "New Chat" link, add 'end' prop to only highlight on exact /chat match
+                        if (item.to === "/chat") {
+                            return (
+                                <NavLink
+                                    key={item.to}
+                                    to={item.to}
+                                    data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                                    className={
+                                        cn(
+                                            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                                            isItemActive(item.to)
+                                                ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                                                : "text-zinc-600 dark:text-zinc-400 hover:bg-[#E7E7E0] hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                                        )
+                                    }
+                                >
+                                    <div className="flex h-4 w-4 items-center justify-center shrink-0">
+                                        <item.icon className="h-4 w-4" />
+                                    </div>
+                                    <span>{item.label}</span>
+                                </NavLink>
+                            );
+                        }
+                        return (
+                            <NavItem
+                                key={item.to}
+                                {...item}
+                            />
+                        );
+                    })}
+                </nav>
 
-        </aside>
+                <div className="my-2 border-t border-zinc-200 dark:border-zinc-800 shrink-0" />
+
+                {/* Chat History */}
+                <div className="px-5 pb-1 text-sm font-medium text-zinc-500 shrink-0">
+                    Chat History
+                </div>
+
+                <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-1 hover-scrollbar min-h-0">
+                    <ChatHistoryList />
+                </div>
+            </aside>
+        </>
     );
 }

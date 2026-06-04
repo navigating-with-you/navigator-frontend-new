@@ -61,13 +61,13 @@ import { type Employee, type EmployeeStatus } from "@/types/employee";
 
 type StatusDotProps = {
     status: EmployeeStatus;
-    isActive?: boolean;
 };
 
 type RowMenuProps = {
     employee: Employee;
     onDelete: (id: string) => void;
     onView: (employee: Employee) => void;
+    onEdit?: (employee: Employee) => void;
     onResendInvite?: (id: string) => void;
     onRevokeInvite?: (id: string) => void;
     currentUserEmail?: string;
@@ -77,6 +77,7 @@ type EmployeeTableProps = {
     employees: Employee[];
     onDelete: (id: string) => void;
     onView: (employee: Employee) => void;
+    onEdit?: (employee: Employee) => void;
     onResendInvite?: (id: string) => void;
     onRevokeInvite?: (id: string) => void;
     currentUserEmail?: string;
@@ -87,16 +88,11 @@ type EmployeeTableProps = {
 
 function StatusDot({
     status,
-    isActive = true,
 }: StatusDotProps): JSX.Element {
-    const color =
-        status === "online"
-            ? "bg-zinc-700 dark:bg-zinc-300"
-            : status === "away"
-                ? "bg-zinc-400 dark:bg-zinc-500"
-                : status === "pending"
-                    ? "bg-zinc-500 dark:bg-zinc-400 animate-pulse"
-                    : "bg-zinc-350 dark:bg-zinc-700";
+    const isPending = status?.toLowerCase() === "pending";
+    const color = isPending
+        ? "bg-zinc-500 dark:bg-zinc-400 animate-pulse"
+        : "bg-zinc-700 dark:bg-zinc-300";
 
     return (
         <TooltipProvider delayDuration={200}>
@@ -110,7 +106,7 @@ function StatusDot({
                     />
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">
-                    {status === "pending" ? "Pending Invite" : (isActive ? "Active" : "Inactive")}
+                    {isPending ? "Pending" : "Accepted"}
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>
@@ -121,6 +117,7 @@ function RowMenu({
     employee,
     onDelete,
     onView,
+    onEdit,
     onResendInvite,
     onRevokeInvite,
     currentUserEmail,
@@ -159,7 +156,7 @@ function RowMenu({
 
                 <DropdownMenuItem
                     onClick={() =>
-                        toast(`Edit ${employee.name}`)
+                        onEdit?.(employee)
                     }
                     className="cursor-pointer"
                 >
@@ -245,6 +242,7 @@ export default function EmployeeTable({
     employees,
     onDelete,
     onView,
+    onEdit,
     onResendInvite,
     onRevokeInvite,
     currentUserEmail,
@@ -353,12 +351,12 @@ export default function EmployeeTable({
             className="overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 flex flex-col h-full"
             data-testid="employees-table"
         >
-            <div className="w-full flex-1 flex flex-col min-h-0">
+            <div className="w-full flex-1 flex flex-col min-h-0 overflow-x-auto">
                 <div className="w-full flex-1 flex flex-col min-h-0">
                     {/* Header */}
                     <div
                         style={{ gridTemplateColumns: computedGridCols }}
-                        className="hidden md:grid items-center gap-2 bg-[#60646B]/10 rounded-t-[10px] px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none"
+                        className="hidden md:grid items-center gap-2 bg-[#60646B]/10 rounded-t-[10px] px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none md:min-w-[800px] lg:min-w-full"
                     >
                         <div>
                             <Checkbox
@@ -431,13 +429,13 @@ export default function EmployeeTable({
                     </div>
 
                     {/* Rows */}
-                    <div className="flex-1 overflow-y-auto hover-scrollbar min-h-0">
+                    <div className="flex-1 overflow-y-auto hover-scrollbar min-h-0 md:min-w-[800px] lg:min-w-full">
                         {pageRows.map((emp) => (
                             <div
                                 key={emp.id}
                                 onClick={() => onView(emp)}
                                 style={{ gridTemplateColumns: computedGridCols }}
-                                className="flex flex-col md:grid items-start md:items-center gap-3 md:gap-2 px-5 py-4 transition-all hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 cursor-pointer group"
+                                className="flex flex-col md:grid items-start md:items-center gap-3 md:gap-2 px-5 py-4 transition-all hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 cursor-pointer group relative border-b border-zinc-100 dark:border-zinc-800/50 last:border-b-0"
                                 data-testid={`employee-row-${emp.id}`}
                             >
                                 <div className="absolute top-5 right-5 md:static md:block" onClick={(e) => e.stopPropagation()}>
@@ -453,6 +451,7 @@ export default function EmployeeTable({
                                             employee={emp}
                                             onDelete={(id) => setConfirmDeleteId(id)}
                                             onView={onView}
+                                            onEdit={onEdit}
                                             onResendInvite={onResendInvite}
                                             onRevokeInvite={(id) => setConfirmRevokeId(id)}
                                             currentUserEmail={currentUserEmail}
@@ -487,7 +486,7 @@ export default function EmployeeTable({
                                                         : "EMP"}
                                                 </AvatarFallback>
                                             </Avatar>
-                                            <StatusDot status={emp.status} isActive={emp.isActive !== false} />
+                                            <StatusDot status={emp.status} />
                                         </div>
 
                                         <div className="truncate min-w-0 flex-1">
@@ -518,17 +517,6 @@ export default function EmployeeTable({
                                                     </Tooltip>
                                                 </TooltipProvider>
                                             )}
-                                        </div>
-
-                                        <div className="md:hidden ml-auto">
-                                            <RowMenu
-                                                employee={emp}
-                                                onDelete={(id) => setConfirmDeleteId(id)}
-                                                onView={onView}
-                                                onResendInvite={onResendInvite}
-                                                onRevokeInvite={(id) => setConfirmRevokeId(id)}
-                                                currentUserEmail={currentUserEmail}
-                                            />
                                         </div>
                                     </div>
                                 )}
@@ -601,6 +589,7 @@ export default function EmployeeTable({
                                         employee={emp}
                                         onDelete={(id) => setConfirmDeleteId(id)}
                                         onView={onView}
+                                        onEdit={onEdit}
                                         onResendInvite={onResendInvite}
                                         onRevokeInvite={(id) => setConfirmRevokeId(id)}
                                         currentUserEmail={currentUserEmail}

@@ -1,4 +1,4 @@
-export type EmployeeStatus = "online" | "away" | "offline" | "pending";
+export type EmployeeStatus = "online" | "away" | "offline" | "pending" | "Accepted";
 export type EmployeeRole = "Super Admin" | "Admin" | "Editor" | "Member";
 
 export interface Employee {

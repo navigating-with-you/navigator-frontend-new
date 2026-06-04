@@ -127,7 +127,6 @@ export default function CategoryPage() {
 
     // Filters
     const [filters, setFilters] = useState({
-        type: "",
         creator: "",
         manager: "",
         kbFiles: "",
@@ -368,23 +367,18 @@ export default function CategoryPage() {
     };
 
     // Filter Lists options
-    const typeOptions = useMemo(() => {
-        const set = new Set<string>();
-        categories.forEach((c) => { if (c.type) set.add(c.type); });
-        return Array.from(set).sort();
-    }, [categories]);
+    const authorizedUsers = useMemo(() => {
+        return employeesList
+            .filter((emp) => {
+                const r = (emp.role || "").toLowerCase().replace("_", "");
+                return r === "admin" || r === "superadmin";
+            })
+            .map((emp) => emp.name)
+            .sort();
+    }, [employeesList]);
 
-    const creatorOptions = useMemo(() => {
-        const set = new Set<string>();
-        categories.forEach((c) => { if (c.createdBy) set.add(c.createdBy); });
-        return Array.from(set).sort();
-    }, [categories]);
-
-    const managerOptions = useMemo(() => {
-        const set = new Set<string>();
-        categories.forEach((c) => { if (c.managerName) set.add(c.managerName); });
-        return Array.from(set).sort();
-    }, [categories]);
+    const creatorOptions = authorizedUsers;
+    const managerOptions = authorizedUsers;
 
     const kbFilesOptions = useMemo(() => {
         return ["0-10 Files", "10-25 Files", "25+ Files"];
@@ -401,7 +395,6 @@ export default function CategoryPage() {
             }
 
             // Dropdown Filters
-            if (filters.type && cat.type !== filters.type) return false;
             if (filters.creator && cat.createdBy !== filters.creator) return false;
             if (filters.manager && cat.managerName !== filters.manager) return false;
 
@@ -807,11 +800,11 @@ export default function CategoryPage() {
     };
 
     return (
-        <div className="p-4 sm:p-8 flex flex-col h-full w-full bg-transparent dark:bg-zinc-950/20 overflow-hidden" data-testid="teams-page" data-tour="teams-page">
+        <div className="p-3 sm:p-6 md:p-8 flex flex-col h-full w-full bg-transparent dark:bg-zinc-950/20 overflow-hidden" data-testid="teams-page" data-tour="teams-page">
 
             {/* Header */}
-            <div className="shrink-0 flex flex-col gap-1">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col gap-1 shrink-0">
+                <div className="flex flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-2.5">
                         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
                             Teams
@@ -822,16 +815,15 @@ export default function CategoryPage() {
                             </Badge>
                         )}
                     </div>
-
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center">
                         <Button
                             variant="outline"
-                            className="w-full sm:w-auto border-[#E7E7E0] bg-[#FEFFFA] hover:bg-[#F5F5F0] dark:border-zinc-700 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold"
+                            className="gap-2 rounded-lg border-[#E7E7E0] bg-[#FEFFFA] hover:bg-[#F5F5F0] dark:border-zinc-700 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold"
                             onClick={handleRefresh}
                             disabled={isLoading}
                         >
-                            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-                            Refresh
+                            <RefreshCw className={cn("h-4 w-4 text-zinc-500 dark:text-zinc-400", isLoading && "animate-spin")} />
+                            <span className="hidden sm:inline">Refresh</span>
                         </Button>
                     </div>
                 </div>
@@ -884,8 +876,8 @@ export default function CategoryPage() {
 
             {/* Filters or Batch Actions */}
             {selected.size > 0 ? (
-                <div className="mt-4 shrink-0 flex items-center justify-between gap-3 bg-transparent select-none animate-fade-in">
-                    <div className="flex items-center gap-3">
+                <div className="mt-4 shrink-0 flex items-center justify-between gap-2 bg-transparent select-none animate-fade-in">
+                    <div className="flex items-center gap-2">
                         <PermissionGate
                             permission={PERMISSIONS.GROUP_DELETE}
                             fallback={null}
@@ -895,9 +887,9 @@ export default function CategoryPage() {
                                 size="sm"
                                 disabled={isBatchProcessing}
                                 onClick={() => setConfirmBatchDelete(true)}
-                                className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-red-650 hover:text-red-700 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-sm font-semibold rounded-lg shadow-sm"
+                                className="h-6 px-2.5 border-[#E7E7E0] dark:border-zinc-700 text-red-650 hover:text-red-700 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
                             >
-                                <Trash2 className="h-4 w-4 mr-2 text-red-500" />
+                                <Trash2 className="h-3.5 w-3.5 text-red-500" />
                                 Delete
                             </Button>
                         </PermissionGate>
@@ -910,9 +902,9 @@ export default function CategoryPage() {
                                 size="sm"
                                 disabled={isBatchProcessing}
                                 onClick={() => setBatchAddFilesOpen(true)}
-                                className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 text-sm font-semibold rounded-lg shadow-sm"
+                                className="h-6 px-2.5 border-[#E7E7E0] dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
                             >
-                                <FileText className="h-4 w-4 mr-2 text-zinc-500" />
+                                <FileText className="h-3.5 w-3.5 text-zinc-500" />
                                 Add Files
                             </Button>
                         </PermissionGate>
@@ -925,15 +917,15 @@ export default function CategoryPage() {
                                 size="sm"
                                 disabled={isBatchProcessing}
                                 onClick={() => setBatchAddEmployeesOpen(true)}
-                                className="h-10 border-[#E7E7E0] dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 text-sm font-semibold rounded-lg shadow-sm"
+                                className="h-6 px-2.5 border-[#E7E7E0] dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
                             >
-                                <Users className="h-4 w-4 mr-2 text-zinc-500" />
+                                <Users className="h-3.5 w-3.5 text-zinc-500" />
                                 Assign Employees
                             </Button>
                         </PermissionGate>
                     </div>
                     {/* Right side selection badge */}
-                    <div className="flex items-center gap-2 px-3 py-2 border border-[#E7E7E0] dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900 rounded-lg text-sm text-zinc-650 dark:text-zinc-300 font-medium shadow-xs">
+                    <div className="flex items-center gap-1.5 px-2.5 h-6 border border-[#E7E7E0] dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900 rounded-md text-xs text-zinc-650 dark:text-zinc-300 font-normal shadow-sm">
                         <span>{selected.size} selected</span>
                         <button
                             type="button"
@@ -941,21 +933,13 @@ export default function CategoryPage() {
                             className="text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200 transition-colors ml-1 cursor-pointer"
                             aria-label="Clear selection"
                         >
-                            <X className="h-4 w-4" />
+                            <X className="h-3 w-3" />
                         </button>
                     </div>
                 </div>
             ) : (
-                <div data-tour="team-filters" className="mt-4 shrink-0 flex flex-wrap items-center justify-between gap-2 select-none">
-                    <div className="flex flex-wrap gap-2">
-                        <FilterDropdown
-                            label="Type"
-                            value={filters.type}
-                            options={typeOptions}
-                            onChange={(v) => setFilters((f) => ({ ...f, type: v }))}
-                            testId="filter-type"
-                        />
-
+                <div data-tour="team-filters" className="mt-4 shrink-0 flex items-center justify-between gap-3 w-full select-none">
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar flex-1 min-w-0">
                         <FilterDropdown
                             label="Creator"
                             value={filters.creator}
@@ -980,12 +964,14 @@ export default function CategoryPage() {
                             testId="filter-kb-files"
                         />
                     </div>
-                    <ColumnSettings
-                        columns={TEAM_COLUMNS}
-                        visibleColumns={visibleColumns}
-                        onApply={setVisibleColumns}
-                        defaultColumns={DEFAULT_TEAM_COLUMNS}
-                    />
+                    <div className="shrink-0 pb-1 flex items-center gap-2">
+                        <ColumnSettings
+                            columns={TEAM_COLUMNS}
+                            visibleColumns={visibleColumns}
+                            onApply={setVisibleColumns}
+                            defaultColumns={DEFAULT_TEAM_COLUMNS}
+                        />
+                    </div>
                 </div>
             )}
 
@@ -1029,7 +1015,7 @@ export default function CategoryPage() {
                             className="text-blue-600 font-semibold text-sm hover:underline p-0 h-auto"
                             onClick={() => {
                                 setSearch("");
-                                setFilters({ type: "", creator: "", manager: "", kbFiles: "" });
+                                setFilters({ creator: "", manager: "", kbFiles: "" });
                             }}
                         >
                             Clear All Search & Filters

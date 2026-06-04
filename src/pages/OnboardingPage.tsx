@@ -131,7 +131,7 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
     return (
         <div className="min-h-screen w-full flex flex-col bg-[#FEFFFA] dark:bg-zinc-950 transition-colors duration-300 relative select-none">
             {/* Header / Top Bar */}
-            <header className="w-full border-b border-zinc-100 dark:border-zinc-800/80 bg-[#FEFFFA] dark:bg-zinc-950 px-6 md:px-12 py-4 shrink-0">
+            <header className="w-full border-b border-zinc-100 dark:border-zinc-800/80 bg-[#FEFFFA] dark:bg-zinc-950 px-4 sm:px-6 md:px-12 py-4 shrink-0">
                 <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
                     {/* Logo */}
                     <div className="flex items-center">
@@ -223,7 +223,7 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
             </header>
 
             {/* Main Form Container */}
-            <main className="w-full max-w-7xl mx-auto px-6 md:px-12 py-10 md:py-12 transition-all">
+            <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-6 sm:py-10 md:py-12 transition-all">
 
                 {/* Steps Horizontal Progress Indicator */}
                 <div className="w-full mb-10">
