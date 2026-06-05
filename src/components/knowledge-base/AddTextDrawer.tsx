@@ -98,6 +98,7 @@ export default function AddTextDrawer({
                             onChange={(e) => { setTitle(e.target.value); setTouched((p) => ({ ...p, title: true })); }}
                             onBlur={() => handleBlur("title")}
                             placeholder="Enter a title"
+                            maxLength={100}
                             data-testid="text-title-input"
                             className="h-11 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                         />

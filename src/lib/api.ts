@@ -7,6 +7,17 @@ export async function syncUser(token: string) {
     return apiClient.post<any>("/auth/sync", undefined, { token });
 }
 
+export async function requestPasswordOtp(token: string) {
+    return apiClient.post<{ message: string; email: string }>("/auth/request-password-otp", undefined, { token });
+}
+
+export async function changePassword(
+    payload: { otp: string; new_password: string; confirm_password: string },
+    token: string
+) {
+    return apiClient.post<{ message: string }>("/auth/change-password", payload, { token });
+}
+
 // ── Employees ─────────────────────────────────────────────────────────────────
 
 export async function listEmployees(token: string) {
@@ -539,4 +550,42 @@ export interface UsageData {
 /** Fetch organisation usage statistics (pages, simple & complex interactions) */
 export async function getUsage(token: string): Promise<UsageData> {
     return apiClient.get<UsageData>("/auth/usage", { token, cache: false });
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+export interface NotificationItem {
+    id: string;
+    user_id: string;
+    title: string;
+    message: string;
+    type: string;
+    is_read: boolean;
+    data: Record<string, any> | null;
+    created_at: string;
+}
+
+export interface NotificationListResponse {
+    notifications: NotificationItem[];
+    unread_count: number;
+}
+
+export async function getNotifications(token: string): Promise<NotificationListResponse> {
+    return apiClient.get<NotificationListResponse>("/notifications", { token, cache: false });
+}
+
+export async function markNotificationRead(notificationId: string, token: string): Promise<NotificationItem> {
+    return apiClient.patch<NotificationItem>(`/notifications/${notificationId}/read`, undefined, { token });
+}
+
+export async function markAllNotificationsRead(token: string): Promise<{ message: string }> {
+    return apiClient.patch<{ message: string }>("/notifications/read-all", undefined, { token });
+}
+
+export async function deleteNotification(notificationId: string, token: string): Promise<{ message: string }> {
+    return apiClient.delete<{ message: string }>(`/notifications/${notificationId}`, undefined, { token });
+}
+
+export async function clearAllNotifications(token: string): Promise<{ message: string }> {
+    return apiClient.delete<{ message: string }>("/notifications/clear-all", undefined, { token });
 }

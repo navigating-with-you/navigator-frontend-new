@@ -138,6 +138,10 @@ class CacheWebSocketManager {
                 cacheManager.invalidatePattern("/files");
                 break;
 
+            case "notification:created":
+                // Handled directly in TopBar component subscription
+                break;
+
             default:
                 console.log("[Cache] Unknown event:", event.event);
         }

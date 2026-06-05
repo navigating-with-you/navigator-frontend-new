@@ -37,6 +37,7 @@ export default function AuthInitializer() {
                     console.error("Failed to sync user:", error);
                     toast.error("Failed to sync your account details.");
                     syncStarted.current = false;
+                    window.dispatchEvent(new Event("navigator_user_sync_failed"));
                 }
             } else if (!isAuthenticated && syncStarted.current) {
                 apiClient.clearToken();
@@ -46,7 +47,17 @@ export default function AuthInitializer() {
             }
         };
 
+        const handleRetry = () => {
+            syncStarted.current = false;
+            performSync();
+        };
+
+        window.addEventListener("navigator_retry_sync", handleRetry);
         performSync();
+
+        return () => {
+            window.removeEventListener("navigator_retry_sync", handleRetry);
+        };
     }, [isAuthenticated, getToken, user]);
 
     useEffect(() => {

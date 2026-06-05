@@ -43,6 +43,86 @@ function groupByTime(conversations: Conversation[]) {
     return groups.filter(g => g.items.length > 0);
 }
 
+function OnboardingSkeleton({ loadingTime }: { loadingTime: number }) {
+    return (
+        <div className="min-h-screen w-full flex flex-col bg-[#FEFFFA] dark:bg-zinc-950 transition-colors duration-300 relative select-none">
+            {/* Header / Top Bar Skeleton */}
+            <header className="w-full border-b border-zinc-100 dark:border-zinc-800/80 bg-[#FEFFFA] dark:bg-zinc-950 px-4 sm:px-6 md:px-12 py-4 shrink-0">
+                <div className="w-full max-w-7xl mx-auto flex items-center justify-between animate-pulse">
+                    {/* Logo placeholder */}
+                    <div className="h-8 w-32 bg-zinc-200 dark:bg-zinc-800 rounded-lg" />
+                    
+                    {/* Controls & Profile placeholder */}
+                    <div className="flex items-center gap-4">
+                        <div className="h-8 w-8 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
+                        <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
+                            <div className="hidden sm:block h-4 w-20 bg-zinc-200 dark:bg-zinc-800 rounded" />
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            {/* Main Container Skeleton */}
+            <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-6 sm:py-10 md:py-12 flex-1 flex flex-col justify-start">
+                <div className="w-full space-y-8 animate-pulse">
+                    {/* Warning banner when loading is slow */}
+                    {loadingTime >= 8 && (
+                        <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-250 dark:border-amber-900/50 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2.5 font-medium shadow-sm transition-all duration-305">
+                            <Clock className="h-4 w-4 shrink-0 text-amber-500 animate-spin" />
+                            <span>This is taking longer than expected. Please wait while we establish a secure connection...</span>
+                        </div>
+                    )}
+
+                    {/* Progress Indicator Skeleton */}
+                    <div className="w-full">
+                        <div className="w-full bg-zinc-150 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mb-3">
+                            <div className="bg-zinc-250 dark:bg-zinc-700 h-full w-[100%] rounded-full" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <div className="h-3 w-16 bg-zinc-200 dark:bg-zinc-800 rounded" />
+                            <div className="h-3 w-24 bg-zinc-200 dark:bg-zinc-800 rounded" />
+                        </div>
+                    </div>
+
+                    {/* Heading Section */}
+                    <div className="space-y-3">
+                        <div className="h-8 w-72 bg-zinc-200 dark:bg-zinc-800 rounded-lg" />
+                        <div className="h-4 w-96 bg-zinc-200 dark:bg-zinc-800 rounded-md" />
+                    </div>
+
+                    {/* Logo Upload Section Skeleton */}
+                    <div className="space-y-2">
+                        <div className="h-3 w-20 bg-zinc-200 dark:bg-zinc-800 rounded" />
+                        <div className="flex flex-col sm:flex-row items-center gap-6 p-4 border border-zinc-100 dark:border-zinc-800/80 rounded-2xl bg-white dark:bg-zinc-900">
+                            <div className="h-24 w-24 rounded-2xl bg-zinc-150 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shrink-0" />
+                            <div className="space-y-3 text-center sm:text-left flex-1">
+                                <div className="h-3 w-64 bg-zinc-200 dark:bg-zinc-800 rounded mx-auto sm:mx-0" />
+                                <div className="h-9 w-28 bg-zinc-200 dark:bg-zinc-800 rounded-lg mx-auto sm:mx-0" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Fields Grid Skeleton */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {Array.from({ length: 8 }).map((_, idx) => (
+                            <div key={idx} className="space-y-2 animate-pulse">
+                                <div className="h-3 w-28 bg-zinc-200 dark:bg-zinc-800 rounded" />
+                                <div className="h-11 w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800/80 rounded-lg" />
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Navigation Row Skeleton */}
+                    <div className="flex justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                        <div className="h-11 w-40 bg-zinc-200 dark:bg-zinc-800 rounded-lg" />
+                    </div>
+                </div>
+            </main>
+        </div>
+    );
+}
+
 export default function AppLayout(): JSX.Element {
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
     const [searchOpen, setSearchOpen] = useState<boolean>(false);
@@ -51,13 +131,16 @@ export default function AppLayout(): JSX.Element {
     const [isLoadingConvs, setIsLoadingConvs] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
-    const { getToken, isAuthenticated } = useKindeAuth();
+    const { getToken, isAuthenticated, logout } = useKindeAuth();
 
     const [profile, setProfile] = useState<any>(() => {
         const stored = sessionStorage.getItem("navigator_user_profile");
         return stored ? JSON.parse(stored) : null;
     });
     const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(!profile);
+    const [loadingTime, setLoadingTime] = useState<number>(0);
+    const [hasError, setHasError] = useState<boolean>(false);
+    const [retryCount, setRetryCount] = useState<number>(0);
 
     useEffect(() => {
         const handleSync = () => {
@@ -65,25 +148,53 @@ export default function AppLayout(): JSX.Element {
             if (stored) {
                 setProfile(JSON.parse(stored));
                 setIsLoadingProfile(false);
+                setHasError(false);
+                setRetryCount(0);
             }
         };
+        const handleSyncFailed = () => {
+            setIsLoadingProfile(false);
+            setHasError(true);
+            setRetryCount((prev) => prev + 1);
+        };
+        
         window.addEventListener("navigator_user_synced", handleSync);
+        window.addEventListener("navigator_user_sync_failed", handleSyncFailed);
         
         // If we already have a profile, turn off loading
         if (profile) {
             setIsLoadingProfile(false);
         }
 
-        // Set a timeout fallback of 5 seconds to stop loading if sync takes too long
-        const timer = setTimeout(() => {
-            setIsLoadingProfile(false);
-        }, 5000);
-
         return () => {
             window.removeEventListener("navigator_user_synced", handleSync);
-            clearTimeout(timer);
+            window.removeEventListener("navigator_user_sync_failed", handleSyncFailed);
         };
     }, [profile]);
+
+    // Timer logic to track loading duration and trip the error after 15s timeout
+    useEffect(() => {
+        let interval: any;
+        if (isLoadingProfile && !profile) {
+            interval = setInterval(() => {
+                setLoadingTime((t) => {
+                    const nextTime = t + 1;
+                    if (nextTime >= 15) {
+                        setHasError(true);
+                        setIsLoadingProfile(false);
+                        setRetryCount((prev) => prev + 1);
+                        clearInterval(interval);
+                    }
+                    return nextTime;
+                });
+            }, 1000);
+        } else {
+            setLoadingTime(0);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [isLoadingProfile, profile]);
 
     // Keep stable references to avoid re-triggering effects on KindeAuth updates
     const authRef = useRef({ getToken, isAuthenticated });
@@ -180,15 +291,62 @@ export default function AppLayout(): JSX.Element {
     const groups = groupByTime(filtered);
     const hasResults = filtered.length > 0;
 
-    if (isLoadingProfile) {
+    // 1. Loading state (waiting for profile sync to finish)
+    if (isLoadingProfile && !profile) {
+        return <OnboardingSkeleton loadingTime={loadingTime} />;
+    }
+
+    // 2. Error state (loading completed/failed/timed out but profile is still null)
+    if (hasError || (!isLoadingProfile && !profile)) {
         return (
-            <div className="flex h-screen w-full items-center justify-center bg-white dark:bg-zinc-950">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+            <div className="flex h-screen w-full flex-col items-center justify-center bg-[#FEFFFA] dark:bg-zinc-950 px-4 text-center select-none animate-fade-in">
+                <div className="max-w-md space-y-6">
+                    <div className="flex justify-center">
+                        <div className="p-3.5 bg-red-50 dark:bg-red-950/20 rounded-full text-red-500">
+                            <svg className="h-10 w-10 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 font-display">We couldn't connect to the server</h2>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                            We had trouble retrieving your organization details. Please check your internet connection or server status and try again.
+                        </p>
+                    </div>
+                    <div className="flex justify-center gap-3 pt-2">
+                        <button
+                            onClick={() => {
+                                setHasError(false);
+                                setIsLoadingProfile(true);
+                                setLoadingTime(0);
+                                window.dispatchEvent(new Event("navigator_retry_sync"));
+                            }}
+                            className="h-10 px-4 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all cursor-pointer"
+                        >
+                            Retry Connection
+                        </button>
+                        <button
+                            onClick={() => logout()}
+                            className="h-10 px-4 text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer"
+                        >
+                            Sign Out
+                        </button>
+                    </div>
+                    {retryCount >= 2 && (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-4 animate-fade-in">
+                            Connection still failing? Try again later or contact our{" "}
+                            <a href="mailto:support@navigator.ai" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
+                                Support Team
+                            </a>.
+                        </p>
+                    )}
+                </div>
             </div>
         );
     }
 
-    if (!profile?.organization_id) {
+    if (!profile.organization_id) {
         return (
             <OnboardingPage 
                 onComplete={(newOrgId) => {

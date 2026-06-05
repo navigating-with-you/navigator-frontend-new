@@ -97,6 +97,7 @@ export default function AddUrlDrawer({
                             onChange={(e) => { setUrl(e.target.value); setTouched((p) => ({ ...p, url: true })); }}
                             onBlur={() => handleBlur("url")}
                             placeholder="https://example.com/docs"
+                            maxLength={2048}
                             data-testid="url-input"
                             className="h-11 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                         />
@@ -121,6 +122,7 @@ export default function AddUrlDrawer({
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             placeholder="Custom display name"
+                            maxLength={100}
                             data-testid="url-title-input"
                             className="h-11 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                         />

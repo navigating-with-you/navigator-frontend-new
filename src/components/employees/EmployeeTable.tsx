@@ -56,6 +56,7 @@ import { Button } from "@/components/ui/button";
 
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 import { type Employee, type EmployeeStatus } from "@/types/employee";
 
@@ -91,7 +92,7 @@ function StatusDot({
 }: StatusDotProps): JSX.Element {
     const isPending = status?.toLowerCase() === "pending";
     const color = isPending
-        ? "bg-zinc-500 dark:bg-zinc-400 animate-pulse"
+        ? "bg-zinc-500 dark:bg-zinc-400"
         : "bg-zinc-700 dark:bg-zinc-300";
 
     return (
@@ -227,6 +228,7 @@ function RowMenu({
 
 const COLUMN_WIDTHS: Record<string, string> = {
     name: "2.5fr",
+    status: "1.5fr",
     kbFiles: "1.5fr",
     simpleInteraction: "1.5fr",
     complexInteraction: "1.5fr",
@@ -248,7 +250,7 @@ export default function EmployeeTable({
     currentUserEmail,
     selected,
     setSelected,
-    visibleColumns = ["name", "kbFiles", "simpleInteraction", "complexInteraction"],
+    visibleColumns = ["name", "status", "role", "kbFiles"],
 }: EmployeeTableProps): JSX.Element {
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
@@ -368,6 +370,12 @@ export default function EmployeeTable({
                         {visibleColumns.includes("name") && (
                             <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("name")}>
                                 Employee Name <SortIcon columnKey="name" />
+                            </div>
+                        )}
+
+                        {visibleColumns.includes("status") && (
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("status")}>
+                                Status <SortIcon columnKey="status" />
                             </div>
                         )}
 
@@ -518,6 +526,21 @@ export default function EmployeeTable({
                                                 </TooltipProvider>
                                             )}
                                         </div>
+                                    </div>
+                                )}
+
+                                {visibleColumns.includes("status") && (
+                                    <div className="flex justify-between w-full md:w-auto text-sm truncate">
+                                        <span className="md:hidden text-zinc-505 mr-2">Status:</span>
+                                        {emp.isActive !== false ? (
+                                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800/30 font-medium">
+                                                Active
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="outline" className="bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800/30 dark:text-zinc-400 dark:border-zinc-700/30 font-medium">
+                                                Pending Invite
+                                            </Badge>
+                                        )}
                                     </div>
                                 )}
 

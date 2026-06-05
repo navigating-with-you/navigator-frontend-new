@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import AddEmployeesDialog from "./AddEmployeesDialog";
 import AddFilesDialog from "./AddFilesDialog";
 import { usePermissions } from "@/hooks/usePermissions";
+import { teamSchema } from "@/schemas/team";
 
 interface CategoryDrawerProps {
     open: boolean;
@@ -147,9 +148,9 @@ export default function CategoryDrawer({
     const availableFilesPool = allFiles;
 
     // Validation
-    const isNameValid = name.trim().length > 0;
-    const isManagerValid = managerId.trim().length > 0;
-    const canSave = isNameValid && isManagerValid && !isReadOnly;
+    const validation = teamSchema.safeParse({ name, description, managerId });
+    const canSave = validation.success && !isReadOnly;
+    const fieldErrors = !validation.success ? validation.error.flatten().fieldErrors : {};
 
     // Filter employees added to the category
     const filteredEmployees = useMemo(() => {
@@ -352,20 +353,20 @@ export default function CategoryDrawer({
                             <Input
                                 value={name}
                                 onChange={(e) => {
-                                    setName(e.target.value.slice(0, 255));
+                                    setName(e.target.value);
                                     setTouched((p) => ({ ...p, name: true }));
                                 }}
-                                maxLength={255}
                                 onBlur={() => handleBlur("name")}
                                 disabled={isReadOnly}
                                 placeholder="Enter category name"
+                                maxLength={50}
                                 className="h-11 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
                                 data-testid="team-name-input"
                             />
-                            {touched.name && !isNameValid && (
+                            {touched.name && fieldErrors.name && (
                                 <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
                                     <AlertCircle className="h-3.5 w-3.5" />
-                                    <span>Category name is required.</span>
+                                    <span>{fieldErrors.name[0]}</span>
                                 </div>
                             )}
                         </div>
@@ -378,22 +379,33 @@ export default function CategoryDrawer({
                             <div className="relative">
                                 <Textarea
                                     value={description}
-                                    onChange={(e) => setDescription(e.target.value.slice(0, 1000))}
+                                    onChange={(e) => {
+                                        setDescription(e.target.value);
+                                        setTouched((p) => ({ ...p, description: true }));
+                                    }}
+                                    onBlur={() => setTouched((p) => ({ ...p, description: true }))}
                                     disabled={isReadOnly}
                                     placeholder="Enter category description"
+                                    maxLength={200}
                                     rows={6}
                                     className="rounded-lg border-zinc-200 dark:border-zinc-700 bg-[#FEFFFA] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 resize-none leading-relaxed pr-16"
                                     data-testid="category-description-input"
                                 />
                                 <span className={cn(
                                     "absolute bottom-3 right-3 text-xs font-semibold bg-[#FEFFFA]/85 dark:bg-zinc-800/85 px-1.5 py-0.5 rounded select-none transition-colors",
-                                    description.length === 1000
+                                    description.length > 200
                                         ? "text-red-650 dark:text-red-400 font-bold"
                                         : "text-zinc-400 dark:text-zinc-500"
                                 )}>
-                                    {description.length}/1000
+                                    {description.length}/200
                                 </span>
                             </div>
+                            {touched.description && fieldErrors.description && (
+                                <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                    <AlertCircle className="h-3.5 w-3.5" />
+                                    <span>{fieldErrors.description[0]}</span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Manager */}
@@ -453,10 +465,10 @@ export default function CategoryDrawer({
                                         </div>
                                     </PopoverContent>
                                 </Popover>
-                                {touched.managerId && !isManagerValid && (
+                                {touched.managerId && fieldErrors.managerId && (
                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
                                         <AlertCircle className="h-3.5 w-3.5" />
-                                        <span>Please select a manager.</span>
+                                        <span>{fieldErrors.managerId[0]}</span>
                                     </div>
                                 )}
                             </div>

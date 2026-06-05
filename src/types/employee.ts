@@ -7,10 +7,6 @@ export interface Employee {
     email: string;
     avatar: string;
     status: EmployeeStatus;
-    mobile?: string;
-    countryCode?: string;
-    gender?: string;
-    dob?: string | Date;
     role: string;
     category: string;
     createdBy: string;

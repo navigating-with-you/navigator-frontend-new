@@ -28,6 +28,7 @@ import ColumnSettings from "@/components/ui/ColumnSettings";
 
 const EMPLOYEE_COLUMNS = [
     { key: "name", label: "Employee Name" },
+    { key: "status", label: "Status" },
     { key: "kbFiles", label: "No. Of KB Files" },
     { key: "simpleInteraction", label: "Simple Interaction" },
     { key: "complexInteraction", label: "Complex Interaction" },
@@ -39,7 +40,7 @@ const EMPLOYEE_COLUMNS = [
     { key: "createdDate", label: "Created Date" },
 ];
 
-const DEFAULT_EMPLOYEE_COLUMNS = ["name", "kbFiles", "simpleInteraction", "complexInteraction"];
+const DEFAULT_EMPLOYEE_COLUMNS = ["name", "status", "role", "kbFiles"];
 import EmptyState from "@/components/employees/EmptyState";
 import UnifiedEmptyState from "@/components/ui/empty-state";
 import AddEmployeeDrawer from "@/components/employees/AddEmployeeDrawer";
@@ -166,9 +167,11 @@ export default function EmployeesPage() {
 
     const isEmpty = employees.length === 0;
 
-    const fetchEmployees = useCallback(async () => {
+    const fetchEmployees = useCallback(async (showSkeleton = false) => {
         try {
-            setIsLoading(true);
+            if (showSkeleton || employees.length === 0) {
+                setIsLoading(true);
+            }
             const token = await getToken();
             if (!token) {
                 toast.error("Not authenticated");
@@ -196,7 +199,11 @@ export default function EmployeesPage() {
                 })
             ]);
 
-            const employeeList = empData?.employees || (Array.isArray(empData) ? empData : []);
+            const rawEmployeeList = empData?.employees || (Array.isArray(empData) ? empData : []);
+            const employeeList = rawEmployeeList.filter((emp: any) => {
+                if (!user?.email) return true;
+                return emp.email?.toLowerCase() !== user.email.toLowerCase();
+            });
             const inviteList = empData?.pending_invites || (Array.isArray(inviteData) ? inviteData : ((inviteData as any)?.invites || []));
             const rolesList = Array.isArray(rolesData) ? (rolesData as any) : [];
             const groupsList = Array.isArray(groupsData) ? groupsData : (groupsData?.groups || []);
@@ -344,7 +351,7 @@ export default function EmployeesPage() {
 
     useEffect(() => {
         if (isAuthenticated) {
-            fetchEmployees();
+            fetchEmployees(true);
 
             return () => {
                 // Manual refresh will be triggered via UI actions instead of WebSocket

@@ -2,8 +2,9 @@ import { useState, useRef } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { createOrganization, uploadLogo } from "@/lib/api";
 import { toast } from "sonner";
-import { Building, Loader2, Sun, Moon, Image as ImageIcon } from "lucide-react";
+import { Building, Loader2, Sun, Moon, Image as ImageIcon, AlertCircle } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { organizationCreateSchema } from "@/schemas/organization";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,10 +27,21 @@ import {
     DropdownMenuSeparator,
     DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import CountryList from "country-list-with-dial-code-and-flag";
 
 type OnboardingPageProps = {
     onComplete: (orgId: string) => void;
 };
+
+const countries = (() => {
+    const instance = (CountryList as any).default || CountryList;
+    if (instance && typeof instance.getAll === "function") {
+        return instance.getAll();
+    }
+    return [];
+})();
+
+
 
 export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const { getToken, user, logout } = useKindeAuth();
@@ -47,11 +59,16 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
     const currentStep = 1;
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
     // ── STEP 1: Company Setup Data ──────────────────────────────────────────
     const [orgName, setOrgName] = useState("");
+    const [orgEmail, setOrgEmail] = useState("");
+    const [selectedPhoneCountry, setSelectedPhoneCountry] = useState("US");
+    const currentPhoneCountry = countries.find(c => c.code === selectedPhoneCountry) || countries.find(c => c.code === "US");
+    const dialCode = currentPhoneCountry ? currentPhoneCountry.dial_code : "+1";
+    const [contactNumber, setContactNumber] = useState("");
     const [address, setAddress] = useState("");
-    const [addressLine2, setAddressLine2] = useState("");
     const [city, setCity] = useState("");
     const [stateProvince, setStateProvince] = useState("");
     const [country, setCountry] = useState("US");
@@ -59,6 +76,24 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+    const formPayload = {
+        name: orgName,
+        email: orgEmail,
+        contactNumber,
+        address,
+        city,
+        stateProvince,
+        country,
+        postalCode,
+    };
+
+    const validation = organizationCreateSchema.safeParse(formPayload);
+    const fieldErrors = !validation.success
+        ? validation.error.flatten().fieldErrors
+        : {};
 
     // Handle file selection for logo
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,41 +113,33 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
         }
     };
 
+    const handleCountryChange = (val: string) => {
+        setCountry(val);
+        const match = countries.find((c) => c.code === val);
+        if (match) {
+            setSelectedPhoneCountry(val);
+        }
+    };
+
     // ── Step 1 Submit: Create Organization ──────────────────────────────────
     const handleCreateOrg = async () => {
-        if (!orgName.trim()) {
-            toast.error("Organization Name is required");
-            return;
-        }
-        if (orgName.trim().length > 255) {
-            toast.error("Organization Name cannot exceed 255 characters");
-            return;
-        }
-        if (!address.trim() || !city.trim() || !stateProvince.trim() || !postalCode.trim()) {
-            toast.error("Complete billing address details are required");
-            return;
-        }
-        if (address.trim().length > 255) {
-            toast.error("Address Line 1 cannot exceed 255 characters");
-            return;
-        }
-        if (addressLine2.trim().length > 255) {
-            toast.error("Address Line 2 cannot exceed 255 characters");
-            return;
-        }
-        if (city.trim().length > 100) {
-            toast.error("City cannot exceed 100 characters");
-            return;
-        }
-        if (stateProvince.trim().length > 100) {
-            toast.error("State or Province cannot exceed 100 characters");
-            return;
-        }
-        if (postalCode.trim().length > 20) {
-            toast.error("Postal Code cannot exceed 20 characters");
+        setTouched({
+            name: true,
+            email: true,
+            contactNumber: true,
+            address: true,
+            city: true,
+            stateProvince: true,
+            postalCode: true,
+        });
+
+        if (!validation.success) {
+            const firstError = validation.error.errors[0]?.message || "Invalid organization details";
+            toast.error(firstError);
             return;
         }
 
+        setSubmitError(null);
         setIsSubmitting(true);
         try {
             const token = await getToken();
@@ -135,9 +162,10 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
             const response = await createOrganization({
                 name: orgName,
                 logo_url: uploadedLogoUrl,
+                email: orgEmail.trim() || undefined,
+                contact_number: contactNumber.trim() ? `${dialCode}${contactNumber.trim()}` : undefined,
                 billing_address: {
                     line1: address,
-                    line2: addressLine2 || undefined,
                     city: city,
                     state: stateProvince,
                     postal_code: postalCode,
@@ -149,7 +177,9 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
             onComplete(response.id);
         } catch (err: any) {
             console.error(err);
-            toast.error(err.message || "Failed to create organization. Check details and retry.");
+            const errMsg = err.message || "Failed to create organization. Check details and retry.";
+            setSubmitError(errMsg);
+            toast.error(errMsg);
         } finally {
             setIsSubmitting(false);
         }
@@ -324,7 +354,8 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
                         {/* Fields Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="md:col-span-3 space-y-1.5">
+                            {/* Organization Name */}
+                            <div className="space-y-1.5 font-medium">
                                 <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                                     Organization Name <span className="text-red-500 ml-0.5">*</span>
                                 </label>
@@ -332,16 +363,84 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     type="text"
                                     value={orgName}
                                     onChange={(e) => setOrgName(e.target.value.slice(0, 255))}
+                                    onBlur={() => setTouched(prev => ({ ...prev, name: true }))}
                                     maxLength={255}
-                                    placeholder="Enter your organization name"
+                                    placeholder="Enter organization name"
                                     className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                                 />
+                                {touched.name && fieldErrors.name && (
+                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                         <AlertCircle className="h-3.5 w-3.5" />
+                                         <span>{fieldErrors.name[0]}</span>
+                                     </div>
+                                 )}
                             </div>
-                        </div>
 
-                        {/* Address Fields */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-1.5">
+                            {/* Contact Email */}
+                            <div className="space-y-1.5 font-medium">
+                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                    Contact Email
+                                </label>
+                                <Input
+                                    type="email"
+                                    value={orgEmail}
+                                    onChange={(e) => setOrgEmail(e.target.value.slice(0, 255))}
+                                    onBlur={() => setTouched(prev => ({ ...prev, email: true }))}
+                                    maxLength={255}
+                                    placeholder="contact@company.com"
+                                    className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+                                />
+                                {touched.email && fieldErrors.email && (
+                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                         <AlertCircle className="h-3.5 w-3.5" />
+                                         <span>{fieldErrors.email[0]}</span>
+                                     </div>
+                                 )}
+                            </div>
+
+                            {/* Contact Phone Number */}
+                            <div className="space-y-1.5 font-medium">
+                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                    Contact Phone Number
+                                </label>
+                                <div className="flex gap-2">
+                                    <Select
+                                        value={selectedPhoneCountry}
+                                        onValueChange={setSelectedPhoneCountry}
+                                    >
+                                        <SelectTrigger className="w-[100px] h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-medium">
+                                            <SelectValue>
+                                                {currentPhoneCountry ? `${currentPhoneCountry.flag} ${currentPhoneCountry.dial_code}` : "+1"}
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-60 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850">
+                                            {countries.map((c) => (
+                                                <SelectItem key={`${c.code}-dial`} value={c.code} textValue={c.name} className="cursor-pointer text-sm">
+                                                    {c.flag} {c.dial_code} ({c.code})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Input
+                                        type="tel"
+                                        value={contactNumber}
+                                        onChange={(e) => setContactNumber(e.target.value.replace(/[^0-9]/g, "").slice(0, 15))}
+                                        onBlur={() => setTouched(prev => ({ ...prev, contactNumber: true }))}
+                                        placeholder="Phone number"
+                                        maxLength={15}
+                                        className="flex-1 h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+                                    />
+                                </div>
+                                {touched.contactNumber && fieldErrors.contactNumber && (
+                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                         <AlertCircle className="h-3.5 w-3.5" />
+                                         <span>{fieldErrors.contactNumber[0]}</span>
+                                     </div>
+                                 )}
+                            </div>
+
+                            {/* Address Line 1 */}
+                            <div className="space-y-1.5 font-medium">
                                 <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                                     Address Line 1 <span className="text-red-500 ml-0.5">*</span>
                                 </label>
@@ -349,29 +448,21 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     type="text"
                                     value={address}
                                     onChange={(e) => setAddress(e.target.value.slice(0, 255))}
+                                    onBlur={() => setTouched(prev => ({ ...prev, address: true }))}
                                     maxLength={255}
                                     placeholder="Enter address line 1"
                                     className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                                 />
+                                {touched.address && fieldErrors.address && (
+                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                         <AlertCircle className="h-3.5 w-3.5" />
+                                         <span>{fieldErrors.address[0]}</span>
+                                     </div>
+                                 )}
                             </div>
 
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                                    Address Line 2 <span className="text-xs text-zinc-400 dark:text-zinc-500 font-normal">(optional)</span>
-                                </label>
-                                <Input
-                                    type="text"
-                                    value={addressLine2}
-                                    onChange={(e) => setAddressLine2(e.target.value.slice(0, 255))}
-                                    maxLength={255}
-                                    placeholder="Enter address line 2"
-                                    className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="space-y-1.5">
+                            {/* City */}
+                            <div className="space-y-1.5 font-medium">
                                 <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                                     City <span className="text-red-500 ml-0.5">*</span>
                                 </label>
@@ -379,13 +470,21 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     type="text"
                                     value={city}
                                     onChange={(e) => setCity(e.target.value.slice(0, 100))}
+                                    onBlur={() => setTouched(prev => ({ ...prev, city: true }))}
                                     maxLength={100}
                                     placeholder="Enter city"
                                     className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                                 />
+                                {touched.city && fieldErrors.city && (
+                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                         <AlertCircle className="h-3.5 w-3.5" />
+                                         <span>{fieldErrors.city[0]}</span>
+                                     </div>
+                                 )}
                             </div>
 
-                            <div className="space-y-1.5">
+                            {/* State or Province */}
+                            <div className="space-y-1.5 font-medium">
                                 <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                                     State or Province <span className="text-red-500 ml-0.5">*</span>
                                 </label>
@@ -393,13 +492,43 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     type="text"
                                     value={stateProvince}
                                     onChange={(e) => setStateProvince(e.target.value.slice(0, 100))}
+                                    onBlur={() => setTouched(prev => ({ ...prev, stateProvince: true }))}
                                     maxLength={100}
                                     placeholder="Enter state or province"
                                     className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                                 />
+                                {touched.stateProvince && fieldErrors.stateProvince && (
+                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                         <AlertCircle className="h-3.5 w-3.5" />
+                                         <span>{fieldErrors.stateProvince[0]}</span>
+                                     </div>
+                                 )}
                             </div>
 
-                            <div className="space-y-1.5">
+                            {/* Country */}
+                            <div className="space-y-1.5 font-medium">
+                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                    Country
+                                </label>
+                                <Select
+                                    value={country}
+                                    onValueChange={handleCountryChange}
+                                >
+                                    <SelectTrigger className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-medium">
+                                        <SelectValue placeholder="Select Country" />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-60 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850">
+                                        {countries.map((c) => (
+                                            <SelectItem key={c.code} value={c.code} textValue={c.name} className="cursor-pointer text-sm">
+                                                {c.flag} {c.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Postal Code */}
+                            <div className="space-y-1.5 font-medium">
                                 <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                                     Postal Code <span className="text-red-500 ml-0.5">*</span>
                                 </label>
@@ -407,45 +536,36 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     type="text"
                                     value={postalCode}
                                     onChange={(e) => setPostalCode(e.target.value.slice(0, 20))}
+                                    onBlur={() => setTouched(prev => ({ ...prev, postalCode: true }))}
                                     maxLength={20}
                                     placeholder="Enter postal code"
                                     className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                                 />
+                                {touched.postalCode && fieldErrors.postalCode && (
+                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                         <AlertCircle className="h-3.5 w-3.5" />
+                                         <span>{fieldErrors.postalCode[0]}</span>
+                                     </div>
+                                 )}
                             </div>
                         </div>
 
-                        {/* Country */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="md:col-span-1 space-y-1.5">
-                                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                                    Country
-                                </label>
-                                <Select
-                                    value={country}
-                                    onValueChange={setCountry}
-                                >
-                                    <SelectTrigger className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-                                        <SelectValue placeholder="Select Country" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="US">United States</SelectItem>
-                                        <SelectItem value="CA">Canada</SelectItem>
-                                        <SelectItem value="GB">United Kingdom</SelectItem>
-                                        <SelectItem value="AU">Australia</SelectItem>
-                                        <SelectItem value="DE">Germany</SelectItem>
-                                        <SelectItem value="IN">India</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
 
                         {/* Navigation Row */}
-                        <div className="flex justify-end pt-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                            <div className="flex-1">
+                                {submitError && (
+                                    <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 text-red-650 dark:text-red-400 text-xs flex items-center gap-2.5 font-medium">
+                                        <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+                                        <span>{submitError}</span>
+                                    </div>
+                                )}
+                            </div>
                             <Button
                                 type="button"
                                 onClick={handleCreateOrg}
                                 disabled={isSubmitting}
-                                className="h-11 px-10 font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/60 rounded-lg transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer min-w-[120px]"
+                                className="h-11 px-10 font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/60 rounded-lg transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer min-w-[120px] self-end sm:self-auto"
                             >
                                 {isSubmitting ? (
                                     <>

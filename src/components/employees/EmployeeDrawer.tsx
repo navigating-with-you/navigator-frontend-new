@@ -118,33 +118,7 @@ export default function EmployeeDetailsDrawer({
                             value={employee.email}
                             testId="details-email"
                         />
-                        <Field
-                            label="Mobile Number"
-                            value={
-                                employee.mobile
-                                    ? `${employee.countryCode || "+1"} ${employee.mobile}`
-                                    : "-"
-                            }
-                            testId="details-mobile"
-                        />
-                        <Field
-                            label="Gender"
-                            value={employee.gender || "-"}
-                            testId="details-gender"
-                        />
-                        <Field
-                            label="Date Of Birth"
-                            value={
-                                employee.dob
-                                    ? new Date(employee.dob).toLocaleDateString("en-GB", {
-                                        day: "numeric",
-                                        month: "long",
-                                        year: "numeric",
-                                      })
-                                    : "-"
-                            }
-                            testId="details-dob"
-                        />
+
                         <Field label="Role" value={employee.role} testId="details-role" />
                         <Field
                             label="Teams"

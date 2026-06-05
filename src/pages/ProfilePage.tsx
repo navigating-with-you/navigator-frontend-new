@@ -384,6 +384,7 @@ export default function ProfilePage() {
                                 <Input
                                     value={editFirstName}
                                     onChange={(e) => setEditFirstName(e.target.value)}
+                                    maxLength={50}
                                     className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-xl h-11 px-3.5 shadow-none focus-visible:ring-1 focus-visible:ring-blue-600"
                                 />
                             </div>
@@ -396,6 +397,7 @@ export default function ProfilePage() {
                                 <Input
                                     value={editLastName}
                                     onChange={(e) => setEditLastName(e.target.value)}
+                                    maxLength={50}
                                     className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-xl h-11 px-3.5 shadow-none focus-visible:ring-1 focus-visible:ring-blue-600"
                                 />
                             </div>

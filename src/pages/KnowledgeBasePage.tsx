@@ -231,9 +231,11 @@ export default function KnowledgeBasePage() {
 
     // ── Data fetching ──────────────────────────────────────────────────────────
 
-    const fetchContents = useCallback(async (folderId: string | null) => {
+    const fetchContents = useCallback(async (folderId: string | null, showSkeleton = false) => {
         try {
-            setIsLoading(true);
+            if (showSkeleton || (childFolders.length === 0 && childFiles.length === 0)) {
+                setIsLoading(true);
+            }
             setFolderJobs([]);
             const token = await getToken();
             if (!token) return;
@@ -310,7 +312,7 @@ export default function KnowledgeBasePage() {
     };
 
     useEffect(() => {
-        fetchContents(currentFolderId);
+        fetchContents(currentFolderId, true);
     }, [currentFolderId, fetchContents]);
 
     useEffect(() => {

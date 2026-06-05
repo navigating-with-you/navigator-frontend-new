@@ -133,9 +133,11 @@ export default function CategoryPage() {
     });
 
     // Populate categories from API
-    const loadCategories = useCallback(async () => {
+    const loadCategories = useCallback(async (showSkeleton = false) => {
         if (!isAuthenticated) return;
-        setIsLoading(true);
+        if (showSkeleton || categories.length === 0) {
+            setIsLoading(true);
+        }
         try {
             const token = await getToken();
             if (!token) return;
@@ -283,7 +285,7 @@ export default function CategoryPage() {
     // Load categories on mount and when dependencies change
     useEffect(() => {
         if (isAuthenticated && !isPermissionsLoading) {
-            loadCategories();
+            loadCategories(true);
         }
     }, [isAuthenticated, isPermissionsLoading, loadCategories]);
 

@@ -1,6 +1,7 @@
 import { useEffect, useState, type JSX } from "react";
 import { X, AlertCircle, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { employeeEditSchema } from "@/schemas/employee";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,11 +69,11 @@ export default function EditEmployeeDrawer({
 
     if (!employee) return <></>;
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isFirstNameValid = firstName.trim() !== "";
-    const isEmailValid = emailRegex.test(email.trim());
-
-    const canSave = isFirstNameValid && isEmailValid;
+    const validation = employeeEditSchema.safeParse({ firstName, lastName, email });
+    const canSave = validation.success;
+    const fieldErrors = !validation.success
+        ? validation.error.flatten().fieldErrors
+        : {};
 
     // Filter roles to only allow admin, editor, member
     const displayRoles = roles.length > 0
@@ -178,12 +179,13 @@ export default function EditEmployeeDrawer({
                                     onChange={(e) => setFirstName(e.target.value)}
                                     onBlur={() => setTouched(t => ({ ...t, firstName: true }))}
                                     placeholder="First Name"
+                                    maxLength={50}
                                     className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-medium"
                                 />
-                                {touched.firstName && !isFirstNameValid && (
+                                {touched.firstName && fieldErrors.firstName && (
                                     <div className="text-red-500 text-[10px] flex items-center gap-1 mt-0.5">
                                         <AlertCircle className="h-3 w-3" />
-                                        <span>Required</span>
+                                        <span>{fieldErrors.firstName[0]}</span>
                                     </div>
                                 )}
                             </div>
@@ -199,8 +201,15 @@ export default function EditEmployeeDrawer({
                                     onChange={(e) => setLastName(e.target.value)}
                                     onBlur={() => setTouched(t => ({ ...t, lastName: true }))}
                                     placeholder="Last Name"
+                                    maxLength={50}
                                     className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-medium"
                                 />
+                                {touched.lastName && fieldErrors.lastName && (
+                                    <div className="text-red-500 text-[10px] flex items-center gap-1 mt-0.5">
+                                        <AlertCircle className="h-3 w-3" />
+                                        <span>{fieldErrors.lastName[0]}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -216,12 +225,13 @@ export default function EditEmployeeDrawer({
                                 onChange={(e) => setEmail(e.target.value)}
                                 onBlur={() => setTouched(t => ({ ...t, email: true }))}
                                 placeholder="Email address"
+                                maxLength={255}
                                 className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-medium"
                             />
-                            {touched.email && !isEmailValid && (
+                            {touched.email && fieldErrors.email && (
                                 <div className="text-red-500 text-[10px] flex items-center gap-1 mt-0.5">
                                     <AlertCircle className="h-3 w-3" />
-                                    <span>Enter a valid email</span>
+                                    <span>{fieldErrors.email[0]}</span>
                                 </div>
                             )}
                         </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState, type JSX } from "react";
 import { X, AlertCircle, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { employeeInviteSchema } from "@/schemas/employee";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,12 +85,11 @@ export default function AddEmployeeDrawer({
         setTouched((prev) => ({ ...prev, [key]: true }));
     };
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isFirstNameValid = form.firstName.trim() !== "";
-    const isEmailValid = emailRegex.test(form.email.trim());
-    const isRoleValid = form.roleId !== "";
-
-    const canSave = isFirstNameValid && isEmailValid && isRoleValid;
+    const validation = employeeInviteSchema.safeParse(form);
+    const canSave = validation.success;
+    const fieldErrors = !validation.success
+        ? validation.error.flatten().fieldErrors
+        : {};
 
     const submit = async (): Promise<void> => {
         if (!canSave || isSubmitting) return;
@@ -173,13 +173,14 @@ export default function AddEmployeeDrawer({
                             onChange={(e) => updateField("firstName", e.target.value)}
                             onBlur={() => handleBlur("firstName")}
                             placeholder="Enter first name"
+                            maxLength={50}
                             data-testid="emp-first-name-input"
                             className="h-11 rounded-lg border-zinc-200"
                         />
-                        {touched.firstName && !isFirstNameValid && (
+                        {touched.firstName && fieldErrors.firstName && (
                             <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
                                 <AlertCircle className="h-3.5 w-3.5" />
-                                <span>First name is required.</span>
+                                <span>{fieldErrors.firstName[0]}</span>
                             </div>
                         )}
                     </div>
@@ -199,9 +200,16 @@ export default function AddEmployeeDrawer({
                             onChange={(e) => updateField("lastName", e.target.value)}
                             onBlur={() => handleBlur("lastName")}
                             placeholder="Enter last name"
+                            maxLength={50}
                             data-testid="emp-last-name-input"
                             className="h-11 rounded-lg border-zinc-200"
                         />
+                        {touched.lastName && fieldErrors.lastName && (
+                            <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                <AlertCircle className="h-3.5 w-3.5" />
+                                <span>{fieldErrors.lastName[0]}</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Email */}
@@ -220,19 +228,14 @@ export default function AddEmployeeDrawer({
                             onChange={(e) => updateField("email", e.target.value)}
                             onBlur={() => handleBlur("email")}
                             placeholder="Enter email address"
+                            maxLength={255}
                             data-testid="emp-email-input"
                             className="h-11 rounded-lg border-zinc-200"
                         />
-                        {touched.email && form.email.trim() === "" && (
+                        {touched.email && fieldErrors.email && (
                             <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
                                 <AlertCircle className="h-3.5 w-3.5" />
-                                <span>Email address is required.</span>
-                            </div>
-                        )}
-                        {touched.email && form.email.trim() !== "" && !isEmailValid && (
-                            <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
-                                <AlertCircle className="h-3.5 w-3.5" />
-                                <span>Please enter a valid email address.</span>
+                                <span>{fieldErrors.email[0]}</span>
                             </div>
                         )}
                     </div>
@@ -268,10 +271,10 @@ export default function AddEmployeeDrawer({
                                 }
                             </SelectContent>
                         </Select>
-                        {touched.roleId && !isRoleValid && (
+                        {touched.roleId && fieldErrors.roleId && (
                             <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
                                 <AlertCircle className="h-3.5 w-3.5" />
-                                <span>Please select a role.</span>
+                                <span>{fieldErrors.roleId[0]}</span>
                             </div>
                         )}
                     </div>

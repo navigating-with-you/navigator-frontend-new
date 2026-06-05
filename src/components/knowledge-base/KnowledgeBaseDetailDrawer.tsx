@@ -674,6 +674,7 @@ export default function KnowledgeBaseDetailDrawer({
                                         <Input
                                             value={nameDraft}
                                             onChange={(e) => setNameDraft(e.target.value)}
+                                            maxLength={100}
                                             disabled={mode === "view"}
                                             placeholder="Enter folder name"
                                             className={cn(
@@ -690,7 +691,8 @@ export default function KnowledgeBaseDetailDrawer({
                                         </Label>
                                         <Textarea
                                             value={descDraft}
-                                            onChange={(e) => setDescDraft(e.target.value.slice(0, 500))}
+                                            onChange={(e) => setDescDraft(e.target.value.slice(0, 200))}
+                                            maxLength={200}
                                             disabled={mode === "view"}
                                             placeholder="Enter folder description..."
                                             rows={8}
@@ -701,7 +703,7 @@ export default function KnowledgeBaseDetailDrawer({
                                         />
                                         {mode === "edit" && (
                                             <div className="text-[11px] font-medium text-zinc-400 text-right mt-1">
-                                                {descDraft.length}/500
+                                                {descDraft.length}/200
                                             </div>
                                         )}
                                     </div>
