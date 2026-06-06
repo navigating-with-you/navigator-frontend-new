@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cacheWebSocket } from "@/utils/cacheWebSocket";
 import { cn } from "@/lib/utils";
+import { validateEmployeeCode, getEmployeeCodeConstraintsText } from "@/utils/employeeCodeValidation";
 
 export default function ProfilePage() {
     const { getToken, user } = useKindeAuth();
@@ -28,6 +29,8 @@ export default function ProfilePage() {
     // States for editable name fields
     const [editFirstName, setEditFirstName] = useState("");
     const [editLastName, setEditLastName] = useState("");
+    const [editEmployeeCode, setEditEmployeeCode] = useState("");
+    const [employeeCodeError, setEmployeeCodeError] = useState("");
 
     // Subscribe to WebSocket status changes
     useEffect(() => {
@@ -84,6 +87,7 @@ export default function ProfilePage() {
         const nameParts = fullName.trim().split(/\s+/);
         setEditFirstName(nameParts[0] || "");
         setEditLastName(nameParts.slice(1).join(" ") || "");
+        setEditEmployeeCode(profile?.employee_code || "");
     }, [profile, user, fullName]);
 
     const initials = fullName
@@ -136,6 +140,17 @@ export default function ProfilePage() {
     const handleSave = async () => {
         setIsSaving(true);
         try {
+            // Validate employee code if provided
+            if (editEmployeeCode) {
+                const validation = validateEmployeeCode(editEmployeeCode);
+                if (!validation.isValid) {
+                    setEmployeeCodeError(validation.error || "Invalid employee code");
+                    setIsSaving(false);
+                    return;
+                }
+            }
+            setEmployeeCodeError("");
+
             const token = await getToken();
             if (!token) {
                 toast.error("Authentication session expired. Please sign in again.");
@@ -150,11 +165,12 @@ export default function ProfilePage() {
             const origLastName = nameParts.slice(1).join(" ") || "";
 
             // 1. Save updated first/last name if changed
-            if (editFirstName.trim() !== origFirstName || editLastName.trim() !== origLastName) {
+            if (editFirstName.trim() !== origFirstName || editLastName.trim() !== origLastName || editEmployeeCode !== (profile?.employee_code || "")) {
                 await updateProfile(
                     {
                         first_name: editFirstName.trim(),
                         last_name: editLastName.trim(),
+                        employee_code: editEmployeeCode || null,
                     },
                     token
                 );
@@ -219,6 +235,7 @@ export default function ProfilePage() {
     const nameParts = fullName.trim().split(/\s+/);
     const firstNameVal = nameParts[0] || "";
     const lastNameVal = nameParts.slice(1).join(" ") || "";
+    const employeeCode = profile?.employee_code || "-";
 
     return (
         <div className="fixed inset-0 z-50 flex justify-end" data-testid="profile-drawer">
@@ -356,6 +373,16 @@ export default function ProfilePage() {
                                 </span>
                             </div>
 
+                            {/* Employee Code */}
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                                    Employee Code
+                                </span>
+                                <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                                    {employeeCode}
+                                </span>
+                            </div>
+
                             {/* Workspace Role */}
                             <div className="flex flex-col gap-1">
                                 <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
@@ -423,6 +450,36 @@ export default function ProfilePage() {
                                     maxLength={50}
                                     className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-xl h-11 px-3.5 shadow-none focus-visible:ring-1 focus-visible:ring-blue-600"
                                 />
+                            </div>
+
+                            {/* Employee Code */}
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">
+                                    Employee Code
+                                </label>
+                                <Input
+                                    value={editEmployeeCode}
+                                    onChange={(e) => {
+                                        setEditEmployeeCode(e.target.value);
+                                        setEmployeeCodeError("");
+                                    }}
+                                    maxLength={50}
+                                    placeholder="e.g., EMP-001 or emp_user_123"
+                                    className={cn(
+                                        "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border rounded-xl h-11 px-3.5 shadow-none focus-visible:ring-1",
+                                        employeeCodeError 
+                                            ? "border-red-500 focus-visible:ring-red-500" 
+                                            : "border-zinc-200 dark:border-zinc-700 focus-visible:ring-blue-600"
+                                    )}
+                                />
+                                {employeeCodeError && (
+                                    <span className="text-xs text-red-500 dark:text-red-400 font-medium">
+                                        {employeeCodeError}
+                                    </span>
+                                )}
+                                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                                    {getEmployeeCodeConstraintsText()}
+                                </span>
                             </div>
 
                             {/* Workspace Role */}

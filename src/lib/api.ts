@@ -43,6 +43,7 @@ export async function createInvite(payload: {
     first_name: string;
     last_name: string | null;
     role_name: string;
+    employee_code?: string | null;
 }, token: string) {
     return apiClient.post<any>("/invite/", payload, { token });
 }
@@ -79,6 +80,18 @@ export async function acceptInvite(payload: {
         email: string;
         organization_id: string;
     }>("/invite/accept", payload, {});
+}
+
+export async function updateEmployeeDetails(
+    userId: string,
+    payload: {
+        first_name?: string | null;
+        last_name?: string | null;
+        employee_code?: string | null;
+    },
+    token: string
+) {
+    return apiClient.patch<any>(`/auth/employees/${userId}`, payload, { token });
 }
 
 // ── RBAC ──────────────────────────────────────────────────────────────────────

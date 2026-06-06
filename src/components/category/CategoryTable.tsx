@@ -4,7 +4,7 @@ import {
     Eye,
     Pencil,
     UserPlus,
-    Archive,
+
     Trash2,
     ChevronLeft,
     ChevronRight,
@@ -52,7 +52,7 @@ type RowMenuProps = {
     onEdit: (category: Category) => void;
     onView: (category: Category) => void;
     onAddEmployees: (category: Category) => void;
-    onArchive: (id: string) => void;
+
 };
 
 type CategoryTableProps = {
@@ -61,7 +61,7 @@ type CategoryTableProps = {
     onEdit: (category: Category) => void;
     onView: (category: Category) => void;
     onAddEmployees: (category: Category) => void;
-    onArchive: (id: string) => void;
+
     visibleColumns?: string[];
     selected: Set<string>;
     setSelected: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -73,7 +73,7 @@ function RowMenu({
     onEdit,
     onView,
     onAddEmployees,
-    onArchive,
+
 }: RowMenuProps): JSX.Element {
     const { hasPermission } = usePermissions();
     const canEdit = hasPermission(PERMISSIONS.GROUP_UPDATE);
@@ -128,15 +128,7 @@ function RowMenu({
                     </DropdownMenuItem>
                 )}
 
-                {canEdit && (
-                    <DropdownMenuItem
-                        onClick={() => onArchive(category.id)}
-                        className="cursor-pointer"
-                    >
-                        <Archive className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                        {category.isArchived ? "Unarchive" : "Archive"}
-                    </DropdownMenuItem>
-                )}
+                {/* Archive action removed */}
 
                 {canDelete && (
                     <DropdownMenuItem
@@ -315,7 +307,7 @@ export default function CategoryTable({
                         )}
                         <div />
                     </div>
- 
+
                     {/* Rows */}
                     <div className="flex-1 overflow-y-auto hover-scrollbar min-h-0 md:min-w-[800px] lg:min-w-full">
                         {pageRows.map((cat) => (
@@ -345,7 +337,6 @@ export default function CategoryTable({
                                                 onEdit={onEdit}
                                                 onView={onView}
                                                 onAddEmployees={onAddEmployees}
-                                                onArchive={onArchive}
                                             />
                                         </div>
                                     </div>
@@ -357,11 +348,10 @@ export default function CategoryTable({
                                             onEdit={onEdit}
                                             onView={onView}
                                             onAddEmployees={onAddEmployees}
-                                            onArchive={onArchive}
                                         />
                                     </div>
                                 )}
- 
+
                                 {visibleColumns.includes("name") && (
                                     <div className="truncate min-w-0 w-full md:w-auto flex items-center gap-3">
                                         {canSelect && (

@@ -618,35 +618,7 @@ export default function CategoryPage() {
         }
     };
 
-    const handleArchiveCategory = async (id: string) => {
-        const target = categories.find((c) => c.id === id);
-        if (!target) return;
-
-        const isArchivedNow = !target.isArchived;
-        const prevCategories = [...categories];
-
-        setCategories(prev => prev.map(c => c.id === id ? { ...c, isArchived: isArchivedNow } : c));
-        toast.success(`Team "${target.name}" ${isArchivedNow ? "archived" : "unarchived"} successfully`);
-
-        try {
-            if (isAuthenticated) {
-                const token = await getToken();
-                if (token) {
-                    await updateGroup(id, { is_archived: isArchivedNow }, token);
-                } else {
-                    toast.error("Not authenticated");
-                    setCategories(prevCategories);
-                }
-            } else {
-                toast.error("Not authenticated");
-                setCategories(prevCategories);
-            }
-        } catch (err) {
-            console.error("API Error archiving team:", err);
-            toast.error("API error archiving team");
-            setCategories(prevCategories);
-        }
-    };
+    // Archive/unarchive removed for teams
 
     const handleBatchDelete = async () => {
         setIsBatchProcessing(true);
@@ -1031,7 +1003,6 @@ export default function CategoryPage() {
                         onEdit={triggerEditMode}
                         onView={triggerViewMode}
                         onAddEmployees={triggerAddEmployeesMode}
-                        onArchive={handleArchiveCategory}
                         visibleColumns={isMember ? MEMBER_TEAM_COLUMNS : visibleColumns}
                         selected={selected}
                         setSelected={setSelected}

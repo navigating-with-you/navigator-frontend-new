@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Plus, RefreshCw, Search, X, Trash2, Mail } from "lucide-react";
+import { Plus, RefreshCw, Search, X, Trash2, Mail, Pencil, FolderPlus } from "lucide-react";
 import { PageActionButton } from "@/components/ui/page-action-button";
 import { PermissionGate } from "@/components/PermissionGate";
 import { PERMISSIONS } from "@/utils/rbacConfig";
@@ -12,7 +12,13 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+    Avatar,
+    AvatarImage,
+    AvatarFallback,
+} from "@/components/ui/avatar";
 import {
     Dialog,
     DialogContent,
@@ -29,6 +35,7 @@ import ColumnSettings from "@/components/ui/ColumnSettings";
 const EMPLOYEE_COLUMNS = [
     { key: "name", label: "Employee Name" },
     { key: "status", label: "Status" },
+    { key: "employeeCode", label: "Employee Code" },
     { key: "kbFiles", label: "No. Of KB Files" },
     { key: "simpleInteraction", label: "Simple Interaction" },
     { key: "complexInteraction", label: "Complex Interaction" },
@@ -48,6 +55,7 @@ import EmployeeDetailsDrawer from "@/components/employees/EmployeeDrawer";
 import EditEmployeeDrawer from "@/components/employees/EditEmployeeDrawer";
 import FilterDropdown from "@/components/FilterDropdown";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { config } from "@/config";
 import { listEmployees, listInvites, resendInvite, revokeInvite, listRoles, deleteEmployee, listGroups } from "@/lib/api";
 
 import { SkeletonTable } from "@/components/ui/skeleton-table";
@@ -56,13 +64,14 @@ export type Filters = {
     status: Employee["status"] | "";
     role: string;
     category: string;
-    creator: string;
 };
 
 
 export default function EmployeesPage() {
     const { getToken, isAuthenticated, user } = useKindeAuth();
     const [employees, setEmployees] = useState<Employee[]>([]);
+    const [currentUserEmployee, setCurrentUserEmployee] = useState<Employee | null>(null);
+    const [superAdminExists, setSuperAdminExists] = useState<boolean>(false);
     const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
         const saved = localStorage.getItem("employee_visible_columns");
         return saved ? JSON.parse(saved) : DEFAULT_EMPLOYEE_COLUMNS;
@@ -162,8 +171,11 @@ export default function EmployeesPage() {
         status: "",
         role: "",
         category: "",
-        creator: "",
     });
+
+    const [batchTeamPickerOpen, setBatchTeamPickerOpen] = useState(false);
+    const [selectedGroupBatch, setSelectedGroupBatch] = useState<string>("");
+    const [isBatchAdding, setIsBatchAdding] = useState(false);
 
     const isEmpty = employees.length === 0;
 
@@ -245,7 +257,7 @@ export default function EmployeesPage() {
                     role: roleName,
                     category: emp.category || "-",
                     avatar: emp.avatar_url || emp.avatar || "",
-                    status: "Accepted",
+                    status: "accepted",
                     kbFiles: emp.kb_files !== undefined && emp.kb_files !== null ? emp.kb_files : "-",
                     simpleInteraction: emp.simple_interaction !== undefined && emp.simple_interaction !== null ? emp.simple_interaction : "-",
                     complexInteraction: emp.complex_interaction !== undefined && emp.complex_interaction !== null ? emp.complex_interaction : "-",
@@ -255,6 +267,7 @@ export default function EmployeesPage() {
                         ? new Date(emp.created_at).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })
                         : "-",
                     isActive: emp.is_active !== undefined ? !!emp.is_active : true,
+                    employeeCode: emp.employee_code || null,
                 };
             });
 
@@ -288,7 +301,7 @@ export default function EmployeesPage() {
                         role: roleName,
                         category: "-",
                         avatar: "",
-                        status: "Pending",
+                        status: "pending",
                         kbFiles: "-",
                         simpleInteraction: "-",
                         complexInteraction: "-",
@@ -298,6 +311,7 @@ export default function EmployeesPage() {
                             ? new Date(inv.invited_at || inv.created_at).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })
                             : "-",
                         isActive: false,
+                        employeeCode: inv.employee_code || null,
                     };
                 });
 
@@ -305,7 +319,25 @@ export default function EmployeesPage() {
             const activeEmails = new Set(mappedEmployees.map(e => e.email.toLowerCase()));
             const uniqueInvites = mappedInvites.filter(inv => !activeEmails.has(inv.email.toLowerCase()));
 
-            setEmployees([...mappedEmployees, ...uniqueInvites]);
+            // Separate current user from employees
+            let currentUser: Employee | null = null;
+            const filteredEmployees = [...mappedEmployees, ...uniqueInvites].filter((emp) => {
+                if (!user?.email) return true;
+                const isCurrentUser = emp.email?.toLowerCase() === user.email.toLowerCase();
+                if (isCurrentUser) {
+                    currentUser = emp;
+                    return false;
+                }
+                return true;
+            });
+
+            setCurrentUserEmployee(currentUser);
+            // Determine if any super admin exists in employees or invites
+            const anySuper = [...mappedEmployees, ...mappedInvites].some(e => (e.role || "").toLowerCase().replace(/\s+/g, "_") === "super_admin");
+            setSuperAdminExists(anySuper);
+
+            // creators removed — no longer building creator filter list
+            setEmployees(filteredEmployees);
         } catch (error: any) {
             console.error("Fetch employees error:", error);
             toast.error(error.message || "Failed to load employees");
@@ -372,36 +404,27 @@ export default function EmployeesPage() {
         return Array.from(list).sort();
     }, [employees]);
 
-    const uniqueCreators = useMemo(() => {
-        return employees
-            .filter((emp) => {
-                const r = (emp.role || "").toLowerCase().replace("_", "");
-                return (r === "admin" || r === "superadmin") && emp.status === "Accepted";
-            })
-            .map((emp) => emp.name)
-            .sort();
-    }, [employees]);
+
 
     const filteredEmployees = useMemo(() => {
         const query = search.toLowerCase();
-        const { status, role, category, creator } = filters;
+        const { status, role, category } = filters;
 
         return employees.filter((emp) => {
             // Filters (check first as they're faster)
             if (status && (emp.status || "").trim().toLowerCase() !== status.trim().toLowerCase()) return false;
             if (role && (emp.role || "").trim().toLowerCase() !== role.trim().toLowerCase()) return false;
             if (category && (emp.category || "").trim().toLowerCase() !== category.trim().toLowerCase()) return false;
-            if (creator && (emp.createdBy || "").trim().toLowerCase() !== creator.trim().toLowerCase()) return false;
 
             // Search
             if (query) {
-                const searchableText = `${emp.name} ${emp.id} ${emp.role} ${emp.category} ${emp.createdBy}`.toLowerCase();
+                const searchableText = `${emp.name} ${emp.id} ${emp.email} ${emp.role} ${emp.category} ${emp.createdBy} ${emp.employeeCode || ""}`.toLowerCase();
                 if (!searchableText.includes(query)) return false;
             }
 
             return true;
         });
-    }, [employees, search, filters.status, filters.role, filters.category, filters.creator]);
+    }, [employees, search, filters.status, filters.role, filters.category]);
 
     const isNoResults = !isEmpty && filteredEmployees.length === 0;
 
@@ -425,6 +448,7 @@ export default function EmployeesPage() {
                 createdBy: user?.givenName ? `${user.givenName} ${user.familyName || ""}`.trim() : "Admin",
                 createdDate: new Date().toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }),
                 isActive: false,
+                employeeCode: newEmp.employeeCode || null,
             };
             return [...prev, newEmployeeItem];
         });
@@ -490,10 +514,132 @@ export default function EmployeesPage() {
                             </Button>
                         </div>
                     </div>
+
+                    {/* Batch Add to Team Dialog */}
+                    <Dialog open={batchTeamPickerOpen} onOpenChange={(open) => !open && setBatchTeamPickerOpen(false)}>
+                        <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md border border-zinc-150 dark:border-zinc-800 shadow-xl p-6">
+                            <DialogHeader>
+                                <DialogTitle className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">Add Selected to Team</DialogTitle>
+                                <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-2">
+                                    Select a team to add the {selected.size} selected employees to.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="mt-4">
+                                <Select value={selectedGroupBatch} onValueChange={setSelectedGroupBatch}>
+                                    <SelectTrigger className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-medium w-full">
+                                        <SelectValue placeholder="Select team" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {teams.map((t) => (
+                                            <SelectItem key={t} value={t}>
+                                                {t}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <DialogFooter className="mt-6 gap-2">
+                                <Button variant="outline" onClick={() => setBatchTeamPickerOpen(false)} disabled={isBatchAdding} className="rounded-lg text-zinc-700 dark:text-zinc-300">
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={async () => {
+                                        if (!selectedGroupBatch || selected.size === 0) return;
+                                        setIsBatchAdding(true);
+                                        try {
+                                            const audience = config.kindeAudience || undefined;
+                                            const token = await getToken(audience ? { audience } : undefined);
+                                            if (!token) throw new Error("Not authenticated");
+                                            const ids = Array.from(selected);
+                                            await (await import("@/lib/api")).addGroupMembers(selectedGroupBatch, ids, token);
+                                            toast.success(`Added ${ids.length} employees to team`);
+                                            setSelected(new Set());
+                                            setBatchTeamPickerOpen(false);
+                                        } catch (err: any) {
+                                            console.error("Batch add to team error", err);
+                                            toast.error(err?.message || "Failed to add to team");
+                                        } finally {
+                                            setIsBatchAdding(false);
+                                        }
+                                    }}
+                                    disabled={isBatchAdding || !selectedGroupBatch}
+                                    className="rounded-lg h-10 px-4 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-2"
+                                >
+                                    {isBatchAdding ? "Adding..." : "Add to Team"}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
                         Manage your team members, their roles, access permissions, and track their activity.
                     </p>
                 </div>
+
+                {/* My Profile Section */}
+                {currentUserEmployee && (
+                    <div className="mt-6 shrink-0 p-4 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-3 flex-1">
+                                <Avatar className="h-12 w-12 rounded-lg flex-shrink-0">
+                                    <AvatarImage
+                                        src={currentUserEmployee.avatar}
+                                        alt={currentUserEmployee.name}
+                                    />
+                                    <AvatarFallback className="rounded-lg text-sm font-medium">
+                                        {currentUserEmployee.name
+                                            ? currentUserEmployee.name
+                                                .split(" ")
+                                                .filter(Boolean)
+                                                .map((n: string) => n[0])
+                                                .join("")
+                                                .slice(0, 2)
+                                                .toUpperCase()
+                                            : "ME"}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                                        {currentUserEmployee.name} (You)
+                                    </h3>
+                                    <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
+                                        {currentUserEmployee.email}
+                                    </p>
+                                    {currentUserEmployee.employeeCode && (
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                            <span className="font-medium">Code:</span> {currentUserEmployee.employeeCode}
+                                        </p>
+                                    )}
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <Badge variant="outline" className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
+                                            {currentUserEmployee.role}
+                                        </Badge>
+                                        {currentUserEmployee.isActive !== false && (
+                                            <Badge variant="outline" className="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+                                                Active
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                    setSelectedEmployee(currentUserEmployee);
+                                    setEditDrawerOpen(true);
+                                }}
+                                className="h-8 px-3 text-xs flex-shrink-0"
+                            >
+                                <Pencil className="h-3.5 w-3.5 mr-1" />
+                                Edit Profile
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Import Avatar component if not already imported */}
 
                 {/* Actions - Fixed */}
                 <div className="mt-6 shrink-0 flex flex-wrap gap-3">
@@ -569,6 +715,19 @@ export default function EmployeesPage() {
                                 >
                                     <Trash2 className="h-3.5 w-3.5 text-red-500" />
                                     Delete
+                                </Button>
+                            </PermissionGate>
+
+                            <PermissionGate permission={PERMISSIONS.GROUP_MANAGE_MEMBERS} fallback={null}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isBatchProcessing}
+                                    onClick={() => setBatchTeamPickerOpen(true)}
+                                    className="h-6 px-2.5 border-[#E7E7E0] dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
+                                >
+                                    <FolderPlus className="h-3.5 w-3.5 text-zinc-500" />
+                                    Add to Team
                                 </Button>
                             </PermissionGate>
 
@@ -651,14 +810,7 @@ export default function EmployeesPage() {
                                 }
                             />
 
-                            <FilterDropdown
-                                label="Creator"
-                                value={filters.creator}
-                                options={uniqueCreators}
-                                onChange={(v: string) =>
-                                    setFilters((f) => ({ ...f, creator: v }))
-                                }
-                            />
+                            {/* Creator filter removed */}
                         </div>
                         <div className="shrink-0 pb-1 flex items-center gap-2">
                             <ColumnSettings
@@ -736,6 +888,8 @@ export default function EmployeesPage() {
                     open={drawerOpen}
                     onOpenChange={setDrawerOpen}
                     onSubmit={handleAddEmployee}
+                    currentUserRole={currentUserEmployee?.role}
+                    superAdminExists={superAdminExists}
                 />
 
                 <EmployeeDetailsDrawer
@@ -751,6 +905,9 @@ export default function EmployeesPage() {
                     onSave={(updated) => {
                         setEmployees(prev => prev.map(emp => emp.id === updated.id ? updated : emp));
                     }}
+                    currentUserRole={currentUserEmployee?.role}
+                    superAdminExists={superAdminExists}
+                    currentUserId={currentUserEmployee?.id}
                 />
 
                 {/* Batch Delete Confirmation Dialog */}

@@ -3,6 +3,7 @@ export const config = {
     kindeDomain: window.env?.VITE_KINDE_DOMAIN || import.meta.env.VITE_KINDE_DOMAIN,
     kindeRedirectUri: window.env?.VITE_KINDE_REDIRECT_URI || import.meta.env.VITE_KINDE_REDIRECT_URI,
     kindeLogoutRedirectUri: window.env?.VITE_KINDE_LOGOUT_REDIRECT_URI || import.meta.env.VITE_KINDE_LOGOUT_REDIRECT_URI,
+    kindeAudience: window.env?.VITE_KINDE_AUDIENCE || import.meta.env.VITE_KINDE_AUDIENCE || "",
     apiBaseUrl: window.env?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8432",
     wsUrl: window.env?.VITE_WS_URL || import.meta.env.VITE_WS_URL,
     kindeInsecureRefresh:

@@ -16,4 +16,5 @@ export interface Employee {
     complexInteraction: string | null;
     inviteId?: string;
     isActive?: boolean;
+    employeeCode?: string | null;
 }

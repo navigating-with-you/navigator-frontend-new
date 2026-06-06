@@ -48,6 +48,7 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { config } from "@/config";
 import {
     getRootContents,
     getFolderContents,
@@ -217,7 +218,8 @@ export default function KnowledgeBasePage() {
         const fetchEmployeesData = async () => {
             if (isPermissionsLoading || isMember) return;
             try {
-                const token = await getToken();
+                const audience = config.kindeAudience || undefined;
+                const token = await getToken(audience ? { audience } : undefined);
                 if (!token) return;
                 const empData = await listEmployees(token);
                 const list = Array.isArray(empData) ? empData : ((empData as any)?.employees || []);
@@ -237,7 +239,8 @@ export default function KnowledgeBasePage() {
                 setIsLoading(true);
             }
             setFolderJobs([]);
-            const token = await getToken();
+            const audience = config.kindeAudience || undefined;
+            const token = await getToken(audience ? { audience } : undefined);
             if (!token) return;
 
             const data = folderId
@@ -287,10 +290,11 @@ export default function KnowledgeBasePage() {
 
     const handleRetryOcr = async (fileId: string) => {
         try {
-            const token = await getToken();
+            const audience = config.kindeAudience || undefined;
+            const token = await getToken(audience ? { audience } : undefined);
             if (!token) return;
             toast.loading("Retrying OCR extraction...", { id: "retry-ocr" });
-            
+
             let job: any = null;
             try {
                 job = await getFileOcrJob(fileId, token);
@@ -323,7 +327,7 @@ export default function KnowledgeBasePage() {
             if (event && (event.event === "ocr:job_created" || event.event === "ocr:job_updated" || event.event === "ocr:job_completed")) {
                 const fileId = event.metadata?.file_id || event.resource_id;
                 const rawStatus = event.metadata?.status || event.metadata?.ocr_status || "";
-                
+
                 let status = "processing";
                 if (event.event === "ocr:job_completed" || rawStatus === "completed" || rawStatus === "success") {
                     status = "completed";
@@ -515,7 +519,8 @@ export default function KnowledgeBasePage() {
             throw new Error("Folder name is too long");
         }
         try {
-            const token = await getToken();
+            const audience = config.kindeAudience || undefined;
+            const token = await getToken(audience ? { audience } : undefined);
             if (!token) return;
             const newFolder = await createFolder({
                 name: payload.name,
@@ -532,7 +537,8 @@ export default function KnowledgeBasePage() {
 
     const handleAddFiles = async (folderId: string, files: File[]) => {
         try {
-            const token = await getToken();
+            const audience = config.kindeAudience || undefined;
+            const token = await getToken(audience ? { audience } : undefined);
             if (!token) return;
             toast.loading("Uploading files...", { id: "uploading-files" });
             const result = await uploadFiles(folderId, files, token);
@@ -566,7 +572,8 @@ export default function KnowledgeBasePage() {
      */
     const handleAddText = async (payload: AddTextPayload) => {
         try {
-            const token = await getToken();
+            const audience = config.kindeAudience || undefined;
+            const token = await getToken(audience ? { audience } : undefined);
             if (!token) return;
             toast.loading("Saving text...", { id: "add-text" });
 
@@ -579,7 +586,7 @@ export default function KnowledgeBasePage() {
 
             const uploadedFile = result.files?.[0];
             if (uploadedFile && (currentFolderId === payload.folderId || (!currentFolderId && payload.folderId === rootFolderId))) {
-                const newFileObj = {
+                const newFileObj: any = {
                     id: uploadedFile.file_id,
                     name: uploadedFile.filename,
                     original_filename: uploadedFile.filename,
@@ -590,6 +597,10 @@ export default function KnowledgeBasePage() {
                         display_name: currentUserName,
                         email: currentUserEmail
                     }
+                    ,
+                    // mark as pending so the UI shows queued/processing until worker completes
+                    ocr_status: "pending",
+                    preview_text: payload.content,
                 };
                 setChildFiles((prev) => [...prev, newFileObj]);
             }
@@ -604,7 +615,8 @@ export default function KnowledgeBasePage() {
      */
     const handleAddUrl = async (payload: AddUrlPayload) => {
         try {
-            const token = await getToken();
+            const audience = config.kindeAudience || undefined;
+            const token = await getToken(audience ? { audience } : undefined);
             if (!token) return;
             toast.loading("Saving URL...", { id: "add-url" });
 
@@ -623,7 +635,7 @@ export default function KnowledgeBasePage() {
 
             const uploadedFile = result.files?.[0];
             if (uploadedFile && (currentFolderId === payload.folderId || (!currentFolderId && payload.folderId === rootFolderId))) {
-                const newFileObj = {
+                const newFileObj: any = {
                     id: uploadedFile.file_id,
                     name: uploadedFile.filename,
                     original_filename: uploadedFile.filename,
@@ -633,7 +645,9 @@ export default function KnowledgeBasePage() {
                     uploader: {
                         display_name: currentUserName,
                         email: currentUserEmail
-                    }
+                    },
+                    ocr_status: "pending",
+                    preview_text: content,
                 };
                 setChildFiles((prev) => [...prev, newFileObj]);
             }
@@ -654,7 +668,8 @@ export default function KnowledgeBasePage() {
         }
 
         try {
-            const token = await getToken();
+            const audience = config.kindeAudience || undefined;
+            const token = await getToken(audience ? { audience } : undefined);
             if (!token) {
                 setChildFolders(prevFolders);
                 setChildFiles(prevFiles);
@@ -696,7 +711,8 @@ export default function KnowledgeBasePage() {
                 }
             });
 
-            const token = await getToken();
+            const audience = config.kindeAudience || undefined;
+            const token = await getToken(audience ? { audience } : undefined);
             if (!token) return;
 
             const promises = [];

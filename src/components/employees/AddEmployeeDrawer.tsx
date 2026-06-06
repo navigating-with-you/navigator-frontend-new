@@ -15,18 +15,22 @@ import {
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { createInvite, listRoles } from "@/lib/api";
 import { toast } from "sonner";
+import { validateEmployeeCode, EMPLOYEE_CODE_CONSTRAINTS } from "@/utils/employeeCodeValidation";
 
 type EmployeeForm = {
     firstName: string;
     lastName: string;
     email: string;
     roleId: string;
+    employeeCode: string;
 };
 
 interface AddEmployeeDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSubmit: (data: any, invite: boolean) => void;
+    currentUserRole?: string;
+    superAdminExists?: boolean;
 }
 
 const initialForm: EmployeeForm = {
@@ -34,12 +38,15 @@ const initialForm: EmployeeForm = {
     lastName: "",
     email: "",
     roleId: "",
+    employeeCode: "",
 };
 
 export default function AddEmployeeDrawer({
     open,
     onOpenChange,
     onSubmit,
+    currentUserRole,
+    superAdminExists,
 }: AddEmployeeDrawerProps): JSX.Element {
     const { getToken } = useKindeAuth();
     const [form, setForm] = useState<EmployeeForm>(initialForm);
@@ -108,10 +115,11 @@ export default function AddEmployeeDrawer({
                 first_name: form.firstName,
                 last_name: form.lastName.trim() || null,
                 role_name: roles.find(r => r.id === form.roleId)?.name || "member",
+                employee_code: form.employeeCode.trim() || null,
             }, token);
 
             toast.success(`Invite sent to ${form.email}`);
-            
+
             // Notify parent
             onSubmit(
                 {
@@ -119,6 +127,7 @@ export default function AddEmployeeDrawer({
                     name: `${form.firstName} ${form.lastName}`.trim(),
                     email: form.email,
                     role: roles.find(r => r.id === form.roleId)?.name || "Member",
+                    employeeCode: form.employeeCode.trim() || null,
                 },
                 true
             );
@@ -259,7 +268,15 @@ export default function AddEmployeeDrawer({
 
                             <SelectContent>
                                 {roles
-                                    .filter((r) => ["admin", "editor", "member"].includes(r.name.toLowerCase()))
+                                    .filter((r) => {
+                                        const name = (r.name || "").toLowerCase();
+                                        if (name === "super_admin") {
+                                            // Only allow Super Admin selection when current user is Super Admin
+                                            // and there is no existing Super Admin (frontend guard)
+                                            return (currentUserRole || "").toLowerCase().replace(/\s+/g, "_") === "super_admin" && !superAdminExists;
+                                        }
+                                        return ["admin", "editor", "member"].includes(name);
+                                    })
                                     .map((r) => {
                                         const displayRole = r.name.charAt(0).toUpperCase() + r.name.slice(1);
                                         return (
@@ -275,6 +292,38 @@ export default function AddEmployeeDrawer({
                             <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
                                 <AlertCircle className="h-3.5 w-3.5" />
                                 <span>{fieldErrors.roleId[0]}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Employee Code */}
+                    <div className="space-y-1.5">
+                        <Label
+                            htmlFor="emp-code"
+                            className="text-sm font-medium text-zinc-700"
+                        >
+                            Employee Code <span className="text-xs text-zinc-400 font-normal">(optional)</span>
+                        </Label>
+
+                        <Input
+                            id="emp-code"
+                            value={form.employeeCode}
+                            onChange={(e) => updateField("employeeCode", e.target.value)}
+                            onBlur={() => handleBlur("employeeCode")}
+                            placeholder="e.g., EMP-001, john-doe"
+                            maxLength={50}
+                            data-testid="emp-code-input"
+                            className="h-11 rounded-lg border-zinc-200"
+                        />
+                        {touched.employeeCode && fieldErrors.employeeCode && (
+                            <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                <AlertCircle className="h-3.5 w-3.5" />
+                                <span>{fieldErrors.employeeCode[0]}</span>
+                            </div>
+                        )}
+                        {!touched.employeeCode && (
+                            <div className="text-xs text-zinc-400">
+                                {EMPLOYEE_CODE_CONSTRAINTS.MIN_LENGTH}-{EMPLOYEE_CODE_CONSTRAINTS.MAX_LENGTH} characters, alphanumeric, hyphens, underscores, dots
                             </div>
                         )}
                     </div>

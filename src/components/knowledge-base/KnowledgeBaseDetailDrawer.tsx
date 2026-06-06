@@ -211,20 +211,27 @@ export default function KnowledgeBaseDetailDrawer({
                 setFolderDetails(folderData);
             }
 
-            // 3. Fetch OCR text (or read plain text)
+            // 3. Fetch OCR text or read plain text.
             if (fileData.mime_type === "text/plain") {
-                try {
-                    const downloadRes = await getFileDownloadUrl(entry.id, token);
-                    if (downloadRes?.download_url) {
-                        const fileRes = await fetch(downloadRes.download_url);
-                        const txt = await fileRes.text();
-                        setOcrText(txt);
-                    } else {
-                        setOcrText("");
+                if (fileData.ocr_status === "completed") {
+                    await fetchExtractedText(entry.id);
+                } else {
+                    try {
+                        const downloadRes = await getFileDownloadUrl(entry.id, token);
+                        if (downloadRes?.download_url) {
+                            const fileRes = await fetch(downloadRes.download_url);
+                            if (!fileRes.ok) {
+                                throw new Error(`Download failed with status ${fileRes.status}`);
+                            }
+                            const txt = await fileRes.text();
+                            setOcrText(txt);
+                        } else {
+                            await fetchExtractedText(entry.id);
+                        }
+                    } catch (err: any) {
+                        console.warn("Text file download failed, falling back to extracted text:", err);
+                        await fetchExtractedText(entry.id);
                     }
-                } catch (err: any) {
-                    console.error("Error reading plain text file:", err);
-                    setOcrText("Failed to read text file content.");
                 }
                 setIsOcrLoading(false);
             } else {
@@ -245,7 +252,7 @@ export default function KnowledgeBaseDetailDrawer({
 
         const handleWsEvent = (event: any) => {
             console.log("[DetailDrawer] WS Event received:", event);
-            
+
             // Check if this event belongs to the currently active file/job
             const isForCurrentFile = event.resource_id === entry.id || event.metadata?.file_id === entry.id;
             const isForCurrentJob = ocrJob && (event.resource_id === ocrJob.job_id || event.resource_id === ocrJob.id);

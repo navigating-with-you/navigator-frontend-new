@@ -1,4 +1,4 @@
-import { useMemo, useState, type JSX } from "react";
+import { useMemo, useState, useEffect, type JSX } from "react";
 
 import {
     MoreVertical,
@@ -6,7 +6,6 @@ import {
     Pencil,
     FolderPlus,
     RotateCw,
-    Archive,
     Trash2,
     ChevronLeft,
     ChevronRight,
@@ -29,6 +28,10 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { listGroups, addGroupMembers } from "@/lib/api";
+import { PermissionGate } from "@/components/PermissionGate";
+import { PERMISSIONS } from "@/utils/rbacConfig";
 
 import {
     Select,
@@ -72,6 +75,7 @@ type RowMenuProps = {
     onResendInvite?: (id: string) => void;
     onRevokeInvite?: (id: string) => void;
     currentUserEmail?: string;
+    onAddToTeam?: (employee: Employee) => void;
 };
 
 type EmployeeTableProps = {
@@ -122,6 +126,7 @@ function RowMenu({
     onResendInvite,
     onRevokeInvite,
     currentUserEmail,
+    onAddToTeam,
 }: RowMenuProps): JSX.Element {
     // Delete is hidden if: target is Super Admin, OR target is the current user
     const isSelf = currentUserEmail && employee.email === currentUserEmail;
@@ -155,25 +160,36 @@ function RowMenu({
                     View Details
                 </DropdownMenuItem>
 
-                <DropdownMenuItem
-                    onClick={() =>
-                        onEdit?.(employee)
-                    }
-                    className="cursor-pointer"
-                >
-                    <Pencil className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                    Edit
-                </DropdownMenuItem>
+                <PermissionGate permission={PERMISSIONS.EMPLOYEE_EDIT} fallback={
+                    <div className="cursor-not-allowed opacity-60">
+                        <Pencil className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                        Edit
+                    </div>
+                }>
+                    <DropdownMenuItem
+                        onClick={() => onEdit?.(employee)}
+                        className="cursor-pointer"
+                    >
+                        <Pencil className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                        Edit
+                    </DropdownMenuItem>
+                </PermissionGate>
 
-                <DropdownMenuItem
-                    onClick={() =>
-                        toast("Add to team")
+
+                <PermissionGate
+                    permission={PERMISSIONS.GROUP_MANAGE_MEMBERS}
+                    fallback={
+                        <DropdownMenuItem onClick={() => toast("You don't have permission to add to team")} className="cursor-pointer flex items-center">
+                            <FolderPlus className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                            Add to Team
+                        </DropdownMenuItem>
                     }
-                    className="cursor-pointer"
                 >
-                    <FolderPlus className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                    Add to Team
-                </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onAddToTeam?.(employee)} className="cursor-pointer flex items-center">
+                        <FolderPlus className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                        Add to Team
+                    </DropdownMenuItem>
+                </PermissionGate>
 
                 {employee.isActive === false && onResendInvite && (
                     <DropdownMenuItem
@@ -187,38 +203,44 @@ function RowMenu({
                     </DropdownMenuItem>
                 )}
 
-                <DropdownMenuItem
-                    onClick={() =>
-                        toast(`Archived ${employee.name}`)
-                    }
-                    className="cursor-pointer"
-                >
-                    <Archive className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                    Archive
-                </DropdownMenuItem>
+                {/* Archive action removed */}
 
                 {employee.isActive !== false ? (
                     canDelete && (
-                        <DropdownMenuItem
-                            data-testid={`delete-${employee.id}`}
-                            onClick={() => onDelete(employee.id)}
-                            className="text-red-600 focus:text-red-600 cursor-pointer focus:bg-red-50 dark:focus:bg-red-950/30"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4 text-red-600" />
-                            Delete
-                        </DropdownMenuItem>
+                        <PermissionGate permission={PERMISSIONS.EMPLOYEE_DELETE} fallback={
+                            <div className="text-red-600 opacity-60">
+                                <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                                Delete
+                            </div>
+                        }>
+                            <DropdownMenuItem
+                                data-testid={`delete-${employee.id}`}
+                                onClick={() => onDelete(employee.id)}
+                                className="text-red-600 focus:text-red-600 cursor-pointer focus:bg-red-50 dark:focus:bg-red-950/30"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                                Delete
+                            </DropdownMenuItem>
+                        </PermissionGate>
                     )
                 ) : (
                     canDelete && onRevokeInvite && (
-                        <DropdownMenuItem
-                            onClick={() =>
-                                onRevokeInvite(employee.inviteId || employee.id)
-                            }
-                            className="text-red-600 focus:text-red-600 cursor-pointer focus:bg-red-50 dark:focus:bg-red-950/30"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4 text-red-600" />
-                            Revoke Invite
-                        </DropdownMenuItem>
+                        <PermissionGate permission={PERMISSIONS.EMPLOYEE_DELETE} fallback={
+                            <div className="text-red-600 opacity-60">
+                                <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                                Revoke Invite
+                            </div>
+                        }>
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    onRevokeInvite(employee.inviteId || employee.id)
+                                }
+                                className="text-red-600 focus:text-red-600 cursor-pointer focus:bg-red-50 dark:focus:bg-red-950/30"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                                Revoke Invite
+                            </DropdownMenuItem>
+                        </PermissionGate>
                     )
                 )}
             </DropdownMenuContent>
@@ -229,6 +251,7 @@ function RowMenu({
 const COLUMN_WIDTHS: Record<string, string> = {
     name: "2.5fr",
     status: "1.5fr",
+    employeeCode: "1.5fr",
     kbFiles: "1.5fr",
     simpleInteraction: "1.5fr",
     complexInteraction: "1.5fr",
@@ -255,6 +278,31 @@ export default function EmployeeTable({
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
+
+    // Teams picker state
+    const { getToken } = useKindeAuth();
+    const [groups, setGroups] = useState<any[]>([]);
+    const [teamPickerOpen, setTeamPickerOpen] = useState(false);
+    const [teamTarget, setTeamTarget] = useState<Employee | null>(null);
+    const [selectedGroup, setSelectedGroup] = useState<string>("");
+    const [isAddingToTeam, setIsAddingToTeam] = useState(false);
+
+    useEffect(() => {
+        if (!teamPickerOpen) return;
+        let mounted = true;
+        (async () => {
+            try {
+                const token = await getToken();
+                if (!token) return;
+                const data = await listGroups(token).catch(() => []);
+                if (!mounted) return;
+                setGroups(Array.isArray(data) ? data : (data?.groups || []));
+            } catch (err) {
+                console.error("Failed to load groups", err);
+            }
+        })();
+        return () => { mounted = false; };
+    }, [teamPickerOpen]);
 
     const [rowsPerPage, setRowsPerPage] =
         useState<number>(50);
@@ -348,6 +396,8 @@ export default function EmployeeTable({
     const allChecked =
         pageRows.length > 0 && pageRows.every((r) => selected.has(r.id));
 
+    const confirmDeleteEmployee = confirmDeleteId ? employees.find(e => e.id === confirmDeleteId) : null;
+
     return (
         <div
             className="overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 flex flex-col h-full"
@@ -379,9 +429,9 @@ export default function EmployeeTable({
                             </div>
                         )}
 
-                        {visibleColumns.includes("kbFiles") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("kbFiles")}>
-                                No. Of KB Files <SortIcon columnKey="kbFiles" />
+                        {visibleColumns.includes("employeeCode") && (
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("employeeCode")}>
+                                Employee Code <SortIcon columnKey="employeeCode" />
                             </div>
                         )}
 
@@ -463,6 +513,7 @@ export default function EmployeeTable({
                                             onResendInvite={onResendInvite}
                                             onRevokeInvite={(id) => setConfirmRevokeId(id)}
                                             currentUserEmail={currentUserEmail}
+                                            onAddToTeam={(e) => { setTeamTarget(e); setTeamPickerOpen(true); setSelectedGroup(""); }}
                                         />
                                     </div>
                                 </div>
@@ -544,6 +595,13 @@ export default function EmployeeTable({
                                     </div>
                                 )}
 
+                                {visibleColumns.includes("employeeCode") && (
+                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
+                                        <span className="md:hidden text-zinc-505">Employee Code:</span>
+                                        {emp.employeeCode || "-"}
+                                    </div>
+                                )}
+
                                 {visibleColumns.includes("kbFiles") && (
                                     <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
                                         <span className="md:hidden text-zinc-505">No. Of KB Files:</span>
@@ -616,6 +674,7 @@ export default function EmployeeTable({
                                         onResendInvite={onResendInvite}
                                         onRevokeInvite={(id) => setConfirmRevokeId(id)}
                                         currentUserEmail={currentUserEmail}
+                                        onAddToTeam={(e) => { setTeamTarget(e); setTeamPickerOpen(true); setSelectedGroup(""); }}
                                     />
                                 </div>
                             </div>
@@ -623,6 +682,61 @@ export default function EmployeeTable({
                     </div>
                 </div>
             </div>
+
+            {/* Team picker dialog */}
+            <Dialog open={teamPickerOpen} onOpenChange={(open) => !open && setTeamPickerOpen(false)}>
+                <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md border border-zinc-100 dark:border-zinc-800 shadow-xl p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">Add to Team</DialogTitle>
+                        <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-2">
+                            Select a team to add {teamTarget?.name} to.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="mt-4">
+                        <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                            <SelectTrigger className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-medium w-full">
+                                <SelectValue placeholder="Select team" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {groups.map((g) => (
+                                    <SelectItem key={g.id} value={g.id}>
+                                        {g.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <DialogFooter className="mt-6 gap-2">
+                        <Button variant="outline" onClick={() => setTeamPickerOpen(false)} className="rounded-lg text-zinc-700 dark:text-zinc-300">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={async () => {
+                                if (!selectedGroup || !teamTarget) return;
+                                setIsAddingToTeam(true);
+                                try {
+                                    const token = await getToken();
+                                    if (!token) throw new Error("Not authenticated");
+                                    await addGroupMembers(selectedGroup, [teamTarget.id], token);
+                                    toast.success(`${teamTarget.name} added to team`);
+                                    setTeamPickerOpen(false);
+                                } catch (err: any) {
+                                    console.error("Add to team error", err);
+                                    toast.error(err?.message || "Failed to add to team");
+                                } finally {
+                                    setIsAddingToTeam(false);
+                                }
+                            }}
+                            disabled={isAddingToTeam || !selectedGroup}
+                            className="rounded-lg h-10 px-4 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-2"
+                        >
+                            {isAddingToTeam ? "Adding..." : "Add to Team"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Pagination */}
             <div className="flex items-center justify-end gap-5 px-5 py-3 text-sm text-zinc-500 dark:text-zinc-400 shrink-0 bg-white dark:bg-zinc-900 select-none">
@@ -710,9 +824,9 @@ export default function EmployeeTable({
             <Dialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
                 <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md border border-zinc-100 dark:border-zinc-800 shadow-xl p-6">
                     <DialogHeader>
-                        <DialogTitle className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">Delete Employee</DialogTitle>
+                        <DialogTitle className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">Delete {confirmDeleteEmployee?.name || "Employee"}</DialogTitle>
                         <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-2">
-                            Are you sure you want to delete this employee? This action cannot be undone and will permanently remove their access.
+                            Are you sure you want to delete {confirmDeleteEmployee?.name || "this employee"}? This action cannot be undone and will permanently remove their access.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="mt-6 gap-2">

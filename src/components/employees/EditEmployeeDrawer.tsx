@@ -14,15 +14,19 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-import { listRoles, changeEmployeeRole } from "@/lib/api";
+import { listRoles, changeEmployeeRole, updateEmployeeDetails } from "@/lib/api";
 import { toast } from "sonner";
 import type { Employee } from "@/types/employee";
+import { EMPLOYEE_CODE_CONSTRAINTS } from "@/utils/employeeCodeValidation";
 
 interface EditEmployeeDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     employee: Employee | null;
     onSave: (updated: Employee) => void;
+    currentUserRole?: string;
+    superAdminExists?: boolean;
+    currentUserId?: string;
 }
 
 export default function EditEmployeeDrawer({
@@ -30,12 +34,16 @@ export default function EditEmployeeDrawer({
     onOpenChange,
     employee,
     onSave,
+    currentUserRole,
+    superAdminExists,
+    currentUserId,
 }: EditEmployeeDrawerProps): JSX.Element {
     const { getToken } = useKindeAuth();
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
     const [roleName, setRoleName] = useState("");
+    const [employeeCode, setEmployeeCode] = useState("");
 
     const [roles, setRoles] = useState<{ id: string; name: string; description?: string }[]>([]);
     const [isSaving, setIsSaving] = useState(false);
@@ -51,6 +59,7 @@ export default function EditEmployeeDrawer({
         setLastName(names.slice(1).join(" ") || "");
         setEmail(employee.email || "");
         setRoleName(employee.role || "");
+        setEmployeeCode(employee.employeeCode || "");
         setTouched({});
 
         const fetchRolesData = async () => {
@@ -75,14 +84,25 @@ export default function EditEmployeeDrawer({
         ? validation.error.flatten().fieldErrors
         : {};
 
-    // Filter roles to only allow admin, editor, member
+    // Filter roles and only allow Super Admin option when permitted
     const displayRoles = roles.length > 0
-        ? roles.filter(r => ["admin", "member", "editor"].includes(r.name.toLowerCase()))
+        ? roles.filter((r) => {
+            const name = (r.name || "").toLowerCase();
+            if (name === "super_admin") {
+                // Allow Super Admin selection when current user is Super Admin and either:
+                // - there is no existing super admin, or
+                // - we're editing the current super admin (maintain role), or
+                // - we're editing ourselves
+                const isCurrentSuper = (employee?.role || "").toLowerCase().replace(/\s+/g, "_") === "super_admin";
+                return (currentUserRole || "").toLowerCase().replace(/\s+/g, "_") === "super_admin" && (!superAdminExists || isCurrentSuper || employee?.id === currentUserId);
+            }
+            return ["admin", "member", "editor"].includes(name);
+        })
         : [
             { id: "admin", name: "admin" },
             { id: "editor", name: "editor" },
             { id: "member", name: "member" }
-          ];
+        ];
 
     const handleSave = async () => {
         if (!canSave || isSaving) return;
@@ -101,12 +121,31 @@ export default function EditEmployeeDrawer({
                 await changeEmployeeRole(employee.id, normalizedRole, token);
             }
 
+            // Update employee details (name and employee_code)
+            const hasNameChange =
+                `${firstName} ${lastName}`.trim() !== employee.name;
+            const hasEmployeeCodeChange =
+                (employeeCode || null) !== (employee.employeeCode || null);
+
+            if (hasNameChange || hasEmployeeCodeChange) {
+                await updateEmployeeDetails(
+                    employee.id,
+                    {
+                        first_name: hasNameChange ? firstName : undefined,
+                        last_name: hasNameChange ? lastName : undefined,
+                        employee_code: hasEmployeeCodeChange ? (employeeCode || null) : undefined,
+                    },
+                    token
+                );
+            }
+
             // Construct updated employee object
             const updatedEmployee: Employee = {
                 ...employee,
                 name: `${firstName} ${lastName}`.trim(),
                 email,
                 role: roleName,
+                employeeCode: employeeCode || null,
             };
 
             toast.success("Employee details updated successfully");
@@ -245,8 +284,8 @@ export default function EditEmployeeDrawer({
                                 </SelectTrigger>
                                 <SelectContent>
                                     {displayRoles.map((r) => {
-                                        const displayRole = r.name === "super_admin" 
-                                            ? "Super Admin" 
+                                        const displayRole = r.name === "super_admin"
+                                            ? "Super Admin"
                                             : r.name.charAt(0).toUpperCase() + r.name.slice(1);
                                         return (
                                             <SelectItem key={r.id} value={displayRole}>
@@ -256,6 +295,27 @@ export default function EditEmployeeDrawer({
                                     })}
                                 </SelectContent>
                             </Select>
+                        </div>
+
+                        {/* Employee Code */}
+                        <div className="space-y-1.5">
+                            <Label htmlFor="edit-employee-code" className="text-xs font-medium text-zinc-500">
+                                Employee Code <span className="text-xs text-zinc-450 font-normal">(optional)</span>
+                            </Label>
+                            <Input
+                                id="edit-employee-code"
+                                value={employeeCode}
+                                onChange={(e) => setEmployeeCode(e.target.value)}
+                                onBlur={() => setTouched(t => ({ ...t, employeeCode: true }))}
+                                placeholder="e.g., EMP-001, john-doe"
+                                maxLength={50}
+                                className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-medium"
+                            />
+                            {touched.employeeCode && (
+                                <div className="text-zinc-400 text-[10px]">
+                                    {EMPLOYEE_CODE_CONSTRAINTS.MIN_LENGTH}-{EMPLOYEE_CODE_CONSTRAINTS.MAX_LENGTH} characters, alphanumeric, hyphens, underscores, dots
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
