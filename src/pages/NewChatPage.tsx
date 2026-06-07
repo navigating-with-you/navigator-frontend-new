@@ -206,9 +206,10 @@ const getCitationForReference = (
 interface CitationPillProps {
     citation: Citation;
     type: "Source" | "Web";
+    onSourceClick?: (citation: Citation) => void;
 }
 
-function CitationPill({ citation, type }: CitationPillProps) {
+function CitationPill({ citation, type, onSourceClick }: CitationPillProps) {
     const isWeb = type === "Web";
     const [imgError, setImgError] = useState(false);
 
@@ -227,8 +228,9 @@ function CitationPill({ citation, type }: CitationPillProps) {
     const handleClick = () => {
         if (isWeb && citation.heading_path) {
             window.open(citation.heading_path, "_blank");
-        } else {
-            toast.info(`Document source: ${citation.filename}`);
+        } else if (onSourceClick) {
+            // Trigger callback to open file in knowledge base
+            onSourceClick(citation);
         }
     };
 
@@ -262,9 +264,10 @@ function CitationPill({ citation, type }: CitationPillProps) {
 // ── Sources Pill Stack & Details Dropdown Component ─────────────────────────────
 interface SourcesPillProps {
     sources: Citation[];
+    onSourceClick?: (citation: Citation) => void;
 }
 
-function SourcesPill({ sources }: SourcesPillProps) {
+function SourcesPill({ sources, onSourceClick }: SourcesPillProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -357,10 +360,15 @@ function SourcesPill({ sources }: SourcesPillProps) {
                             <div
                                 key={idx}
                                 onClick={() => {
-                                    if (isWeb && src.heading_path) {
-                                        window.open(src.heading_path, "_blank");
+                                    if (onSourceClick) {
+                                        onSourceClick(src);
                                     } else {
-                                        toast.info(`Document source: ${src.filename}`);
+                                        // Fallback behavior
+                                        if (isWeb && src.heading_path) {
+                                            window.open(src.heading_path, "_blank");
+                                        } else {
+                                            toast.info(`Document source: ${src.filename}`);
+                                        }
                                     }
                                     setIsExpanded(false);
                                 }}
@@ -399,10 +407,12 @@ function MessageContent({
     content,
     citations,
     isStreaming,
+    onCitationClick,
 }: {
     content: string;
     citations?: Citation[];
     isStreaming?: boolean;
+    onCitationClick?: (citation: Citation) => void;
 }): JSX.Element {
     if (!content && isStreaming) {
         return <TypingDots />;
@@ -420,7 +430,7 @@ function MessageContent({
                 if (trimmed.startsWith("### ")) {
                     return (
                         <p key={idx} className="font-bold text-zinc-900 dark:text-zinc-100 mt-4 first:mt-0 text-[14px] leading-snug">
-                            {formatInline(trimmed.slice(4), citations)}
+                            {formatInline(trimmed.slice(4), citations, onCitationClick)}
                         </p>
                     );
                 }
@@ -429,7 +439,7 @@ function MessageContent({
                 if (trimmed.startsWith("## ")) {
                     return (
                         <p key={idx} className="font-bold text-zinc-900 dark:text-zinc-100 mt-5 first:mt-0 text-[16px] leading-snug">
-                            {formatInline(trimmed.slice(3), citations)}
+                            {formatInline(trimmed.slice(3), citations, onCitationClick)}
                         </p>
                     );
                 }
@@ -438,7 +448,7 @@ function MessageContent({
                 if (trimmed.startsWith("**") && trimmed.endsWith("**") && trimmed.length > 4) {
                     return (
                         <p key={idx} className="font-semibold text-zinc-900 dark:text-zinc-100 mt-4 first:mt-0 text-[15px] leading-snug">
-                            {formatInline(trimmed.slice(2, -2), citations)}
+                            {formatInline(trimmed.slice(2, -2), citations, onCitationClick)}
                         </p>
                     );
                 }
@@ -449,7 +459,7 @@ function MessageContent({
                     return (
                         <div key={idx} className="flex items-start gap-2 pl-2 text-zinc-800 dark:text-zinc-200">
                             <span className="shrink-0 text-zinc-500 dark:text-zinc-400 select-none">→</span>
-                            <span className="leading-relaxed">{formatInline(arrowMatch[2], citations)}</span>
+                            <span className="leading-relaxed">{formatInline(arrowMatch[2], citations, onCitationClick)}</span>
                         </div>
                     );
                 }
@@ -461,7 +471,7 @@ function MessageContent({
                     return (
                         <div key={idx} className={cn("flex items-start gap-2 text-zinc-800 dark:text-zinc-200", indent > 0 ? "pl-6" : "pl-2")}>
                             <span className="shrink-0 text-zinc-400 dark:text-zinc-500 select-none font-semibold">•</span>
-                            <span className="leading-relaxed">{formatInline(bulletMatch[2], citations)}</span>
+                            <span className="leading-relaxed">{formatInline(bulletMatch[2], citations, onCitationClick)}</span>
                         </div>
                     );
                 }
@@ -472,7 +482,7 @@ function MessageContent({
                     return (
                         <div key={idx} className="flex items-start gap-2 pl-2">
                             <span className="shrink-0 text-xs font-semibold text-zinc-400 mt-0.5 w-4">{numMatch[1]}.</span>
-                            <span className="text-zinc-800 dark:text-zinc-155">{formatInline(numMatch[2], citations)}</span>
+                            <span className="text-zinc-800 dark:text-zinc-155">{formatInline(numMatch[2], citations, onCitationClick)}</span>
                         </div>
                     );
                 }
@@ -480,7 +490,7 @@ function MessageContent({
                 // Plain paragraph
                 return (
                     <p key={idx} className="text-zinc-800 dark:text-zinc-200 leading-relaxed">
-                        {formatInline(trimmed, citations)}
+                        {formatInline(trimmed, citations, onCitationClick)}
                     </p>
                 );
             })}
@@ -490,7 +500,7 @@ function MessageContent({
 }
 
 /** Apply bold/italic inline formatting + citation pill replacements */
-function formatInline(text: string, citations?: Citation[]): JSX.Element {
+function formatInline(text: string, citations?: Citation[], onCitationClick?: (citation: Citation) => void): JSX.Element {
     const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\[Source \d+\]|\[Web \d+\]|\[[^\]]+\])/g);
     return (
         <>
@@ -498,12 +508,12 @@ function formatInline(text: string, citations?: Citation[]): JSX.Element {
                 if (part.startsWith("**") && part.endsWith("**")) {
                     return (
                         <strong key={i} className="font-semibold text-zinc-900 dark:text-zinc-100">
-                            {formatInline(part.slice(2, -2), citations)}
+                            {formatInline(part.slice(2, -2), citations, onCitationClick)}
                         </strong>
                     );
                 }
                 if (part.startsWith("*") && part.endsWith("*")) {
-                    return <em key={i}>{formatInline(part.slice(1, -1), citations)}</em>;
+                    return <em key={i}>{formatInline(part.slice(1, -1), citations, onCitationClick)}</em>;
                 }
 
                 const citationMatch = part.match(/^\[(Source|Web) (\d+)\]$/);
@@ -513,7 +523,7 @@ function formatInline(text: string, citations?: Citation[]): JSX.Element {
                     const citation = getCitationForReference(type, index, citations);
 
                     if (citation) {
-                        return <CitationPill key={i} citation={citation} type={type} />;
+                        return <CitationPill key={i} citation={citation} type={type} onSourceClick={onCitationClick} />;
                     }
                 }
 
@@ -533,7 +543,7 @@ function formatInline(text: string, citations?: Citation[]): JSX.Element {
 
                     if (foundCitation) {
                         const type = (foundCitation.file_id !== null && foundCitation.file_id !== undefined) ? "Source" : "Web";
-                        return <CitationPill key={i} citation={foundCitation} type={type} />;
+                        return <CitationPill key={i} citation={foundCitation} type={type} onSourceClick={onCitationClick} />;
                     }
                 }
 
@@ -561,6 +571,7 @@ export default function NewChatPage(): JSX.Element {
     const [thinkingLabel, setThinkingLabel] = useState("Thinking...");
 
     const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+    const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -747,6 +758,23 @@ export default function NewChatPage(): JSX.Element {
         if (!el) return;
         el.style.height = "auto";
     };
+
+    // ── Handle citation click ─────────────────────────────────────────────────
+
+    const handleCitationClick = useCallback((citation: Citation) => {
+        if (citation.file_id) {
+            // Internal document - open file preview or navigate to knowledge base
+            setSelectedCitation(citation);
+            toast.success(`Opening: ${citation.filename}`);
+            // TODO: Navigate to file viewer or open preview modal
+            // Example: openFilePreview(citation.file_id)
+        } else {
+            // Web source - open in new tab
+            if (citation.heading_path) {
+                window.open(citation.heading_path, "_blank");
+            }
+        }
+    }, []);
 
     // ── Send message ──────────────────────────────────────────────────────────
 
@@ -1247,7 +1275,7 @@ export default function NewChatPage(): JSX.Element {
                                             /* User bubble */
                                             <div className="flex w-full justify-end">
                                                 <div className="flex flex-col items-end gap-1.5 max-w-[75%]">
-                                                    <div className="rounded-2xl rounded-br-sm px-4 py-2.5 text-sm leading-relaxed shadow-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200/30 dark:border-zinc-700/30">
+                                                    <div className="rounded-2xl rounded-br-sm px-4 py-2.5 text-sm leading-relaxed shadow-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200/30 dark:border-zinc-700/30 select-text">
                                                         <div className="whitespace-pre-wrap">{m.content}</div>
                                                     </div>
                                                     <div className="flex items-center gap-3 pr-1 text-zinc-400 dark:text-zinc-500 text-[11px] select-none">
@@ -1258,13 +1286,6 @@ export default function NewChatPage(): JSX.Element {
                                                             title="Copy message"
                                                         >
                                                             <Copy className="h-3 w-3" />
-                                                        </button>
-                                                        <button
-                                                            className="hover:text-red-650 dark:hover:text-red-400 transition-colors cursor-pointer"
-                                                            onClick={() => setMessageToDelete(m.id)}
-                                                            title="Delete from here"
-                                                        >
-                                                            <Trash2 className="h-3 w-3" />
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1293,11 +1314,12 @@ export default function NewChatPage(): JSX.Element {
 
                                                     {/* Message content - wide, clean layout without bubble background */}
                                                     {(m.content || m.isStreaming) && (
-                                                        <div className="w-full text-zinc-800 dark:text-zinc-200">
+                                                        <div className="w-full text-zinc-800 dark:text-zinc-200 select-text">
                                                             <MessageContent
                                                                 content={m.content}
                                                                 citations={m.sources}
                                                                 isStreaming={m.isStreaming}
+                                                                onCitationClick={handleCitationClick}
                                                             />
                                                         </div>
                                                     )}
@@ -1328,36 +1350,11 @@ export default function NewChatPage(): JSX.Element {
                                                                     </TooltipTrigger>
                                                                     <TooltipContent side="top">Regenerate response</TooltipContent>
                                                                 </Tooltip>
-                                                                <Tooltip>
-                                                                    <TooltipTrigger asChild>
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                navigator.clipboard.writeText(m.content);
-                                                                                toast.success("Message copied to clipboard!");
-                                                                            }}
-                                                                            className="flex items-center gap-1.5 hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors cursor-pointer"
-                                                                        >
-                                                                            <Share2 className="h-4 w-4" /> Share
-                                                                        </button>
-                                                                    </TooltipTrigger>
-                                                                    <TooltipContent side="top">Share message</TooltipContent>
-                                                                </Tooltip>
-                                                                <Tooltip>
-                                                                    <TooltipTrigger asChild>
-                                                                        <button
-                                                                            onClick={() => setMessageToDelete(m.id)}
-                                                                            className="flex items-center gap-1.5 text-zinc-450 hover:text-red-650 dark:hover:text-red-400 transition-colors cursor-pointer"
-                                                                        >
-                                                                            <Trash2 className="h-4 w-4" /> Delete
-                                                                        </button>
-                                                                    </TooltipTrigger>
-                                                                    <TooltipContent side="top">Delete message and all subsequent messages</TooltipContent>
-                                                                </Tooltip>
                                                             </TooltipProvider>
 
                                                             {/* Sources stacked pill */}
                                                             {m.sources && m.sources.length > 0 && (
-                                                                <SourcesPill sources={m.sources} />
+                                                                <SourcesPill sources={m.sources} onSourceClick={handleCitationClick} />
                                                             )}
                                                         </div>
                                                     )}
@@ -1450,31 +1447,6 @@ export default function NewChatPage(): JSX.Element {
                 </div>
             )}
 
-            {/* Delete Message Confirmation Dialog */}
-            <Dialog open={messageToDelete !== null} onOpenChange={(open) => !open && setMessageToDelete(null)}>
-                <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md border border-zinc-150 dark:border-zinc-800 shadow-xl p-6">
-                    <DialogHeader>
-                        <DialogTitle className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">Delete Message</DialogTitle>
-                        <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-2">
-                            Are you sure you want to delete this message? This will delete this message and all subsequent messages in this chat. This action is irreversible.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter className="mt-6 gap-2 flex justify-end">
-                        <button
-                            onClick={() => setMessageToDelete(null)}
-                            className="px-4 py-2 bg-zinc-100 dark:bg-zinc-850 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={() => messageToDelete && handleTruncateMessage(messageToDelete)}
-                            className="px-4 py-2 bg-red-650 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors cursor-pointer"
-                        >
-                            Delete
-                        </button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }

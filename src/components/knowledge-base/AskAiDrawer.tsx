@@ -304,10 +304,16 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
                                         m.role === "user" ? "justify-end" : "justify-start"
                                     )}>
                                         {m.citations.map((c, idx) => (
-                                            <a
+                                            <button
                                                 key={idx}
-                                                href="#"
-                                                onClick={(e) => e.preventDefault()}
+                                                onClick={() => {
+                                                    if (c.file_id) {
+                                                        toast.info(`Document: ${c.filename}\nRelevance: ${Math.round((c.relevance_score || 0) * 100)}%`);
+                                                        // TODO: Open file preview or navigate to file
+                                                    } else if (c.heading_path) {
+                                                        window.open(c.heading_path, "_blank");
+                                                    }
+                                                }}
                                                 className="group flex items-center gap-1.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-md text-[10px] font-medium text-slate-700 transition-colors cursor-pointer"
                                                 title={c.content_preview}
                                             >
@@ -318,7 +324,7 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
                                                         {Math.round(c.relevance_score * 100)}%
                                                     </span>
                                                 )}
-                                            </a>
+                                            </button>
                                         ))}
                                     </div>
                                 )}
