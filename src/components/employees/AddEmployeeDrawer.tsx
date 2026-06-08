@@ -15,7 +15,7 @@ import {
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { createInvite, listRoles } from "@/lib/api";
 import { toast } from "sonner";
-import { validateEmployeeCode, EMPLOYEE_CODE_CONSTRAINTS } from "@/utils/employeeCodeValidation";
+import { EMPLOYEE_CODE_CONSTRAINTS } from "@/utils/employeeCodeValidation";
 
 type EmployeeForm = {
     firstName: string;

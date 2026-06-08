@@ -25,6 +25,7 @@ createRoot(document.getElementById("root")!).render(
             redirectUri={config.kindeRedirectUri}
             logoutUri={config.kindeLogoutRedirectUri}
             useInsecureForRefreshToken={config.kindeInsecureRefresh}
+            audience={config.kindeAudience}
         >
             <QueryClientProvider client={queryClient}>
                 <ThemeProvider>

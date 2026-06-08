@@ -55,7 +55,7 @@ import EmployeeDetailsDrawer from "@/components/employees/EmployeeDrawer";
 import EditEmployeeDrawer from "@/components/employees/EditEmployeeDrawer";
 import FilterDropdown from "@/components/FilterDropdown";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-import { config } from "@/config";
+
 import { listEmployees, listInvites, resendInvite, revokeInvite, listRoles, deleteEmployee, listGroups } from "@/lib/api";
 
 import { SkeletonTable } from "@/components/ui/skeleton-table";
@@ -550,8 +550,7 @@ export default function EmployeesPage() {
                                         if (!selectedGroupBatch || selected.size === 0) return;
                                         setIsBatchAdding(true);
                                         try {
-                                            const audience = config.kindeAudience || undefined;
-                                            const token = await getToken(audience ? { audience } : undefined);
+                                            const token = await getToken();
                                             if (!token) throw new Error("Not authenticated");
                                             const ids = Array.from(selected);
                                             await (await import("@/lib/api")).addGroupMembers(selectedGroupBatch, ids, token);

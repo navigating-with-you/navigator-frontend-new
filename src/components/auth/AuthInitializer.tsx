@@ -14,9 +14,8 @@ export default function AuthInitializer() {
             if (isAuthenticated && !syncStarted.current) {
                 syncStarted.current = true;
                 try {
-                    const audience = (window as any).env?.VITE_KINDE_AUDIENCE || import.meta.env.VITE_KINDE_AUDIENCE || undefined;
                     // Request an access token for the API audience so backend accepts it
-                    const token = await getToken(audience ? { audience } : undefined);
+                    const token = await getToken();
                     if (token) {
                         apiClient.setToken(token);
                         cacheWebSocket.setToken(token);

@@ -14,13 +14,11 @@ import {
     ChevronDown,
     Copy,
     RotateCcw,
-    Share2,
     Square,
     Cpu,
     Folder,
     Search,
     Navigation,
-    Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -35,20 +33,12 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogFooter,
-    DialogTitle,
-    DialogDescription,
-} from "@/components/ui/dialog";
+
 import {
     sendChatQueryStream,
     createConversation,
     getConversation,
     updateConversation,
-    truncateConversation,
     type ChatMessage,
     type Citation,
     type Conversation,
@@ -570,8 +560,7 @@ export default function NewChatPage(): JSX.Element {
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [thinkingLabel, setThinkingLabel] = useState("Thinking...");
 
-    const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
-    const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -764,7 +753,6 @@ export default function NewChatPage(): JSX.Element {
     const handleCitationClick = useCallback((citation: Citation) => {
         if (citation.file_id) {
             // Internal document - open file preview or navigate to knowledge base
-            setSelectedCitation(citation);
             toast.success(`Opening: ${citation.filename}`);
             // TODO: Navigate to file viewer or open preview modal
             // Example: openFilePreview(citation.file_id)
@@ -1089,25 +1077,7 @@ export default function NewChatPage(): JSX.Element {
         await handleSendMessage(userMsg.content, truncateId);
     };
 
-    // ── Clear / Delete / Truncate actions ─────────────────────────────────────
 
-    const handleTruncateMessage = async (messageId: string) => {
-        if (!conversationId) return;
-        const targetIdx = messages.findIndex((m) => m.id === messageId);
-        if (targetIdx === -1) return;
-
-        try {
-            const token = await getToken();
-            if (!token) return;
-            await truncateConversation(conversationId, messageId, true, token);
-            toast.success("Messages deleted");
-            setMessages((prev) => prev.slice(0, targetIdx));
-            setMessageToDelete(null);
-            window.dispatchEvent(new Event("navigator_conversation_created"));
-        } catch (err: any) {
-            toast.error(err.message || "Failed to delete message");
-        }
-    };
 
     // ── Copy ──────────────────────────────────────────────────────────────────
 

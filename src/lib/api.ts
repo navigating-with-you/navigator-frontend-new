@@ -528,7 +528,7 @@ export async function deleteAvatar(token: string) {
 }
 
 /** Update user profile first and last names */
-export async function updateProfile(payload: { first_name: string; last_name: string }, token: string) {
+export async function updateProfile(payload: { first_name: string; last_name: string; employee_code?: string | null }, token: string) {
     return apiClient.patch<any>("/auth/profile", payload, { token });
 }
 

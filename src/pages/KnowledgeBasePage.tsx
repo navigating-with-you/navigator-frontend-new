@@ -48,7 +48,7 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-import { config } from "@/config";
+
 import {
     getRootContents,
     getFolderContents,
@@ -218,8 +218,7 @@ export default function KnowledgeBasePage() {
         const fetchEmployeesData = async () => {
             if (isPermissionsLoading || isMember) return;
             try {
-                const audience = config.kindeAudience || undefined;
-                const token = await getToken(audience ? { audience } : undefined);
+                const token = await getToken();
                 if (!token) return;
                 const empData = await listEmployees(token);
                 const list = Array.isArray(empData) ? empData : ((empData as any)?.employees || []);
@@ -239,8 +238,7 @@ export default function KnowledgeBasePage() {
                 setIsLoading(true);
             }
             setFolderJobs([]);
-            const audience = config.kindeAudience || undefined;
-            const token = await getToken(audience ? { audience } : undefined);
+            const token = await getToken();
             if (!token) return;
 
             const data = folderId
@@ -290,8 +288,7 @@ export default function KnowledgeBasePage() {
 
     const handleRetryOcr = async (fileId: string) => {
         try {
-            const audience = config.kindeAudience || undefined;
-            const token = await getToken(audience ? { audience } : undefined);
+            const token = await getToken();
             if (!token) return;
             toast.loading("Retrying OCR extraction...", { id: "retry-ocr" });
 
@@ -519,8 +516,7 @@ export default function KnowledgeBasePage() {
             throw new Error("Folder name is too long");
         }
         try {
-            const audience = config.kindeAudience || undefined;
-            const token = await getToken(audience ? { audience } : undefined);
+            const token = await getToken();
             if (!token) return;
             const newFolder = await createFolder({
                 name: payload.name,
@@ -537,8 +533,7 @@ export default function KnowledgeBasePage() {
 
     const handleAddFiles = async (folderId: string, files: File[]) => {
         try {
-            const audience = config.kindeAudience || undefined;
-            const token = await getToken(audience ? { audience } : undefined);
+            const token = await getToken();
             if (!token) return;
             toast.loading("Uploading files...", { id: "uploading-files" });
             const result = await uploadFiles(folderId, files, token);
@@ -572,8 +567,7 @@ export default function KnowledgeBasePage() {
      */
     const handleAddText = async (payload: AddTextPayload) => {
         try {
-            const audience = config.kindeAudience || undefined;
-            const token = await getToken(audience ? { audience } : undefined);
+            const token = await getToken();
             if (!token) return;
             toast.loading("Saving text...", { id: "add-text" });
 
@@ -615,8 +609,7 @@ export default function KnowledgeBasePage() {
      */
     const handleAddUrl = async (payload: AddUrlPayload) => {
         try {
-            const audience = config.kindeAudience || undefined;
-            const token = await getToken(audience ? { audience } : undefined);
+            const token = await getToken();
             if (!token) return;
             toast.loading("Saving URL...", { id: "add-url" });
 
@@ -668,8 +661,7 @@ export default function KnowledgeBasePage() {
         }
 
         try {
-            const audience = config.kindeAudience || undefined;
-            const token = await getToken(audience ? { audience } : undefined);
+            const token = await getToken();
             if (!token) {
                 setChildFolders(prevFolders);
                 setChildFiles(prevFiles);
@@ -711,8 +703,7 @@ export default function KnowledgeBasePage() {
                 }
             });
 
-            const audience = config.kindeAudience || undefined;
-            const token = await getToken(audience ? { audience } : undefined);
+            const token = await getToken();
             if (!token) return;
 
             const promises = [];

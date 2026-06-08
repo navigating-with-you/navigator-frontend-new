@@ -7,5 +7,6 @@ interface Window {
         VITE_API_BASE_URL?: string;
         VITE_WS_URL?: string;
         VITE_KINDE_INSECURE_REFRESH?: string;
+        VITE_KINDE_AUDIENCE?: string;
     };
 }

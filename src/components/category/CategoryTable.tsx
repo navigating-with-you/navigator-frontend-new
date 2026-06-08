@@ -160,7 +160,6 @@ export default function CategoryTable({
     onEdit,
     onView,
     onAddEmployees,
-    onArchive,
     visibleColumns = ["name", "managerName", "kbCount", "employeeCount"],
     selected,
     setSelected,
@@ -427,7 +426,6 @@ export default function CategoryTable({
                                         onEdit={onEdit}
                                         onView={onView}
                                         onAddEmployees={onAddEmployees}
-                                        onArchive={onArchive}
                                     />
                                 </div>
                             </div>
