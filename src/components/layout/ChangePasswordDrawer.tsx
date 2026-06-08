@@ -216,7 +216,6 @@ export default function ChangePasswordDrawer({
                 { otp, new_password: form.newPassword, confirm_password: form.confirmPassword },
                 token
             );
-            toast.success("Password updated successfully");
             handleOpenChange(false);
         } catch (err: any) {
             const msg =

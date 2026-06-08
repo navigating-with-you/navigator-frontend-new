@@ -8,7 +8,6 @@ import {
     FolderPlus,
     FilePlus2,
     Type,
-    Globe,
     RefreshCw,
     Search,
     X,
@@ -35,7 +34,7 @@ const DEFAULT_KB_COLUMNS = ["name", "folder", "owner", "ocr_status"];
 import CreateFolderDrawer from "@/components/knowledge-base/CreateFolderDrawer";
 import AddFilesDrawer from "@/components/knowledge-base/AddFilesDrawer";
 import AddTextDrawer from "@/components/knowledge-base/AddTextDrawer";
-import AddUrlDrawer from "@/components/knowledge-base/AddUrlDrawer";
+
 
 import KnowledgeBaseDetailDrawer from "@/components/knowledge-base/KnowledgeBaseDetailDrawer";
 import { cacheWebSocket } from "@/utils/cacheWebSocket";
@@ -69,7 +68,6 @@ import type {
     KBEntry,
     CreateFolderPayload,
     AddTextPayload,
-    AddUrlPayload,
 } from "@/types/knowledge-base";
 
 /** ---------------- Helpers ---------------- */
@@ -202,7 +200,7 @@ export default function KnowledgeBasePage() {
     const [folderOpen, setFolderOpen] = useState(false);
     const [filesOpen, setFilesOpen] = useState(false);
     const [textOpen, setTextOpen] = useState(false);
-    const [urlOpen, setUrlOpen] = useState(false);
+
 
     const [detailEntry, setDetailEntry] = useState<KBEntry | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
@@ -604,51 +602,7 @@ export default function KnowledgeBasePage() {
         }
     };
 
-    /**
-     * Save a URL reference as a .txt file and upload it to the target folder.
-     */
-    const handleAddUrl = async (payload: AddUrlPayload) => {
-        try {
-            const token = await getToken();
-            if (!token) return;
-            toast.loading("Saving URL...", { id: "add-url" });
 
-            const displayName = payload.title || payload.url.replace(/^https?:\/\//, "").split("/")[0];
-            const fileName = `${displayName.replace(/[^a-z0-9_\-. ]/gi, "_")}.txt`;
-            const content = [
-                payload.title ? `Title: ${payload.title}` : "",
-                `URL: ${payload.url}`,
-                `Added: ${new Date().toISOString()}`,
-            ].filter(Boolean).join("\n");
-            const blob = new Blob([content], { type: "text/plain" });
-            const file = new File([blob], fileName, { type: "text/plain" });
-
-            const result = await uploadFiles(payload.folderId, [file], token);
-            toast.success(`"${displayName}" saved successfully`, { id: "add-url" });
-
-            const uploadedFile = result.files?.[0];
-            if (uploadedFile && (currentFolderId === payload.folderId || (!currentFolderId && payload.folderId === rootFolderId))) {
-                const newFileObj: any = {
-                    id: uploadedFile.file_id,
-                    name: uploadedFile.filename,
-                    original_filename: uploadedFile.filename,
-                    file_size: uploadedFile.file_size,
-                    created_at: uploadedFile.created_at,
-                    mime_type: "text/plain",
-                    uploader: {
-                        display_name: currentUserName,
-                        email: currentUserEmail
-                    },
-                    ocr_status: "pending",
-                    preview_text: content,
-                };
-                setChildFiles((prev) => [...prev, newFileObj]);
-            }
-            setUrlOpen(false);
-        } catch (error: any) {
-            toast.error(error.message || "Failed to save URL", { id: "add-url" });
-        }
-    };
 
     const handleDelete = async (id: string, type: "folder" | "file") => {
         const prevFolders = [...childFolders];
@@ -862,18 +816,7 @@ export default function KnowledgeBasePage() {
                     />
                 </PermissionGate>
 
-                {/* Add URL */}
-                <PermissionGate
-                    permission={PERMISSIONS.FILE_UPLOAD}
-                    fallback={null}
-                >
-                    <PageActionButton
-                        icon={<Globe className="h-3.5 w-3.5" />}
-                        label="Add URL"
-                        onClick={() => setUrlOpen(true)}
-                        data-testid="add-url-btn"
-                    />
-                </PermissionGate>
+
             </div>
 
             {/* Search */}
@@ -1037,14 +980,7 @@ export default function KnowledgeBasePage() {
                 isInsideFolder={!!currentFolderId}
             />
 
-            {/* Add URL — same folder logic */}
-            <AddUrlDrawer
-                open={urlOpen}
-                onOpenChange={setUrlOpen}
-                onSubmit={handleAddUrl}
-                folders={drawableFolders}
-                isInsideFolder={!!currentFolderId}
-            />
+
 
             {/* File detail drawer */}
             <KnowledgeBaseDetailDrawer

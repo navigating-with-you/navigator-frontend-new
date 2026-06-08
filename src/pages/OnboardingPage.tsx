@@ -181,7 +181,15 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
             onComplete(response.id);
         } catch (err: any) {
             console.error(err);
-            const errMsg = err.message || "Failed to create organization. Check details and retry.";
+            let errMsg = err.message || "Failed to create organization. Check details and retry.";
+            
+            // Extract field-specific error messages from backend validation errors
+            // If multiple errors joined by comma, take the first one
+            if (errMsg.includes(",")) {
+                const errors = errMsg.split(",");
+                errMsg = errors[0].trim();
+            }
+            
             setSubmitError(errMsg);
             toast.error(errMsg);
         } finally {

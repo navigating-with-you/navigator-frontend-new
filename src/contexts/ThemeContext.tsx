@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { getUserSettings, updateThemePreference } from "@/lib/api";
 
 type Theme = "light" | "dark" | "system";
 
@@ -15,11 +17,31 @@ const ThemeContext = createContext<ThemeContextValue>({
 });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+    const { getToken } = useKindeAuth();
     const [theme, setThemeState] = useState<Theme>(() => {
         const stored = localStorage.getItem("navigator_theme") as Theme | null;
         if (stored === "dark" || stored === "light" || stored === "system") return stored;
         return "system"; // default to system theme
     });
+
+    // Load theme from backend on mount
+    useEffect(() => {
+        const loadThemeFromBackend = async () => {
+            try {
+                const token = await getToken();
+                if (token) {
+                    const settings = await getUserSettings(token);
+                    const backendTheme = (settings.preferences.theme as Theme) || "system";
+                    setThemeState(backendTheme);
+                }
+            } catch (error) {
+                console.error("Failed to load theme from backend:", error);
+                // Fall back to localStorage
+            }
+        };
+
+        loadThemeFromBackend();
+    }, [getToken]);
 
     useEffect(() => {
         const root = window.document.documentElement;
@@ -55,17 +77,43 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         return () => mediaQuery.removeEventListener("change", handleChange);
     }, [theme]);
 
-    const toggleTheme = () => {
+    const toggleTheme = async () => {
         setThemeState((prev) => {
-            if (prev === "system") {
-                const systemIsDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-                return systemIsDark ? "light" : "dark";
-            }
-            return prev === "light" ? "dark" : "light";
+            const next = prev === "system"
+                ? window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark"
+                : prev === "light"
+                ? "dark"
+                : "light";
+            
+            // Save to backend
+            (async () => {
+                try {
+                    const token = await getToken();
+                    if (token) {
+                        await updateThemePreference(next, token);
+                    }
+                } catch (error) {
+                    console.error("Failed to save theme preference:", error);
+                }
+            })();
+            
+            return next;
         });
     };
 
-    const setTheme = (t: Theme) => setThemeState(t);
+    const setTheme = async (t: Theme) => {
+        setThemeState(t);
+        
+        // Save to backend
+        try {
+            const token = await getToken();
+            if (token) {
+                await updateThemePreference(t, token);
+            }
+        } catch (error) {
+            console.error("Failed to save theme preference:", error);
+        }
+    };
 
     return (
         <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>

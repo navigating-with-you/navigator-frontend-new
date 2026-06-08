@@ -14,16 +14,16 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
+            "group toast group-[.toaster]:bg-white dark:group-[.toaster]:bg-zinc-900 group-[.toaster]:text-zinc-900 dark:group-[.toaster]:text-zinc-100 group-[.toaster]:border-zinc-200 dark:group-[.toaster]:border-zinc-800 group-[.toaster]:shadow-lg",
+          description: "group-[.toast]:text-zinc-600 dark:group-[.toast]:text-zinc-400",
           actionButton:
-            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+            "group-[.toast]:bg-blue-600 group-[.toast]:text-white hover:group-[.toast]:bg-blue-700",
           cancelButton:
-            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+            "group-[.toast]:bg-zinc-100 dark:group-[.toast]:bg-zinc-800 group-[.toast]:text-zinc-700 dark:group-[.toast]:text-zinc-300",
           closeButton:
-            "group-[.toaster]:bg-background group-[.toast]:text-blue-600 dark:group-[.toast]:text-blue-400 group-[.toaster]:border-border",
+            "group-[.toaster]:text-zinc-600 dark:group-[.toaster]:text-zinc-400 hover:group-[.toaster]:text-zinc-900 dark:hover:group-[.toaster]:text-zinc-100",
           icon:
-            "group-[.toast]:text-blue-600 dark:group-[.toast]:text-blue-400",
+            "group-[.toast]:text-zinc-600 dark:group-[.toast]:text-zinc-400",
         },
       }}
       {...props}

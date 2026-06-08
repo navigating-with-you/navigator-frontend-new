@@ -94,7 +94,7 @@ export default function EmployeesPage() {
         return () => window.removeEventListener("resize", handleResize);
     }, [visibleColumns]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [teams, setTeams] = useState<string[]>([]);
+    const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
     const [roleOptions, setRoleOptions] = useState<string[]>([]);
 
     const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
@@ -220,8 +220,7 @@ export default function EmployeesPage() {
             const rolesList = Array.isArray(rolesData) ? (rolesData as any) : [];
             // Handle paginated groups response: items array or fallback to groups or empty
             const groupsList = Array.isArray(groupsData) ? groupsData : (groupsData?.items || groupsData?.groups || []);
-            const groupNames = groupsList.map((g: any) => g.name);
-            setTeams(groupNames);
+            setTeams(groupsList.map((g: any) => ({ id: g.id, name: g.name })));
 
             const roleNames = rolesList.map((r: any) => {
                 return r.name === "super_admin"
@@ -251,6 +250,9 @@ export default function EmployeesPage() {
                     ? "Super Admin"
                     : rawRole.charAt(0).toUpperCase() + rawRole.slice(1);
 
+                // Ensure email is always a string, not "-"
+                const email = emp.email && typeof emp.email === "string" && emp.email.trim() ? emp.email.trim() : "";
+
                 return {
                     id: emp.id || `EMP-${Date.now()}`,
                     inviteId: emp.invite_id || emp.id,
@@ -262,7 +264,7 @@ export default function EmployeesPage() {
                     kbFiles: emp.kb_files !== undefined && emp.kb_files !== null ? emp.kb_files : "-",
                     simpleInteraction: emp.simple_interaction !== undefined && emp.simple_interaction !== null ? emp.simple_interaction : "-",
                     complexInteraction: emp.complex_interaction !== undefined && emp.complex_interaction !== null ? emp.complex_interaction : "-",
-                    email: emp.email || "-",
+                    email: email,
                     createdBy: emp.created_by || emp.createdBy || "Admin",
                     createdDate: emp.created_at
                         ? new Date(emp.created_at).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })
@@ -295,6 +297,9 @@ export default function EmployeesPage() {
                         ? "Super Admin"
                         : rawRole.charAt(0).toUpperCase() + rawRole.slice(1);
 
+                    // Ensure email is always a string, not "-"
+                    const email = inv.email && typeof inv.email === "string" && inv.email.trim() ? inv.email.trim() : "";
+
                     return {
                         id: inv.id,
                         inviteId: inv.id,
@@ -306,7 +311,7 @@ export default function EmployeesPage() {
                         kbFiles: "-",
                         simpleInteraction: "-",
                         complexInteraction: "-",
-                        email: inv.email || "-",
+                        email: email,
                         createdBy: "Admin",
                         createdDate: inv.invited_at || inv.created_at
                             ? new Date(inv.invited_at || inv.created_at).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })
@@ -408,7 +413,7 @@ export default function EmployeesPage() {
 
 
     const filteredEmployees = useMemo(() => {
-        const query = search.toLowerCase();
+        const query = search.toLowerCase().trim();
         const { status, role, category } = filters;
 
         return employees.filter((emp) => {
@@ -417,7 +422,7 @@ export default function EmployeesPage() {
             if (role && (emp.role || "").trim().toLowerCase() !== role.trim().toLowerCase()) return false;
             if (category && (emp.category || "").trim().toLowerCase() !== category.trim().toLowerCase()) return false;
 
-            // Search
+            // Search - includes name, email, id, role, category, createdBy, and employeeCode
             if (query) {
                 const searchableText = `${emp.name} ${emp.id} ${emp.email} ${emp.role} ${emp.category} ${emp.createdBy} ${emp.employeeCode || ""}`.toLowerCase();
                 if (!searchableText.includes(query)) return false;
@@ -487,6 +492,14 @@ export default function EmployeesPage() {
                     />
                 </div>
             }
+            showLoading={
+                <div className="p-3 sm:p-6 md:p-8 flex flex-col h-full w-full bg-transparent overflow-hidden items-center justify-center">
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading permissions...</p>
+                    </div>
+                </div>
+            }
         >
             <div className="p-3 sm:p-6 md:p-8 flex flex-col h-full w-full bg-transparent overflow-hidden" data-testid="employees-page" data-tour="employees-page">
                 {/* Header - Fixed */}
@@ -533,8 +546,8 @@ export default function EmployeesPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         {teams.map((t) => (
-                                            <SelectItem key={t} value={t}>
-                                                {t}
+                                            <SelectItem key={t.id} value={t.id}>
+                                                {t.name}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -557,6 +570,8 @@ export default function EmployeesPage() {
                                             toast.success(`Added ${ids.length} employees to team`);
                                             setSelected(new Set());
                                             setBatchTeamPickerOpen(false);
+                                            // Refresh employee list to reflect team membership changes
+                                            await fetchEmployees(false);
                                         } catch (err: any) {
                                             console.error("Batch add to team error", err);
                                             toast.error(err?.message || "Failed to add to team");

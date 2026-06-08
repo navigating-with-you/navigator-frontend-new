@@ -602,3 +602,24 @@ export async function deleteNotification(notificationId: string, token: string):
 export async function clearAllNotifications(token: string): Promise<{ message: string }> {
     return apiClient.delete<{ message: string }>("/notifications/clear-all", undefined, { token });
 }
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+
+export interface UserSettings {
+    preferences: {
+        theme?: string;
+        [key: string]: any;
+    };
+}
+
+export async function getUserSettings(token: string): Promise<UserSettings> {
+    return apiClient.get<UserSettings>("/api/settings/", { token, cache: false });
+}
+
+export async function updateUserSettings(payload: Record<string, any>, token: string): Promise<UserSettings> {
+    return apiClient.post<UserSettings>("/api/settings/", payload, { token });
+}
+
+export async function updateThemePreference(theme: string, token: string): Promise<UserSettings> {
+    return apiClient.patch<UserSettings>("/api/settings/theme", { theme }, { token });
+}

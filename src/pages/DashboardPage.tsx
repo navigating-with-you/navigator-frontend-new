@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-import { listEmployees, listInvites, getRootContents, getUsage, getNotifications } from "@/lib/api";
+import { listEmployees, getRootContents, getUsage, getNotifications } from "@/lib/api";
 
 // ─── TYPES & DATA ──────────────────────────────────────────────────────────
 
@@ -224,7 +224,7 @@ function InteractionChart({ data }: { data: DataPoint[] }): JSX.Element {
                             key={i}
                             x={paddingLeft - 12}
                             y={y + 4}
-                            className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 text-right"
+                            className="text-[10px] font-medium text-white text-right"
                             style={{ textAnchor: 'end' }}
                         >
                             {getTickValue(tick)}
@@ -241,7 +241,7 @@ function InteractionChart({ data }: { data: DataPoint[] }): JSX.Element {
                             key={i}
                             x={x}
                             y={height - 15}
-                            className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 text-center"
+                            className="text-[10px] font-medium text-white text-center"
                             style={{ textAnchor: 'middle' }}
                         >
                             {d.date}
@@ -331,9 +331,9 @@ export default function DashboardPage(): JSX.Element {
     const { getToken, isAuthenticated } = useKindeAuth();
 
     // Live states with dummy fallbacks
-    const [employeesCount, setEmployeesCount] = useState<number>(9);
-    const [kbSizeBytes, setKbSizeBytes] = useState<number>(133222); // 130.1 KB in bytes
-    const [usageLimit, setUsageLimit] = useState<number>(64);
+    const [employeesCount, setEmployeesCount] = useState<number>(0);
+    const [kbSizeBytes, setKbSizeBytes] = useState<number>(0); // 0 bytes
+    const [usageLimit, setUsageLimit] = useState<number>(0);
     const [plan, setPlan] = useState<string>("Core Plan");
     const [recentActivities, setRecentActivities] = useState<any[]>([]);
 
@@ -347,29 +347,22 @@ export default function DashboardPage(): JSX.Element {
             if (!token) return;
 
             // Parallel fetches
-            const [empData, inviteData, rootData, usageData, notifData] = await Promise.all([
+            const [empData, rootData, usageData, notifData] = await Promise.all([
                 listEmployees(token).catch(() => ({ employees: [] })),
-                listInvites(token).catch(() => []),
                 getRootContents(token).catch(() => ({ folders: [], files: [] })),
                 getUsage(token).catch(() => null),
                 getNotifications(token).catch(() => ({ notifications: [] }))
             ]);
 
-            // 1. Calculate proper employees count
+            // 1. Calculate proper employees count (members only, no invites)
             const activeEmployees = empData?.employees || (Array.isArray(empData) ? empData : []);
-            const invites = inviteData?.invites || (Array.isArray(inviteData) ? inviteData : []);
-            const totalEmployees = activeEmployees.length + invites.length;
-            if (totalEmployees > 0) {
-                setEmployeesCount(totalEmployees);
-            }
+            setEmployeesCount(activeEmployees.length);
 
             // 2. Calculate proper KB/MB/GB folder sizes recursively
             const foldersBytes = (rootData.folders || []).reduce((acc: number, f: any) => acc + (f.total_size || 0), 0);
             const filesBytes = (rootData.files || []).reduce((acc: number, f: any) => acc + (f.file_size || 0), 0);
             const totalBytes = foldersBytes + filesBytes;
-            if (totalBytes > 0) {
-                setKbSizeBytes(totalBytes);
-            }
+            setKbSizeBytes(totalBytes);
 
             // 3. Overall Usage & Subscription
             if (usageData) {
@@ -486,7 +479,7 @@ export default function DashboardPage(): JSX.Element {
                             {new Intl.NumberFormat().format(employeesCount)}
                         </h3>
                         <p className="text-[11px] font-medium text-zinc-450 dark:text-zinc-500">
-                            Active members & invites
+                            Active members only
                         </p>
                     </div>
                     <div className="h-12 w-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm shrink-0">
@@ -552,8 +545,8 @@ export default function DashboardPage(): JSX.Element {
                 <div className="lg:col-span-2 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900/80 p-5 shadow-sm flex flex-col gap-4 h-[480px] lg:h-[580px]">
                     <div className="flex items-center justify-between w-full pb-1 border-b border-zinc-100 dark:border-zinc-800/60">
                         <div className="space-y-0.5">
-                            <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">Interaction Usage</h2>
-                            <p className="text-[11px] text-zinc-400 font-medium">Monthly billing overage metrics</p>
+                            <h2 className="text-base font-bold text-white">Interaction Usage</h2>
+                            <p className="text-[11px] text-white font-medium">Monthly billing overage metrics</p>
                         </div>
 
                         {/* Interactive dropdown */}
@@ -591,11 +584,11 @@ export default function DashboardPage(): JSX.Element {
                     <div className="flex items-center gap-4 text-xs font-medium self-end px-2">
                         <div className="flex items-center gap-1.5">
                             <span className="h-3 w-3 rounded bg-blue-600 block shrink-0" />
-                            <span className="text-zinc-500 dark:text-zinc-400">Simple Interaction</span>
+                            <span className="text-white">Simple Interaction</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <span className="h-3 w-3 rounded bg-orange-600 block shrink-0" />
-                            <span className="text-zinc-500 dark:text-zinc-400">Complex Interaction</span>
+                            <span className="text-white">Complex Interaction</span>
                         </div>
                     </div>
 
@@ -608,7 +601,7 @@ export default function DashboardPage(): JSX.Element {
 
                     {/* Chart Footer Indicator */}
                     <div className="flex items-center justify-center gap-1 py-1 bg-zinc-50/50 dark:bg-zinc-800/20 border border-zinc-100 dark:border-zinc-800/60 rounded-xl">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-white">
                             Dollar / Monthly
                         </p>
                     </div>

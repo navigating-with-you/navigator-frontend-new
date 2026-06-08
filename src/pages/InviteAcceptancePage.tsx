@@ -117,7 +117,6 @@ export default function InviteAcceptancePage() {
                 organization_id: response.organization_id,
             });
             setStep("success");
-            toast.success("Password set successfully!");
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : "Failed to set password";
             setError(errorMsg);

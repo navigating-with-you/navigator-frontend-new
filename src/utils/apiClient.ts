@@ -8,19 +8,31 @@ interface ApiOptions {
 }
 
 function parseErrorDetail(errorData: any, defaultMsg: string): string {
-    if (!errorData || errorData.detail === undefined || errorData.detail === null) {
-        return defaultMsg;
+    // Handle Pydantic validation errors (422 response)
+    if (errorData.detail && Array.isArray(errorData.detail)) {
+        return errorData.detail
+            .map((e: any) => e.msg || e.message || JSON.stringify(e))
+            .join(", ");
     }
-    const detail = errorData.detail;
-    if (typeof detail === "string") {
-        return detail;
+
+    // Handle string detail messages
+    if (typeof errorData.detail === "string") {
+        return errorData.detail;
     }
-    if (Array.isArray(detail)) {
-        return detail.map((e: any) => e.msg || e.message || JSON.stringify(e)).join(", ");
+
+    // Handle object detail with message/msg properties
+    if (typeof errorData.detail === "object" && errorData.detail !== null) {
+        return errorData.detail.message || errorData.detail.msg || JSON.stringify(errorData.detail);
     }
-    if (typeof detail === "object") {
-        return detail.message || detail.msg || JSON.stringify(detail);
+
+    // Handle top-level error/message properties
+    if (errorData.error && typeof errorData.error === "string") {
+        return errorData.error;
     }
+    if (errorData.message && typeof errorData.message === "string") {
+        return errorData.message;
+    }
+
     return defaultMsg;
 }
 

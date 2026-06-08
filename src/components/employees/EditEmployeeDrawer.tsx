@@ -148,7 +148,6 @@ export default function EditEmployeeDrawer({
                 employeeCode: employeeCode || null,
             };
 
-            toast.success("Employee details updated successfully");
             onSave(updatedEmployee);
             onOpenChange(false);
         } catch (error: any) {
@@ -265,7 +264,8 @@ export default function EditEmployeeDrawer({
                                 onBlur={() => setTouched(t => ({ ...t, email: true }))}
                                 placeholder="Email address"
                                 maxLength={255}
-                                className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-medium"
+                                disabled={employee.isActive !== false}
+                                className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-medium disabled:bg-zinc-50 disabled:text-zinc-500 disabled:cursor-not-allowed"
                             />
                             {touched.email && fieldErrors.email && (
                                 <div className="text-red-500 text-[10px] flex items-center gap-1 mt-0.5">
