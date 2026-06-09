@@ -251,7 +251,7 @@ export default function TopBar({
     onToggleSidebar,
     onProfileClick,
 }: TopBarProps): JSX.Element {
-    const { logout, user, isLoading, getToken } = useKindeAuth();
+    const { logout, user, getToken } = useKindeAuth();
     const { hasPermission } = usePermissions();
     const canViewOrgDetails = hasPermission(PERMISSIONS.ORG_VIEW);
     const [usage, setUsage] = useState<UsageData | null>(null);
