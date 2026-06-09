@@ -19,7 +19,7 @@ function OcrStatusBadge({ status }: { status?: string | null }) {
     const cfg: Record<string, { icon: React.ReactNode; label: string; cls: string; desc: string }> = {
         pending: {
             icon: <Clock className="h-3.5 w-3.5" />,
-            label: "Queued",
+            label: "Processing",
             cls: "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
             desc: "File is in queue waiting to be processed by the OCR engine.",
         },
@@ -526,7 +526,7 @@ export default function KnowledgeBaseDetailDrawer({
                                 {/* OCR Status */}
                                 <div className="flex flex-col">
                                     <span className="text-[12px] text-zinc-400 dark:text-zinc-500 font-medium">
-                                        OCR Status
+                                        Processing Status
                                     </span>
                                     <span className="mt-1">
                                         {(() => {
@@ -757,7 +757,7 @@ export default function KnowledgeBaseDetailDrawer({
                                         ref={fileInputRef}
                                         type="file"
                                         multiple
-                                        accept=".pdf,.docx,.ppt,.pptx,.txt"
+                                        accept=".pdf,.docx,.txt"
                                         className="hidden"
                                         onChange={handleUploadFiles}
                                     />

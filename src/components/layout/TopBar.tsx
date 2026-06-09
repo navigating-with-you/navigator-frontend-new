@@ -603,7 +603,7 @@ export default function TopBar({
                     <DropdownMenuContent
                         align="end"
                         sideOffset={2}
-                        className="w-[300px] rounded-[10px] p-[10px] border border-zinc-200/60 dark:border-zinc-800 shadow-lg bg-[#FEFFFA] dark:bg-zinc-900 space-y-3.5 focus:outline-none"
+                        className="w-[300px] rounded-xl p-3 border border-zinc-200/60 dark:border-zinc-800 shadow-lg bg-[#FEFFFA] dark:bg-zinc-900 space-y-3.5 focus:outline-none"
                     >
 
                         {/* Overall Usage Card Container */}
@@ -655,7 +655,7 @@ export default function TopBar({
                             
                             <DropdownMenuItem
                                 onClick={onProfileClick}
-                                className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-700 dark:text-zinc-300 hover:bg-[#60646B1A] dark:hover:bg-zinc-800 focus:bg-[#60646B1A] dark:focus:bg-zinc-800 cursor-pointer"
+                                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-zinc-700 dark:text-zinc-300 hover:bg-[#60646B1A] dark:hover:bg-zinc-800 focus:bg-[#60646B1A] dark:focus:bg-zinc-800 cursor-pointer"
                             >
                                 <User className="h-4 w-4 text-zinc-500" />
                                 <span className="font-medium">My Profile</span>
@@ -683,7 +683,7 @@ export default function TopBar({
                                 <DropdownMenuPortal>
                                     <DropdownMenuSubContent
                                         sideOffset={8}
-                                        className="w-[150px] rounded-[10px] p-[10px] border border-zinc-200/60 dark:border-zinc-800 shadow-lg bg-[#FEFFFA] dark:bg-zinc-900 space-y-0.5 focus:outline-none"
+                                        className="w-[150px] rounded-lg p-2.5 border border-zinc-200/60 dark:border-zinc-800 shadow-lg bg-[#FEFFFA] dark:bg-zinc-900 space-y-0.5 focus:outline-none"
                                     >
                                         <DropdownMenuItem
                                             onSelect={(e) => {

@@ -602,6 +602,14 @@ export async function getUsage(token: string): Promise<UsageData> {
     return apiClient.get<UsageData>("/auth/usage", { token, cache: false });
 }
 
+export async function getSubscription(token: string): Promise<any> {
+    return apiClient.get<any>("/subscription/me", { token, cache: false });
+}
+
+export async function getSubscriptionSummary(token: string): Promise<any> {
+    return apiClient.get<any>("/subscription/me/summary", { token, cache: false });
+}
+
 // ── Notifications ─────────────────────────────────────────────────────────────
 
 export interface NotificationItem {

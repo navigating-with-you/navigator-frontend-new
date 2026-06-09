@@ -165,7 +165,7 @@ export default function SubscriptionPage(): JSX.Element {
         <div className="flex flex-col min-h-full w-full max-w-7xl mx-auto p-3 sm:p-6 md:p-8 space-y-5 bg-transparent select-none shrink-0">
             {/* Header Title Row */}
             <div className="flex flex-row items-center w-full shrink-0">
-                <h1 className="text-[22px] font-bold text-zinc-900 dark:text-zinc-100">Subscription</h1>
+                <h1 className="text-[22px] font-medium text-zinc-900 dark:text-zinc-100">Subscription</h1>
             </div>
 
             {/* Controls Row */}
@@ -203,8 +203,8 @@ export default function SubscriptionPage(): JSX.Element {
                             type="button"
                             onClick={() => setBillingCycle("monthly")}
                             className={`flex items-center h-full px-4 rounded-[6px] text-xs font-semibold cursor-pointer transition-all ${billingCycle === "monthly"
-                                    ? "bg-[#EBF2FE] dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold"
-                                    : "text-zinc-500 hover:text-zinc-855 dark:text-zinc-450 dark:hover:text-zinc-255"
+                                ? "bg-[#EBF2FE] dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold"
+                                : "text-zinc-500 hover:text-zinc-855 dark:text-zinc-450 dark:hover:text-zinc-255"
                                 }`}
                         >
                             Monthly
@@ -213,14 +213,14 @@ export default function SubscriptionPage(): JSX.Element {
                             type="button"
                             onClick={() => setBillingCycle("yearly")}
                             className={`flex items-center gap-2 h-full px-3 rounded-[6px] text-xs font-semibold cursor-pointer transition-all ${billingCycle === "yearly"
-                                    ? "bg-[#EBF2FE] dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold"
-                                    : "text-zinc-500 hover:text-zinc-855 dark:text-zinc-450 dark:hover:text-zinc-255"
+                                ? "bg-[#EBF2FE] dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold"
+                                : "text-zinc-500 hover:text-zinc-855 dark:text-zinc-450 dark:hover:text-zinc-255"
                                 }`}
                         >
                             <span>Yearly</span>
                             <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] text-[10px] font-bold transition-all ${billingCycle === "yearly"
-                                    ? "bg-[#FFEBE3] text-[#FF4E20] dark:bg-orange-950/50 dark:text-orange-400"
-                                    : "bg-orange-50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-500"
+                                ? "bg-[#FFEBE3] text-[#FF4E20] dark:bg-orange-950/50 dark:text-orange-400"
+                                : "bg-orange-50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-500"
                                 }`}>
                                 <Tag className="h-3.5 w-3.5 fill-current stroke-[2.5]" />
                                 Up to 12% Off
@@ -254,9 +254,9 @@ export default function SubscriptionPage(): JSX.Element {
                 className="flex-1 flex flex-col md:flex-row gap-6 pt-2 select-none max-w-full items-center md:items-start md:overflow-x-auto pb-6 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             >
                 {plans.map((plan) => {
-                    const price = billingCycle === "monthly" ? plan.monthlyBase : plan.yearlyBase;
-                    const originalYearly = Math.round(plan.monthlyBase * 12);
-                    const showDiscount = billingCycle === "yearly" && plan.hasSaveBadge;
+                    const price = "XX";
+                    const originalYearly = "XX";
+                    const showDiscount = "XX";
 
                     return (
                         <div
@@ -280,11 +280,11 @@ export default function SubscriptionPage(): JSX.Element {
                                 <div className="flex items-baseline gap-1.5">
                                     {showDiscount && (
                                         <span className="text-zinc-400 dark:text-zinc-550 text-[15px] line-through font-medium">
-                                            {currency.symbol}{formatPrice(originalYearly)}
+                                            {currency.symbol}{(originalYearly)}
                                         </span>
                                     )}
                                     <span className="text-[31px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight leading-none">
-                                        {currency.symbol}{formatPrice(price)}
+                                        {currency.symbol}{(price)}
                                     </span>
                                     <span className="text-zinc-400 dark:text-zinc-450 text-xs font-normal">
                                         /{billingCycle === "monthly" ? "month" : "year"}

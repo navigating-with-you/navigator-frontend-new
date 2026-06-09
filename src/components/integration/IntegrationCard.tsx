@@ -14,16 +14,17 @@ type Integration = {
 
 type IntegrationCardProps = {
     integration: Integration;
+    disabled?: boolean;
 };
 
-const IntegrationCard: React.FC<IntegrationCardProps> = ({ integration }) => {
+const IntegrationCard: React.FC<IntegrationCardProps> = ({ integration, disabled = false }) => {
     const { id, name, description, icon, defaultEnabled = false } = integration;
     const [enabled, setEnabled] = useState<boolean>(defaultEnabled);
 
     return (
         <div
             data-testid={`integration-card-${id}`}
-            className="group relative flex flex-col rounded-xl border border-neutral-200 dark:border-zinc-700/50 bg-white dark:bg-zinc-800/60 p-4 sm:p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] dark:shadow-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(16,24,40,0.08)] dark:hover:border-zinc-600"
+            className={`group relative flex flex-col rounded-xl border border-neutral-200 dark:border-zinc-700/50 bg-white dark:bg-zinc-800/60 p-4 sm:p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] dark:shadow-none transition-all duration-200 ${disabled ? "opacity-80" : "hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(16,24,40,0.08)] dark:hover:border-zinc-600"}`}
         >
             {/* Top row: icon */}
             <div className="flex items-start justify-between">
@@ -61,7 +62,8 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({ integration }) => {
                         type="button"
                         aria-label={`Settings for ${name}`}
                         data-testid={`integration-settings-${id}`}
-                        className="rounded-md p-1.5 text-neutral-400 dark:text-zinc-500 transition-colors hover:bg-neutral-100 dark:hover:bg-zinc-700 hover:text-neutral-700 dark:hover:text-zinc-300 focus:outline-none shrink-0"
+                        disabled={disabled}
+                        className={`rounded-md p-1.5 text-neutral-400 dark:text-zinc-500 transition-colors focus:outline-none shrink-0 ${disabled ? "cursor-not-allowed opacity-50" : "hover:bg-neutral-100 dark:hover:bg-zinc-700 hover:text-neutral-700 dark:hover:text-zinc-300"}`}
                     >
                         <Settings className="h-[18px] w-[18px]" />
                     </button>
@@ -81,8 +83,9 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({ integration }) => {
                     >
                         <Switch
                             checked={enabled}
-                            onCheckedChange={setEnabled}
+                            onCheckedChange={(checked) => !disabled && setEnabled(checked)}
                             data-testid={`integration-toggle-${id}`}
+                            disabled={disabled}
                             className="data-[state=checked]:bg-blue-600 scale-90 sm:scale-100"
                         />
                     </PermissionGate>

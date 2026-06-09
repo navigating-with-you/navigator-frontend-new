@@ -160,7 +160,7 @@ export default function AddEmployeeDrawer({
                         <X className="h-5 w-5" />
                     </button>
 
-                    <SheetTitle className="text-lg font-semibold text-zinc-900">
+                    <SheetTitle className="text-lg font-medium text-zinc-900">
                         Add Employee
                     </SheetTitle>
                 </div>

@@ -13,7 +13,7 @@ function Field({ label, value, testId }: FieldProps) {
         <div>
             <div className="text-xs text-zinc-500">{label}</div>
             <div
-                className="mt-1 text-sm font-medium text-zinc-900"
+                className="mt-1 text-sm font-normal text-zinc-900"
                 data-testid={testId}
             >
                 {value || "-"}
@@ -36,7 +36,7 @@ function UsageCard({ icon: Icon, label, value }: UsageCardProps) {
             </div>
             <div>
                 <div className="text-xs text-zinc-500">{label}</div>
-                <div className="text-sm font-semibold text-zinc-900">{value}</div>
+                <div className="text-sm font-normal text-zinc-900">{value}</div>
             </div>
         </div>
     );
@@ -75,7 +75,7 @@ export default function EmployeeDetailsDrawer({
                     >
                         <X className="h-5 w-5" />
                     </button>
-                    <SheetTitle className="text-lg font-semibold text-zinc-900">
+                    <SheetTitle className="text-lg font-medium text-zinc-900">
                         Employee Details
                     </SheetTitle>
                 </div>
@@ -141,7 +141,7 @@ export default function EmployeeDetailsDrawer({
 
                     {/* Usage */}
                     <div>
-                        <div className="text-sm font-semibold text-zinc-900">Usage</div>
+                        <div className="text-sm font-medium text-zinc-900">Usage</div>
                         <div className="mt-3 space-y-3">
                             <UsageCard
                                 icon={FileText}

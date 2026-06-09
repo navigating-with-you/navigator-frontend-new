@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cacheWebSocket } from "@/utils/cacheWebSocket";
 import { cn } from "@/lib/utils";
 import { validateEmployeeCode, getEmployeeCodeConstraintsText } from "@/utils/employeeCodeValidation";
 
@@ -24,29 +23,12 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isAvatarDeleted, setIsAvatarDeleted] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [isWsConnected, setIsWsConnected] = useState(false);
 
     // States for editable name fields
     const [editFirstName, setEditFirstName] = useState("");
     const [editLastName, setEditLastName] = useState("");
     const [editEmployeeCode, setEditEmployeeCode] = useState("");
     const [employeeCodeError, setEmployeeCodeError] = useState("");
-
-    // Subscribe to WebSocket status changes
-    useEffect(() => {
-        setIsWsConnected(cacheWebSocket.isConnected());
-
-        const handleConnect = () => setIsWsConnected(true);
-        const handleDisconnect = () => setIsWsConnected(false);
-
-        cacheWebSocket.on("ws:connected", handleConnect);
-        cacheWebSocket.on("ws:disconnected", handleDisconnect);
-
-        return () => {
-            cacheWebSocket.off("ws:connected", handleConnect);
-            cacheWebSocket.off("ws:disconnected", handleDisconnect);
-        };
-    }, []);
 
     // Load profile from sessionStorage on mount, or sync if not present
     useEffect(() => {
@@ -271,7 +253,7 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
                         >
                             <X className="h-5 w-5" />
                         </button>
-                        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+                        <h2 className="text-xl font-medium text-zinc-900 dark:text-zinc-100">
                             {isEditing ? "Edit My Profile" : "My Profile"}
                         </h2>
                     </div>
@@ -310,10 +292,7 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
                                         </div>
                                     )}
                                 </div>
-                                <span className={cn(
-                                    "absolute bottom-1 right-1 block h-3.5 w-3.5 rounded-full ring-2 ring-white dark:ring-zinc-900 transition-all duration-300",
-                                    isWsConnected ? "bg-green-500" : "bg-yellow-500"
-                                )} />
+
                                 {isEditing && currentAvatarUrl && (
                                     <button
                                         type="button"
@@ -362,7 +341,7 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
                                 <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                                     First Name
                                 </span>
-                                <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                                <span className="text-sm font-normal text-zinc-800 dark:text-zinc-200">
                                     {firstNameVal || "-"}
                                 </span>
                             </div>
@@ -372,7 +351,7 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
                                 <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                                     Last Name
                                 </span>
-                                <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                                <span className="text-sm font-normal text-zinc-800 dark:text-zinc-200">
                                     {lastNameVal || "-"}
                                 </span>
                             </div>
@@ -382,7 +361,7 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
                                 <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                                     Employee Code
                                 </span>
-                                <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                                <span className="text-sm font-normal text-zinc-800 dark:text-zinc-200">
                                     {employeeCode}
                                 </span>
                             </div>
@@ -392,7 +371,7 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
                                 <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                                     Workspace Role
                                 </span>
-                                <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                                <span className="text-sm font-normal text-zinc-800 dark:text-zinc-200">
                                     {roleName}
                                 </span>
                             </div>
@@ -402,7 +381,7 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
                                 <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                                     Email
                                 </span>
-                                <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                                <span className="text-sm font-normal text-zinc-800 dark:text-zinc-200">
                                     {email}
                                 </span>
                             </div>
@@ -412,7 +391,7 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
                                 <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                                     Organization
                                 </span>
-                                <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                                <span className="text-sm font-normal text-zinc-800 dark:text-zinc-200">
                                     {organizationName}
                                 </span>
                             </div>
@@ -422,7 +401,7 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
                                 <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                                     Member Since
                                 </span>
-                                <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                                <span className="text-sm font-normal text-zinc-800 dark:text-zinc-200">
                                     {joinedDate}
                                 </span>
                             </div>

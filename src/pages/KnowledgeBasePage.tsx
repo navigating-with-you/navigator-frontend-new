@@ -27,7 +27,7 @@ const KB_COLUMNS = [
     { key: "folder", label: "Size / Description" },
     { key: "owner", label: "Creator" },
     { key: "createdDate", label: "Created Date" },
-    { key: "ocr_status", label: "Status" },
+    { key: "ocr_status", label: "Processing Status" },
 ];
 
 const DEFAULT_KB_COLUMNS = ["name", "folder", "owner", "ocr_status"];

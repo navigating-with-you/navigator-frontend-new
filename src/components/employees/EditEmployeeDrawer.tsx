@@ -177,7 +177,7 @@ export default function EditEmployeeDrawer({
                     >
                         <X className="h-5 w-5" />
                     </button>
-                    <SheetTitle className="text-lg font-semibold text-zinc-900">
+                    <SheetTitle className="text-lg font-medium text-zinc-900">
                         Edit Employee
                     </SheetTitle>
                 </div>
@@ -218,7 +218,7 @@ export default function EditEmployeeDrawer({
                                     onBlur={() => setTouched(t => ({ ...t, firstName: true }))}
                                     placeholder="First Name"
                                     maxLength={50}
-                                    className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-medium"
+                                    className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-normal"
                                 />
                                 {touched.firstName && fieldErrors.firstName && (
                                     <div className="text-red-500 text-[10px] flex items-center gap-1 mt-0.5">
@@ -240,7 +240,7 @@ export default function EditEmployeeDrawer({
                                     onBlur={() => setTouched(t => ({ ...t, lastName: true }))}
                                     placeholder="Last Name"
                                     maxLength={50}
-                                    className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-medium"
+                                    className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-normal"
                                 />
                                 {touched.lastName && fieldErrors.lastName && (
                                     <div className="text-red-500 text-[10px] flex items-center gap-1 mt-0.5">
@@ -265,7 +265,7 @@ export default function EditEmployeeDrawer({
                                 placeholder="Email address"
                                 maxLength={255}
                                 disabled={employee.isActive !== false}
-                                className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-medium disabled:bg-zinc-50 disabled:text-zinc-500 disabled:cursor-not-allowed"
+                                className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-normal disabled:bg-zinc-50 disabled:text-zinc-500 disabled:cursor-not-allowed"
                             />
                             {touched.email && fieldErrors.email && (
                                 <div className="text-red-500 text-[10px] flex items-center gap-1 mt-0.5">
@@ -279,7 +279,7 @@ export default function EditEmployeeDrawer({
                         <div className="space-y-1.5">
                             <Label className="text-xs font-medium text-zinc-500">Role</Label>
                             <Select value={roleName} onValueChange={setRoleName}>
-                                <SelectTrigger className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-medium">
+                                <SelectTrigger className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-normal">
                                     <SelectValue placeholder="Select role" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -309,7 +309,7 @@ export default function EditEmployeeDrawer({
                                 onBlur={() => setTouched(t => ({ ...t, employeeCode: true }))}
                                 placeholder="e.g., EMP-001, john-doe"
                                 maxLength={50}
-                                className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-medium"
+                                className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-normal"
                             />
                             {touched.employeeCode && (
                                 <div className="text-zinc-400 text-[10px]">

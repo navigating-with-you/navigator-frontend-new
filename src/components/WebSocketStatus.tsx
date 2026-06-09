@@ -34,11 +34,11 @@ export function WebSocketStatus() {
     return (
         <div className="flex items-center gap-2 px-2 sm:px-3 py-1 rounded-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shrink-0">
             <div className={`w-2 h-2 rounded-full shrink-0 ${isConnected
-                    ? 'bg-green-500'
-                    : 'bg-yellow-500'
+                ? 'bg-green-500'
+                : 'bg-yellow-500'
                 }`} />
             <span className="text-[10px] sm:text-xs font-medium text-zinc-650 dark:text-zinc-400 hidden sm:inline select-none">
-                {isConnected ? 'Live' : 'Connecting...'}
+                {isConnected ? 'Connected' : 'Connecting...'}
             </span>
         </div>
     );

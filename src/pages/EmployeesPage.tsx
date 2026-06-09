@@ -80,19 +80,6 @@ export default function EmployeesPage() {
     useEffect(() => {
         localStorage.setItem("employee_visible_columns", JSON.stringify(visibleColumns));
     }, [visibleColumns]);
-
-    useEffect(() => {
-        const handleResize = () => {
-            const isBigger = window.innerWidth > 1440;
-            const max = isBigger ? 7 : 5;
-            if (visibleColumns.length > max) {
-                setVisibleColumns(prev => prev.slice(0, max));
-            }
-        };
-        window.addEventListener("resize", handleResize);
-        handleResize();
-        return () => window.removeEventListener("resize", handleResize);
-    }, [visibleColumns]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
     const [roleOptions, setRoleOptions] = useState<string[]>([]);
@@ -824,7 +811,7 @@ export default function EmployeesPage() {
                             <FilterDropdown
                                 label="Team"
                                 value={filters.category}
-                                options={teams}
+                                options={teams.map((t) => t.name)}
                                 onChange={(v: string) =>
                                     setFilters((f) => ({ ...f, category: v }))
                                 }

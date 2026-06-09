@@ -69,7 +69,7 @@ function OcrStatusBadge({ status }: { status?: string | null }) {
     const cfg: Record<string, { icon: React.ReactNode; label: string; cls: string; desc: string }> = {
         pending: {
             icon: <Clock className="h-3 w-3" />,
-            label: "Queued",
+            label: "Processing",
             cls: "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
             desc: "File is in queue waiting to be processed by the OCR engine.",
         },
@@ -430,7 +430,7 @@ export default function KnowledgeBaseTable({
                                     </div>
                                 )}
 
-                                 {/* Col: Status */}
+                                {/* Col: Status */}
                                 {visibleColumns.includes("ocr_status") && (
                                     <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
                                         <span className="md:hidden text-zinc-505 font-medium mr-2">Status:</span>

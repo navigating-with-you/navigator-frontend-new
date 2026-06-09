@@ -101,10 +101,10 @@ function ThinkingAccordion({ isStreaming, thinkingSteps }: ThinkingAccordionProp
 
     const lastStep = thinkingSteps[thinkingSteps.length - 1];
 
-    // Status bullet color
+    // Status bullet color - no animation
     const dotClass = isStreaming
-        ? "bg-blue-500 animate-pulse"
-        : "bg-[#15803d] dark:bg-emerald-500";
+        ? "bg-blue-500"
+        : "bg-green-600 dark:bg-green-500";
 
     // Header text
     let headerText = "";
@@ -126,51 +126,60 @@ function ThinkingAccordion({ isStreaming, thinkingSteps }: ThinkingAccordionProp
     }
 
     return (
-        <div className="w-full mb-4 select-none bg-[#eae9e4] dark:bg-zinc-900/60 rounded-2xl p-4 transition-all border border-zinc-200/20 dark:border-zinc-800/30">
+        <div className="w-[60%] mb-2.5 select-none bg-white dark:bg-zinc-900/40 rounded-xl transition-all overflow-hidden">
             {/* Header row */}
             <div
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center justify-between cursor-pointer"
+                className="flex items-center justify-between cursor-pointer px-3 py-2 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors"
             >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                     <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", dotClass)} />
                     <span className={cn(
-                        "text-xs font-semibold",
+                        "text-[11px] font-medium",
                         isStreaming
-                            ? "text-zinc-650 dark:text-zinc-350"
-                            : "text-[#15803d] dark:text-emerald-400 font-bold"
+                            ? "text-zinc-600 dark:text-zinc-400"
+                            : "text-green-700 dark:text-green-400 font-semibold"
                     )}>
                         {headerText}
                     </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+                <button
+                    className="flex items-center gap-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsExpanded(!isExpanded);
+                    }}
+                >
                     <span>{isExpanded ? "Collapse" : "Expand"}</span>
                     <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", isExpanded ? "rotate-180" : "")} />
-                </div>
+                </button>
             </div>
 
             {/* Collapsible list */}
             {isExpanded && (
-                <div className="mt-3.5 space-y-2.5 text-xs text-zinc-650 dark:text-zinc-300 pl-1.5">
-                    {thinkingSteps.map((step, idx) => {
-                        const messageLower = (step.message || "").toLowerCase();
-                        const isSearch = step.step === "searching" || messageLower.includes("search");
-                        const isBrowsing = messageLower.includes("brows") || messageLower.includes("web");
+                <>
+                    <div className="h-px bg-zinc-200 dark:bg-zinc-800" />
+                    <div className="space-y-1 text-[11px] text-zinc-650 dark:text-zinc-300 px-3 py-2">
+                        {thinkingSteps.map((step, idx) => {
+                            const messageLower = (step.message || "").toLowerCase();
+                            const isSearch = step.step === "searching" || messageLower.includes("search");
+                            const isBrowsing = messageLower.includes("brows") || messageLower.includes("web");
 
-                        return (
-                            <div key={idx} className="flex items-center gap-2.5">
-                                {isSearch ? (
-                                    <Search className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-450 shrink-0" />
-                                ) : isBrowsing ? (
-                                    <Navigation className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-450 shrink-0" />
-                                ) : (
-                                    <Navigation className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
-                                )}
-                                <span className="leading-relaxed">{step.message}</span>
-                            </div>
-                        );
-                    })}
-                </div>
+                            return (
+                                <div key={idx} className="flex items-start gap-1.5">
+                                    {isSearch ? (
+                                        <Search className="h-2.5 w-2.5 text-zinc-500 dark:text-zinc-450 shrink-0 mt-0.5" />
+                                    ) : isBrowsing ? (
+                                        <Navigation className="h-2.5 w-2.5 text-zinc-500 dark:text-zinc-450 shrink-0 mt-0.5" />
+                                    ) : (
+                                        <Navigation className="h-2.5 w-2.5 text-zinc-400 dark:text-zinc-500 shrink-0 mt-0.5" />
+                                    )}
+                                    <span className="leading-tight">{step.message}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
             )}
         </div>
     );
@@ -1282,9 +1291,9 @@ export default function NewChatPage(): JSX.Element {
                                                         </div>
                                                     )}
 
-                                                    {/* Message content - wide, clean layout without bubble background */}
+                                                    {/* Message content - 60% max width, clean layout without bubble background */}
                                                     {(m.content || m.isStreaming) && (
-                                                        <div className="w-full text-zinc-800 dark:text-zinc-200 select-text">
+                                                        <div className="max-w-[60%] text-zinc-800 dark:text-zinc-200 select-text">
                                                             <MessageContent
                                                                 content={m.content}
                                                                 citations={m.sources}
@@ -1326,6 +1335,13 @@ export default function NewChatPage(): JSX.Element {
                                                             {m.sources && m.sources.length > 0 && (
                                                                 <SourcesPill sources={m.sources} onSourceClick={handleCitationClick} />
                                                             )}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Timestamp for assistant message */}
+                                                    {!m.isStreaming && m.content && (
+                                                        <div className="text-zinc-400 dark:text-zinc-500 text-[11px] select-none mt-2">
+                                                            <span>{timeStr}</span>
                                                         </div>
                                                     )}
                                                 </div>

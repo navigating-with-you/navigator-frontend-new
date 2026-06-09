@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils";
 import type { KBEntry } from "@/types/knowledge-base";
 
 const MAX_FILE_SIZE_MB = 50;
-const ALLOWED_EXTENSIONS = /\.(pdf|docx|pptx|txt)$/i;
-const ALLOWED_ACCEPT = ".pdf,.docx,.pptx,.txt";
+const ALLOWED_EXTENSIONS = /\.(pdf|docx|txt)$/i;
+const ALLOWED_ACCEPT = ".pdf,.docx,.txt";
 
 function formatFileSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
@@ -221,7 +221,7 @@ export default function AddFilesDrawer({
                             Max {MAX_FILE_SIZE_MB} MB per file
                         </p>
                         <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-                            .pdf, .docx, .ppt, .pptx, .txt
+                            .pdf, .docx, .txt
                         </p>
 
                         <input

@@ -249,18 +249,18 @@ function RowMenu({
 }
 
 const COLUMN_WIDTHS: Record<string, string> = {
-    name: "2.5fr",
-    status: "1.5fr",
-    employeeCode: "1.5fr",
-    kbFiles: "1.5fr",
-    simpleInteraction: "1.5fr",
-    complexInteraction: "1.5fr",
-    id: "1.5fr",
-    email: "2fr",
-    role: "1.5fr",
-    category: "1.5fr",
-    createdBy: "1.5fr",
-    createdDate: "1.5fr",
+    name: "2fr",
+    status: "1.2fr",
+    employeeCode: "1.2fr",
+    kbFiles: "1fr",
+    simpleInteraction: "1.2fr",
+    complexInteraction: "1.2fr",
+    id: "1.2fr",
+    email: "1.5fr",
+    role: "1.2fr",
+    category: "1.2fr",
+    createdBy: "1.2fr",
+    createdDate: "1.2fr",
 };
 
 export default function EmployeeTable({
@@ -400,17 +400,17 @@ export default function EmployeeTable({
 
     return (
         <div
-            className="overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 flex flex-col h-full"
+            className="rounded-2xl bg-white dark:bg-zinc-900 flex flex-col h-full overflow-hidden"
             data-testid="employees-table"
         >
-            <div className="w-full flex-1 flex flex-col min-h-0 overflow-x-auto">
-                <div className="w-full flex-1 flex flex-col min-h-0">
+            <div className="w-full flex-1 flex flex-col min-h-0 overflow-x-auto hover-scrollbar">
+                <div className="w-full flex-1 flex flex-col min-h-0 min-w-max md:min-w-full">
                     {/* Header */}
                     <div
                         style={{ gridTemplateColumns: computedGridCols }}
-                        className="hidden md:grid items-center gap-2 bg-[#60646B]/10 rounded-t-[10px] px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none md:min-w-[800px] lg:min-w-full"
+                        className="hidden md:grid items-center gap-0 bg-[#60646B]/10 rounded-t-[10px] px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300 shrink-0 select-none border-b border-zinc-200 dark:border-zinc-800"
                     >
-                        <div>
+                        <div className="pl-1">
                             <Checkbox
                                 checked={allChecked}
                                 onCheckedChange={toggleAll}
@@ -418,85 +418,91 @@ export default function EmployeeTable({
                             />
                         </div>
                         {visibleColumns.includes("name") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("name")}>
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("name")}>
                                 Employee Name <SortIcon columnKey="name" />
                             </div>
                         )}
 
                         {visibleColumns.includes("status") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("status")}>
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("status")}>
                                 Status <SortIcon columnKey="status" />
                             </div>
                         )}
 
                         {visibleColumns.includes("employeeCode") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("employeeCode")}>
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("employeeCode")}>
                                 Employee Code <SortIcon columnKey="employeeCode" />
                             </div>
                         )}
 
+                        {visibleColumns.includes("kbFiles") && (
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("kbFiles")}>
+                                No. Of KB Files <SortIcon columnKey="kbFiles" />
+                            </div>
+                        )}
+
                         {visibleColumns.includes("simpleInteraction") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("simpleInteraction")}>
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("simpleInteraction")}>
                                 Simple Interaction <SortIcon columnKey="simpleInteraction" />
                             </div>
                         )}
 
                         {visibleColumns.includes("complexInteraction") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("complexInteraction")}>
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("complexInteraction")}>
                                 Complex Interaction <SortIcon columnKey="complexInteraction" />
                             </div>
                         )}
 
                         {visibleColumns.includes("id") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("id")}>
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("id")}>
                                 Employee ID <SortIcon columnKey="id" />
                             </div>
                         )}
 
                         {visibleColumns.includes("email") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("email")}>
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("email")}>
                                 Email <SortIcon columnKey="email" />
                             </div>
                         )}
 
                         {visibleColumns.includes("role") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("role")}>
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("role")}>
                                 Role <SortIcon columnKey="role" />
                             </div>
                         )}
 
                         {visibleColumns.includes("category") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("category")}>
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("category")}>
                                 Categories <SortIcon columnKey="category" />
                             </div>
                         )}
 
                         {visibleColumns.includes("createdBy") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("createdBy")}>
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("createdBy")}>
                                 Created By <SortIcon columnKey="createdBy" />
                             </div>
                         )}
 
                         {visibleColumns.includes("createdDate") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("createdDate")}>
+                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("createdDate")}>
                                 Created Date <SortIcon columnKey="createdDate" />
                             </div>
                         )}
 
-                        <div />
+                        <div className="px-2" />
                     </div>
 
                     {/* Rows */}
-                    <div className="flex-1 overflow-y-auto hover-scrollbar min-h-0 md:min-w-[800px] lg:min-w-full">
+                    <div className="flex-1 overflow-y-auto hover-scrollbar min-h-0">
                         {pageRows.map((emp) => (
                             <div
                                 key={emp.id}
                                 onClick={() => onView(emp)}
                                 style={{ gridTemplateColumns: computedGridCols }}
-                                className="flex flex-col md:grid items-start md:items-center gap-3 md:gap-2 px-5 py-4 transition-all hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 cursor-pointer group relative border-b border-zinc-100 dark:border-zinc-800/50 last:border-b-0"
+                                className="flex flex-col md:grid items-start md:items-center gap-3 md:gap-0 px-5 py-4 transition-all hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 cursor-pointer group relative border-b border-zinc-100 dark:border-zinc-800/50 last:border-b-0"
                                 data-testid={`employee-row-${emp.id}`}
                             >
-                                <div className="absolute top-5 right-5 md:static md:block" onClick={(e) => e.stopPropagation()}>
+                                <div className="absolute top-5 right-5 md:static md:block px-2 md:px-0" onClick={(e) => e.stopPropagation()}>
                                     <div className="hidden md:block">
                                         <Checkbox
                                             checked={selected.has(emp.id)}
@@ -519,7 +525,7 @@ export default function EmployeeTable({
                                 </div>
 
                                 {visibleColumns.includes("name") && (
-                                    <div className="flex items-center gap-3 min-w-0 w-full md:w-auto flex-1">
+                                    <div className="flex items-center gap-3 min-w-0 w-full md:w-auto flex-1 px-3">
                                         <div className="md:hidden">
                                             <Checkbox
                                                 checked={selected.has(emp.id)}
@@ -581,8 +587,8 @@ export default function EmployeeTable({
                                 )}
 
                                 {visibleColumns.includes("status") && (
-                                    <div className="flex justify-between w-full md:w-auto text-sm truncate">
-                                        <span className="md:hidden text-zinc-505 mr-2">Status:</span>
+                                    <div className="flex justify-between w-full md:w-auto text-sm truncate px-3">
+                                        <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">Status:</span>
                                         {emp.isActive !== false ? (
                                             <Badge variant="outline" className="bg-[#149614]/10 text-[#149614] border-[#149614]/20 dark:bg-[#149614]/10 dark:text-[#149614] dark:border-[#149614]/30 font-medium">
                                                 Active
@@ -596,76 +602,76 @@ export default function EmployeeTable({
                                 )}
 
                                 {visibleColumns.includes("employeeCode") && (
-                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                        <span className="md:hidden text-zinc-505">Employee Code:</span>
-                                        {emp.employeeCode || "-"}
+                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate px-3">
+                                        <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">Employee Code:</span>
+                                        <span className="truncate">{emp.employeeCode || "-"}</span>
                                     </div>
                                 )}
 
                                 {visibleColumns.includes("kbFiles") && (
-                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                        <span className="md:hidden text-zinc-505">No. Of KB Files:</span>
-                                        {emp.kbFiles ?? "-"}
+                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate px-3">
+                                        <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">KB Files:</span>
+                                        <span className="truncate">{emp.kbFiles ?? "-"}</span>
                                     </div>
                                 )}
 
                                 {visibleColumns.includes("simpleInteraction") && (
-                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                        <span className="md:hidden text-zinc-505">Simple Inter.:</span>
-                                        {emp.simpleInteraction ?? "-"}
+                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate px-3">
+                                        <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">Simple Interaction:</span>
+                                        <span className="truncate">{emp.simpleInteraction ?? "-"}</span>
                                     </div>
                                 )}
 
                                 {visibleColumns.includes("complexInteraction") && (
-                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                        <span className="md:hidden text-zinc-505">Complex Inter.:</span>
-                                        {emp.complexInteraction ?? "-"}
+                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate px-3">
+                                        <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">Complex Interaction:</span>
+                                        <span className="truncate">{emp.complexInteraction ?? "-"}</span>
                                     </div>
                                 )}
 
                                 {visibleColumns.includes("id") && (
-                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                        <span className="md:hidden text-zinc-505">Employee ID:</span>
-                                        {emp.id}
+                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate px-3">
+                                        <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">Employee ID:</span>
+                                        <span className="truncate">{emp.id}</span>
                                     </div>
                                 )}
 
                                 {visibleColumns.includes("email") && (
-                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                        <span className="md:hidden text-zinc-505">Email:</span>
-                                        {emp.email}
+                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate px-3">
+                                        <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">Email:</span>
+                                        <span className="truncate">{emp.email}</span>
                                     </div>
                                 )}
 
                                 {visibleColumns.includes("role") && (
-                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                        <span className="md:hidden text-zinc-505">Role:</span>
-                                        {emp.role}
+                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate px-3">
+                                        <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">Role:</span>
+                                        <span className="truncate">{emp.role}</span>
                                     </div>
                                 )}
 
                                 {visibleColumns.includes("category") && (
-                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                        <span className="md:hidden text-zinc-505">Category:</span>
-                                        {emp.category}
+                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate px-3">
+                                        <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">Categories:</span>
+                                        <span className="truncate">{emp.category}</span>
                                     </div>
                                 )}
 
                                 {visibleColumns.includes("createdBy") && (
-                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                        <span className="md:hidden text-zinc-505">Created By:</span>
-                                        {emp.createdBy}
+                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate px-3">
+                                        <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">Created By:</span>
+                                        <span className="truncate">{emp.createdBy}</span>
                                     </div>
                                 )}
 
                                 {visibleColumns.includes("createdDate") && (
-                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                        <span className="md:hidden text-zinc-505">Created Date:</span>
-                                        {emp.createdDate}
+                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate px-3">
+                                        <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">Created Date:</span>
+                                        <span className="truncate">{emp.createdDate}</span>
                                     </div>
                                 )}
 
-                                <div className="hidden md:flex justify-end" onClick={(e) => e.stopPropagation()}>
+                                <div className="hidden md:flex justify-end px-2" onClick={(e) => e.stopPropagation()}>
                                     <RowMenu
                                         employee={emp}
                                         onDelete={(id) => setConfirmDeleteId(id)}

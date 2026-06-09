@@ -90,7 +90,7 @@ function NavItem({
 
     const isItemActive = (targetTo: string) => {
         if (targetTo === "/chat") {
-            return location.pathname === "/chat" || location.pathname.startsWith("/chat/");
+            return location.pathname === "/chat";
         }
         return location.pathname === targetTo;
     };
@@ -314,17 +314,17 @@ function ChatHistoryList({ onConversationDeleted }: { onConversationDeleted?: ()
                                 onClick={() => !isEditing && handleOpenConversation(conv)}
                                 data-testid={`chat-history-${conv.id}`}
                                 className={cn(
-                                    "group w-full flex items-center gap-2 py-2 pr-2 text-left text-sm transition-all cursor-pointer shrink-0 relative border-l-2 pl-3",
+                                    "group w-full flex items-center gap-2 py-2 px-3 text-left text-sm transition-all cursor-pointer shrink-0 relative rounded-lg",
                                     isActive
-                                        ? "bg-blue-50/60 text-blue-600 dark:bg-blue-950/15 dark:text-blue-400 font-semibold border-blue-600 dark:border-blue-500 rounded-r-lg"
-                                        : "text-zinc-655 hover:bg-zinc-100/60 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100 border-transparent rounded-lg"
+                                        ? "bg-[#E7E7E0] text-zinc-900 dark:bg-[#E7E7E0]/10 dark:text-zinc-100 font-semibold"
+                                        : "text-zinc-655 hover:bg-zinc-100/60 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100"
                                 )}
                             >
                                 <MessageSquare
                                     className={cn(
                                         "h-3.5 w-3.5 shrink-0 transition-colors",
                                         isActive
-                                            ? "text-blue-600 dark:text-blue-400"
+                                            ? "text-zinc-700 dark:text-zinc-300"
                                             : "text-zinc-400 group-hover:text-zinc-500 dark:text-zinc-500 dark:group-hover:text-zinc-400"
                                     )}
                                 />
@@ -422,7 +422,7 @@ export default function Sidebar({
 
     const isItemActive = (targetTo: string) => {
         if (targetTo === "/chat") {
-            return location.pathname === "/chat" || location.pathname.startsWith("/chat/");
+            return location.pathname === "/chat";
         }
         return location.pathname === targetTo;
     };
@@ -599,6 +599,7 @@ export default function Sidebar({
                                 <NavLink
                                     key={item.to}
                                     to={item.to}
+                                    end
                                     data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
                                     className={
                                         cn(

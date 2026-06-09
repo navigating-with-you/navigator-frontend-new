@@ -32,6 +32,7 @@ type IntegrationProps = {
 
 const Integration: React.FC<IntegrationProps> = ({ variant = "populated" }) => {
     const [query, setQuery] = useState<string>("");
+    const isUnderDevelopment = true;
 
     const allIntegrations: IntegrationItem[] = useMemo(
         () => [
@@ -81,17 +82,23 @@ const Integration: React.FC<IntegrationProps> = ({ variant = "populated" }) => {
             {/* Title row */}
             <div className="flex flex-col gap-1 shrink-0">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <h1
-                        data-testid="integration-title"
-                        className="text-[26px] font-semibold tracking-tight text-neutral-900 dark:text-zinc-100"
-                    >
-                        Integration
-                    </h1>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <h1
+                            data-testid="integration-title"
+                            className="text-[26px] font-semibold tracking-tight text-neutral-900 dark:text-zinc-100"
+                        >
+                            Integration
+                        </h1>
+                        <span className="rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                            Coming soon
+                        </span>
+                    </div>
 
                     <button
                         type="button"
                         data-testid="integration-refresh-btn"
-                        className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-neutral-700 dark:text-zinc-300 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors hover:bg-neutral-50 dark:hover:bg-zinc-700 hover:text-neutral-900 dark:hover:text-zinc-100 focus:outline-none"
+                        disabled={isUnderDevelopment}
+                        className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-neutral-700 dark:text-zinc-300 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors hover:bg-neutral-50 dark:hover:bg-zinc-700 hover:text-neutral-900 dark:hover:text-zinc-100 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500"
                     >
                         <RotateCw className="h-4 w-4" />
                         Refresh
@@ -112,8 +119,8 @@ const Integration: React.FC<IntegrationProps> = ({ variant = "populated" }) => {
                     }
                     placeholder="Search integrations by name or description..."
                     data-testid="integration-search-input"
-                    disabled={isEmpty}
-                    className="h-10 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 pr-10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-blue-500/20"
+                    disabled={isEmpty || isUnderDevelopment}
+                    className="h-10 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 pr-10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:dark:bg-zinc-800 disabled:placeholder:text-zinc-500"
                 />
                 {query && !isEmpty && (
                     <button
@@ -145,6 +152,7 @@ const Integration: React.FC<IntegrationProps> = ({ variant = "populated" }) => {
                             <IntegrationCard
                                 key={integration.id}
                                 integration={integration}
+                                disabled={isUnderDevelopment}
                             />
                         ))}
                     </div>
