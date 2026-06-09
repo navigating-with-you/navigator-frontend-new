@@ -126,11 +126,11 @@ function ThinkingAccordion({ isStreaming, thinkingSteps }: ThinkingAccordionProp
     }
 
     return (
-        <div className="w-[60%] mb-2.5 select-none bg-white dark:bg-zinc-900/40 rounded-xl transition-all overflow-hidden">
+        <div className="w-[60%] mb-2.5 select-none bg-[#E7E7E0] dark:bg-[#E7E7E0]/10 rounded-xl transition-all overflow-hidden">
             {/* Header row */}
             <div
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center justify-between cursor-pointer px-3 py-2 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors"
+                className="flex items-center justify-between cursor-pointer px-3 py-2 hover:bg-[#E7E7E0]/50 dark:hover:bg-[#E7E7E0]/20 transition-colors"
             >
                 <div className="flex items-center gap-1.5">
                     <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", dotClass)} />
@@ -1285,7 +1285,7 @@ export default function NewChatPage(): JSX.Element {
 
                                                     {/* Thinking step label fallback — while streaming and no steps array yet */}
                                                     {m.isStreaming && (!m.thinkingSteps || m.thinkingSteps.length === 0) && (
-                                                        <div className="w-full mb-1 flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-xl text-xs text-blue-700 dark:text-blue-300 animate-pulse">
+                                                        <div className="w-full mb-1 flex items-center gap-2 px-3 py-2 bg-[#E7E7E0] dark:bg-[#E7E7E0]/10 border border-[#E7E7E0]/50 dark:border-[#E7E7E0]/20 rounded-xl text-xs text-zinc-700 dark:text-zinc-300 animate-pulse">
                                                             <TypingDots />
                                                             <span>{thinkingLabel}</span>
                                                         </div>

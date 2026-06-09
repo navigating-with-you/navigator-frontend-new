@@ -408,7 +408,7 @@ export default function EmployeeTable({
                     {/* Header */}
                     <div
                         style={{ gridTemplateColumns: computedGridCols }}
-                        className="hidden md:grid items-center gap-0 bg-[#60646B]/10 rounded-t-[10px] px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300 shrink-0 select-none border-b border-zinc-200 dark:border-zinc-800"
+                        className="hidden md:grid items-center gap-0 bg-[#E7E7E0] rounded-t-[10px] px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300 shrink-0 select-none border-b border-zinc-200 dark:border-zinc-800"
                     >
                         <div className="pl-1">
                             <Checkbox
