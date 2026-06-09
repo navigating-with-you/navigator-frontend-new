@@ -18,7 +18,6 @@ import {
     Cpu,
     Folder,
     Search,
-    Navigation,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -126,16 +125,16 @@ function ThinkingAccordion({ isStreaming, thinkingSteps }: ThinkingAccordionProp
     }
 
     return (
-        <div className="w-[60%] mb-2.5 select-none bg-[#E7E7E0] dark:bg-[#E7E7E0]/10 rounded-xl transition-all overflow-hidden">
+        <div className="w-fit mb-1.5 select-none bg-[#E7E7E0] dark:bg-[#E7E7E0]/10 rounded-lg transition-all overflow-hidden">
             {/* Header row */}
             <div
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center justify-between cursor-pointer px-3 py-2 hover:bg-[#E7E7E0]/50 dark:hover:bg-[#E7E7E0]/20 transition-colors"
+                className="flex items-center justify-between cursor-pointer px-2.5 py-1.5 hover:bg-[#E7E7E0]/50 dark:hover:bg-[#E7E7E0]/20 transition-colors"
             >
-                <div className="flex items-center gap-1.5">
-                    <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", dotClass)} />
+                <div className="flex items-center gap-1">
+                    <span className={cn("h-1 w-1 rounded-full shrink-0", dotClass)} />
                     <span className={cn(
-                        "text-[11px] font-medium",
+                        "text-[10px] font-medium",
                         isStreaming
                             ? "text-zinc-600 dark:text-zinc-400"
                             : "text-green-700 dark:text-green-400 font-semibold"
@@ -144,14 +143,13 @@ function ThinkingAccordion({ isStreaming, thinkingSteps }: ThinkingAccordionProp
                     </span>
                 </div>
                 <button
-                    className="flex items-center gap-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                    className="flex items-center gap-0.5 text-[9px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors ml-1.5"
                     onClick={(e) => {
                         e.stopPropagation();
                         setIsExpanded(!isExpanded);
                     }}
                 >
-                    <span>{isExpanded ? "Collapse" : "Expand"}</span>
-                    <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", isExpanded ? "rotate-180" : "")} />
+                    <span>{isExpanded ? "▼" : "▶"}</span>
                 </button>
             </div>
 
@@ -159,20 +157,17 @@ function ThinkingAccordion({ isStreaming, thinkingSteps }: ThinkingAccordionProp
             {isExpanded && (
                 <>
                     <div className="h-px bg-zinc-200 dark:bg-zinc-800" />
-                    <div className="space-y-1 text-[11px] text-zinc-650 dark:text-zinc-300 px-3 py-2">
+                    <div className="space-y-0.5 text-[9px] text-zinc-600 dark:text-zinc-400 px-2.5 py-1.5 max-h-32 overflow-y-auto">
                         {thinkingSteps.map((step, idx) => {
                             const messageLower = (step.message || "").toLowerCase();
                             const isSearch = step.step === "searching" || messageLower.includes("search");
-                            const isBrowsing = messageLower.includes("brows") || messageLower.includes("web");
 
                             return (
-                                <div key={idx} className="flex items-start gap-1.5">
+                                <div key={idx} className="flex items-start gap-1">
                                     {isSearch ? (
-                                        <Search className="h-2.5 w-2.5 text-zinc-500 dark:text-zinc-450 shrink-0 mt-0.5" />
-                                    ) : isBrowsing ? (
-                                        <Navigation className="h-2.5 w-2.5 text-zinc-500 dark:text-zinc-450 shrink-0 mt-0.5" />
+                                        <Search className="h-2 w-2 text-zinc-500 dark:text-zinc-450 shrink-0 mt-0.5" />
                                     ) : (
-                                        <Navigation className="h-2.5 w-2.5 text-zinc-400 dark:text-zinc-500 shrink-0 mt-0.5" />
+                                        <div className="h-1 w-1 rounded-full bg-zinc-400 dark:bg-zinc-500 shrink-0 mt-1" />
                                     )}
                                     <span className="leading-tight">{step.message}</span>
                                 </div>
@@ -1218,7 +1213,7 @@ export default function NewChatPage(): JSX.Element {
                     </div>
                 ) : isLoadingMessages ? (
                     /* ── Loading Skeleton ─────────────────────────────── */
-                    <div className="max-w-5xl mx-auto px-3 sm:px-6 md:px-8 pt-4 sm:pt-6 pb-6 space-y-6 md:space-y-8">
+                    <div className="max-w-4xl mx-auto px-3 sm:px-6 md:px-8 pt-4 sm:pt-6 pb-6 space-y-6 md:space-y-8">
                         {[1, 2, 3].map((i) => {
                             const isUser = i % 2 === 0;
                             return (
@@ -1236,7 +1231,7 @@ export default function NewChatPage(): JSX.Element {
                     </div>
                 ) : (
                     /* ── Messages Thread ──────────────────────────────── */
-                    <div className="max-w-5xl mx-auto px-3 sm:px-6 md:px-8 pt-4 sm:pt-6 pb-6">
+                    <div className="max-w-4xl mx-auto px-3 sm:px-6 md:px-8 pt-4 sm:pt-6 pb-6">
                         <div className="space-y-8">
                             {messages.map((m) => {
                                 const timeStr = m.timestamp.toLocaleTimeString("en-US", {
@@ -1271,8 +1266,8 @@ export default function NewChatPage(): JSX.Element {
                                             </div>
                                         ) : (
                                             /* Assistant bubble */
-                                            <div className="flex w-full justify-start">
-                                                <div className="flex flex-col items-start w-full gap-2.5">
+                                            <div className="flex w-full justify-start overflow-hidden">
+                                                <div className="flex flex-col items-start min-w-0 w-full gap-2.5">
                                                     {/* Thinking step accordion - with distinct styling */}
                                                     {m.thinkingSteps && m.thinkingSteps.length > 0 && (
                                                         <div className="w-full mb-1">
@@ -1285,8 +1280,7 @@ export default function NewChatPage(): JSX.Element {
 
                                                     {/* Thinking step label fallback — while streaming and no steps array yet */}
                                                     {m.isStreaming && (!m.thinkingSteps || m.thinkingSteps.length === 0) && (
-                                                        <div className="w-full mb-1 flex items-center gap-2 px-3 py-2 bg-[#E7E7E0] dark:bg-[#E7E7E0]/10 border border-[#E7E7E0]/50 dark:border-[#E7E7E0]/20 rounded-xl text-xs text-zinc-700 dark:text-zinc-300 animate-pulse">
-                                                            <TypingDots />
+                                                        <div className="w-[60%] mb-1 flex items-center gap-2 px-3 py-2 bg-[#E7E7E0] dark:bg-[#E7E7E0]/10 border border-[#E7E7E0]/50 dark:border-[#E7E7E0]/20 rounded-xl text-xs text-zinc-700 dark:text-zinc-300 animate-pulse">
                                                             <span>{thinkingLabel}</span>
                                                         </div>
                                                     )}
