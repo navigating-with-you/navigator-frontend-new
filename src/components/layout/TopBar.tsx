@@ -425,8 +425,6 @@ export default function TopBar({
         }
     };
 
-    const fullName = profile?.display_name || (user?.givenName ? `${user.givenName} ${user.familyName || ""}`.trim() : (isLoading ? "Loading..." : "User"));
-
     return (
         <>
         <header
