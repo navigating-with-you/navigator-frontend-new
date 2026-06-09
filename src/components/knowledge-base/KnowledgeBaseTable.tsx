@@ -223,7 +223,7 @@ export default function KnowledgeBaseTable({
                     {/* Header */}
                     <div
                         style={{ gridTemplateColumns: computedGridCols }}
-                        className="hidden md:grid items-center gap-2 bg-[#60646B]/10 rounded-t-[10px] px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none md:min-w-[800px] lg:min-w-full"
+                        className="hidden md:grid items-center gap-2 bg-[#E7E7E0] dark:bg-[#171717] rounded-t-[10px] px-5 py-3 text-xs font-medium uppercase tracking-wide text-[#171717] dark:text-[#E7E7E0] shrink-0 select-none md:min-w-[800px] lg:min-w-full"
                     >
                         <div>
                             <Checkbox
@@ -233,32 +233,32 @@ export default function KnowledgeBaseTable({
                             />
                         </div>
                         {visibleColumns.includes("name") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("name")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80" onClick={() => handleSort("name")}>
                                 Knowledge Base Name <SortIcon columnKey="name" />
                             </div>
                         )}
                         {visibleColumns.includes("type") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("type")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80" onClick={() => handleSort("type")}>
                                 Type <SortIcon columnKey="type" />
                             </div>
                         )}
                         {visibleColumns.includes("folder") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("folder")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80" onClick={() => handleSort("folder")}>
                                 {col2Label} <SortIcon columnKey="folder" />
                             </div>
                         )}
                         {visibleColumns.includes("owner") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("owner")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80" onClick={() => handleSort("owner")}>
                                 {col3Label} <SortIcon columnKey="owner" />
                             </div>
                         )}
                         {visibleColumns.includes("createdDate") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("createdDate")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80" onClick={() => handleSort("createdDate")}>
                                 Created Date <SortIcon columnKey="createdDate" />
                             </div>
                         )}
                         {visibleColumns.includes("ocr_status") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("ocr_status")} title="Status of document text extraction and indexing. Hover over status badges to see detailed descriptions.">
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80" onClick={() => handleSort("ocr_status")} title="Status of document text extraction and indexing. Hover over status badges to see detailed descriptions.">
                                 Status <SortIcon columnKey="ocr_status" />
                             </div>
                         )}

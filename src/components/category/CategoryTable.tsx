@@ -263,7 +263,7 @@ export default function CategoryTable({
                     {/* Header */}
                     <div
                         style={{ gridTemplateColumns: computedGridCols }}
-                        className="hidden md:grid items-center gap-2 bg-[#60646B]/10 rounded-t-[10px] px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 shrink-0 select-none md:min-w-[800px] lg:min-w-full"
+                        className="hidden md:grid items-center gap-2 bg-[#E7E7E0] dark:bg-[#171717] rounded-t-[10px] px-5 py-3 text-xs font-medium uppercase tracking-wide text-[#171717] dark:text-[#E7E7E0] shrink-0 select-none md:min-w-[800px] lg:min-w-full "
                     >
                         {canSelect && (
                             <div>
@@ -275,12 +275,12 @@ export default function CategoryTable({
                             </div>
                         )}
                         {visibleColumns.includes("name") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("name")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80" onClick={() => handleSort("name")}>
                                 Team Name <SortIcon columnKey="name" />
                             </div>
                         )}
                         {visibleColumns.includes("managerName") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100" onClick={() => handleSort("managerName")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80" onClick={() => handleSort("managerName")}>
                                 Manager <SortIcon columnKey="managerName" />
                             </div>
                         )}

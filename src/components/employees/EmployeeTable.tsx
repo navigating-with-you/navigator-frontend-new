@@ -408,7 +408,7 @@ export default function EmployeeTable({
                     {/* Header */}
                     <div
                         style={{ gridTemplateColumns: computedGridCols }}
-                        className="hidden md:grid items-center gap-0 bg-[#E7E7E0] rounded-t-[10px] px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300 shrink-0 select-none border-b border-zinc-200 dark:border-zinc-800"
+                        className="hidden md:grid items-center gap-0 bg-[#E7E7E0] dark:bg-[#171717] rounded-t-[10px] px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-[#171717] dark:text-[#E7E7E0] shrink-0 select-none "
                     >
                         <div className="pl-1">
                             <Checkbox
@@ -418,76 +418,77 @@ export default function EmployeeTable({
                             />
                         </div>
                         {visibleColumns.includes("name") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("name")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("name")}>
                                 Employee Name <SortIcon columnKey="name" />
                             </div>
                         )}
 
                         {visibleColumns.includes("status") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("status")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("status")}>
                                 Status <SortIcon columnKey="status" />
                             </div>
                         )}
 
                         {visibleColumns.includes("employeeCode") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("employeeCode")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("employeeCode")}>
                                 Employee Code <SortIcon columnKey="employeeCode" />
                             </div>
                         )}
 
                         {visibleColumns.includes("kbFiles") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("kbFiles")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("kbFiles")}>
                                 No. Of KB Files <SortIcon columnKey="kbFiles" />
                             </div>
                         )}
 
                         {visibleColumns.includes("simpleInteraction") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("simpleInteraction")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("simpleInteraction")}>
                                 Simple Interaction <SortIcon columnKey="simpleInteraction" />
                             </div>
                         )}
 
                         {visibleColumns.includes("complexInteraction") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("complexInteraction")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("complexInteraction")}>
                                 Complex Interaction <SortIcon columnKey="complexInteraction" />
                             </div>
                         )}
 
                         {visibleColumns.includes("id") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("id")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("id")}>
                                 Employee ID <SortIcon columnKey="id" />
                             </div>
                         )}
 
                         {visibleColumns.includes("email") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("email")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("email")}>
                                 Email <SortIcon columnKey="email" />
                             </div>
                         )}
 
                         {visibleColumns.includes("role") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("role")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("role")}>
                                 Role <SortIcon columnKey="role" />
                             </div>
                         )}
 
                         {visibleColumns.includes("category") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("category")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("category")}>
                                 Categories <SortIcon columnKey="category" />
                             </div>
                         )}
 
                         {visibleColumns.includes("createdBy") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("createdBy")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("createdBy")}>
                                 Created By <SortIcon columnKey="createdBy" />
                             </div>
                         )}
 
                         {visibleColumns.includes("createdDate") && (
-                            <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 px-3" onClick={() => handleSort("createdDate")}>
+                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("createdDate")}>
                                 Created Date <SortIcon columnKey="createdDate" />
                             </div>
                         )}
+
 
                         <div className="px-2" />
                     </div>
