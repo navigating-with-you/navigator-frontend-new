@@ -50,7 +50,7 @@ function AppRoutes(): JSX.Element {
                 path="/"
                 element={
                     isAuthenticated ? (
-                        <Navigate to="/dashboard" replace />
+                        <Navigate to="/chat" replace />
                     ) : (
                         <LandingPage />
                     )
@@ -74,7 +74,9 @@ function AppRoutes(): JSX.Element {
                         path="/dashboard"
                         element={
                             <Suspense fallback={<PageLoader />}>
-                                <DashboardPage />
+                                <PermissionRoute permission={PERMISSIONS.EMPLOYEE_VIEW} redirectTo="/">
+                                    <DashboardPage />
+                                </PermissionRoute>
                             </Suspense>
                         }
                     />

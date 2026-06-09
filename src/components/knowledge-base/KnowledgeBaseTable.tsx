@@ -42,6 +42,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { KBEntry } from "@/types/knowledge-base";
+import { PermissionGate } from "@/components/PermissionGate";
+import { PERMISSIONS } from "@/utils/rbacConfig";
 
 interface KnowledgeBaseTableProps {
     entries: KBEntry[];
@@ -334,17 +336,23 @@ export default function KnowledgeBaseTable({
                                                 </DropdownMenuItem>
                                             )}
 
-                                            <DropdownMenuItem
-                                                className="text-red-655 focus:text-red-655 cursor-pointer dark:focus:bg-zinc-800"
-                                                data-testid={`kb-delete-${kb.id}`}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setConfirmDeleteId(kb.id);
-                                                }}
+                                            <PermissionGate
+                                                permissions={[PERMISSIONS.FILE_DELETE, PERMISSIONS.FOLDER_DELETE]}
+                                                requireAny
+                                                fallback={null}
                                             >
-                                                <Trash2 className="h-4 w-4 text-red-655" />
-                                                Delete
-                                            </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    className="text-red-655 focus:text-red-655 cursor-pointer dark:focus:bg-zinc-800"
+                                                    data-testid={`kb-delete-${kb.id}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setConfirmDeleteId(kb.id);
+                                                    }}
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-red-655" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </PermissionGate>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
@@ -482,17 +490,23 @@ export default function KnowledgeBaseTable({
                                                 </DropdownMenuItem>
                                             )}
 
-                                            <DropdownMenuItem
-                                                className="text-red-600 focus:text-red-600 cursor-pointer dark:focus:bg-zinc-800"
-                                                data-testid={`kb-delete-${kb.id}`}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setConfirmDeleteId(kb.id);
-                                                }}
+                                            <PermissionGate
+                                                permissions={[PERMISSIONS.FILE_DELETE, PERMISSIONS.FOLDER_DELETE]}
+                                                requireAny
+                                                fallback={null}
                                             >
-                                                <Trash2 className="h-4 w-4 text-red-600" />
-                                                Delete
-                                            </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    className="text-red-600 focus:text-red-600 cursor-pointer dark:focus:bg-zinc-800"
+                                                    data-testid={`kb-delete-${kb.id}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setConfirmDeleteId(kb.id);
+                                                    }}
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-red-600" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </PermissionGate>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>

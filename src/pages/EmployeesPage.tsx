@@ -570,6 +570,11 @@ export default function EmployeesPage() {
                                             toast.success(`Added ${ids.length} employees to team`);
                                             setSelected(new Set());
                                             setBatchTeamPickerOpen(false);
+                                            
+                                            // Clear the groups/categories cache so team membership updates are fetched
+                                            const { cacheManager } = await import("@/utils/cacheManager");
+                                            cacheManager.invalidatePattern("/groups/");
+                                            
                                             // Refresh employee list to reflect team membership changes
                                             await fetchEmployees(false);
                                         } catch (err: any) {

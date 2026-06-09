@@ -61,7 +61,7 @@ type SidebarProps = {
 };
 
 const mainNav: NavItemType[] = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutGrid }, // Available to all
+    { to: "/dashboard", label: "Dashboard", icon: LayoutGrid, permission: PERMISSIONS.EMPLOYEE_VIEW }, // Restricted to Admin/Editor/Super-Admin, not Members
     { to: "/employees", label: "Employees", icon: Users, permission: PERMISSIONS.EMPLOYEE_EDIT }, // Restricted to Admin/Editor/Super-Admin, not Members
     { to: "/teams", label: "Teams", icon: ListTree, permission: PERMISSIONS.GROUP_VIEW },
     { to: "/knowledge-base", label: "Knowledge Base", icon: FileStack, permission: PERMISSIONS.FOLDER_VIEW },

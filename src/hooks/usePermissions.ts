@@ -41,7 +41,10 @@ export function usePermissions() {
     },
     // Only run when the user is authenticated
     enabled: isAuthenticated,
+    // Keep data in cache for 5 minutes; don't refetch during this time
     staleTime: 5 * 60 * 1000,
+    // Cache data for 10 minutes so it persists across page navigations
+    gcTime: 10 * 60 * 1000,
     // Retry once on failure, then degrade gracefully
     retry: 1,
     // Never throw to error boundary

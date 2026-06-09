@@ -501,6 +501,43 @@ export async function createOrganization(
     return apiClient.post<any>("/org/", payload, { token });
 }
 
+/** Get organization details */
+export async function getOrganization(orgId: string, token: string) {
+    return apiClient.get<any>(`/org/${orgId}`, { token, cache: false });
+}
+
+/** Get organization settings */
+export async function getOrganizationSettings(orgId: string, token: string) {
+    return apiClient.get<any>(`/org/${orgId}/settings`, { token, cache: false });
+}
+
+/** Update organization details */
+export async function updateOrganization(
+    orgId: string,
+    payload: {
+        name?: string;
+        logo_url?: string;
+        email?: string;
+        contact_number?: string;
+        billing_address?: {
+            line1: string;
+            line2?: string;
+            city: string;
+            state: string;
+            postal_code: string;
+            country: string;
+        };
+    },
+    token: string
+) {
+    return apiClient.patch<any>(`/org/${orgId}`, payload, { token });
+}
+
+/** Delete organization logo */
+export async function deleteOrgLogo(orgId: string, token: string) {
+    return apiClient.patch<any>(`/org/${orgId}`, { logo_url: null }, { token });
+}
+
 /** Truncate messages in a conversation starting from or after a message ID */
 export async function truncateConversation(
     conversationId: string,

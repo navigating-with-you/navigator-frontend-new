@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { cacheWebSocket } from "@/utils/cacheWebSocket";
 import { toast } from "sonner";
 import ChangePasswordDrawer from "@/components/layout/ChangePasswordDrawer";
+import OrganizationProfileDrawer from "@/components/layout/OrganizationProfileDrawer";
 
 
 import React, { useEffect, useState } from "react";
@@ -46,6 +47,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PERMISSIONS } from "@/utils/rbacConfig";
 
 
 // ── UsageRow ─────────────────────────────────────────────────────────────────
@@ -249,9 +252,12 @@ export default function TopBar({
     onProfileClick,
 }: TopBarProps): JSX.Element {
     const { logout, user, isLoading, getToken } = useKindeAuth();
+    const { hasPermission } = usePermissions();
+    const canViewOrgDetails = hasPermission(PERMISSIONS.ORG_VIEW);
     const [usage, setUsage] = useState<UsageData | null>(null);
     const [profile, setProfile] = useState<any>(null);
     const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+    const [organizationProfileOpen, setOrganizationProfileOpen] = useState(false);
     const navigate = useNavigate();
     const { theme, setTheme } = useTheme();
     const [isWsConnected, setIsWsConnected] = useState(false);
@@ -582,30 +588,15 @@ export default function TopBar({
                     <DropdownMenuTrigger asChild>
                         <button
                             type="button"
-                            className="ml-1 relative flex items-center justify-center outline-none bg-[#60646B1A] dark:bg-zinc-800/40 p-1 rounded-full cursor-pointer hover:opacity-85 transition-all"
+                            className="ml-1 relative flex items-center justify-center outline-none bg-transparent p-2 rounded-full cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
                             data-testid="user-profile"
                             data-tour="profile"
                         >
-                            <div className="relative">
-                                <div className="h-9 w-9 rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shadow-xs">
-                                    {(profile?.avatar_url || user?.picture) && !avatarError ? (
-                                        <img
-                                            src={profile?.avatar_url || user?.picture}
-                                            alt={fullName}
-                                            className="object-cover h-full w-full"
-                                            onError={() => setAvatarError(true)}
-                                        />
-                                    ) : (
-                                        <span className="text-zinc-800 dark:text-zinc-200 font-semibold text-sm">
-                                            {initials}
-                                        </span>
-                                    )}
-                                </div>
-                                <span className={cn(
-                                    "absolute bottom-0.5 right-0.5 block h-2.5 w-2.5 rounded-full ring-2 ring-[#FEFFFA] dark:ring-zinc-900 transition-all duration-300",
-                                    isWsConnected ? "bg-green-500" : "bg-yellow-500"
-                                )} />
-                            </div>
+                            <User className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
+                            <span className={cn(
+                                "absolute bottom-1 right-1 block h-2 w-2 rounded-full ring-2 ring-[#FEFFFA] dark:ring-zinc-900 transition-all duration-300",
+                                isWsConnected ? "bg-green-500" : "bg-yellow-500"
+                            )} />
                         </button>
                     </DropdownMenuTrigger>
 
@@ -848,21 +839,25 @@ export default function TopBar({
                         <DropdownMenuSeparator className="bg-zinc-100 dark:bg-zinc-800 my-1" />
 
                         {/* Organization Section */}
-                        <div className="space-y-0.5">
-                            <div className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-2.5 pb-1">
-                                Organization
-                            </div>
+                        {canViewOrgDetails && (
+                            <>
+                                <div className="space-y-0.5">
+                                    <div className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-2.5 pb-1">
+                                        Organization
+                                    </div>
 
-                            <DropdownMenuItem
-                                onClick={() => toast.info("Organization Details")}
-                                className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-700 dark:text-zinc-300 hover:bg-[#60646B1A] dark:hover:bg-zinc-800 focus:bg-[#60646B1A] dark:focus:bg-zinc-800 cursor-pointer"
-                            >
-                                <Building2 className="h-4 w-4 text-zinc-500" />
-                                <span className="font-medium">Organization Details</span>
-                            </DropdownMenuItem>
-                        </div>
+                                    <DropdownMenuItem
+                                        onClick={() => setOrganizationProfileOpen(true)}
+                                        className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-700 dark:text-zinc-300 hover:bg-[#60646B1A] dark:hover:bg-zinc-800 focus:bg-[#60646B1A] dark:focus:bg-zinc-800 cursor-pointer"
+                                    >
+                                        <Building2 className="h-4 w-4 text-zinc-500" />
+                                        <span className="font-medium">Organization Details</span>
+                                    </DropdownMenuItem>
+                                </div>
 
-                        <DropdownMenuSeparator className="bg-zinc-100 dark:bg-zinc-800 my-1" />
+                                <DropdownMenuSeparator className="bg-zinc-100 dark:bg-zinc-800 my-1" />
+                            </>
+                        )}
 
                         {/* Sign Out */}
                         <DropdownMenuItem
@@ -879,6 +874,10 @@ export default function TopBar({
         <ChangePasswordDrawer
             open={changePasswordOpen}
             onOpenChange={setChangePasswordOpen}
+        />
+        <OrganizationProfileDrawer
+            open={organizationProfileOpen}
+            onOpenChange={setOrganizationProfileOpen}
         />
     </>);
 }
