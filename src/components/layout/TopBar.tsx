@@ -254,6 +254,7 @@ export default function TopBar({
     const { logout, user, getToken } = useKindeAuth();
     const { hasPermission } = usePermissions();
     const canViewOrgDetails = hasPermission(PERMISSIONS.ORG_VIEW);
+    const canViewBilling = hasPermission(PERMISSIONS.BILLING_VIEW);
     const [usage, setUsage] = useState<UsageData | null>(null);
     const [profile, setProfile] = useState<any>(null);
     const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -592,45 +593,47 @@ export default function TopBar({
                     >
 
                         {/* Overall Usage Card Container */}
-                        <div className="rounded-[10px] bg-[#60646B14] dark:bg-zinc-800/40 p-3 border border-zinc-150/60 dark:border-zinc-800">
-                            <div className="flex items-center justify-between mb-3">
-                                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">Overall Usage</span>
-                                <Button
-                                    size="sm"
-                                    onClick={() => navigate("/subscription")}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-semibold px-2.5 py-0.5 h-6 cursor-pointer"
-                                >
-                                    Upgrade
-                                </Button>
-                            </div>
-                            <div className="space-y-2.5 text-xs">
-                                {/* Plan row */}
-                                <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
-                                    <span>Plan</span>
-                                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-                                        {usage?.plan ?? "Core"}
-                                    </span>
+                        {canViewBilling && (
+                            <div className="rounded-[10px] bg-[#60646B14] dark:bg-zinc-800/40 p-3 border border-zinc-150/60 dark:border-zinc-800">
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">Overall Usage</span>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => navigate("/subscription")}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-semibold px-2.5 py-0.5 h-6 cursor-pointer"
+                                    >
+                                        Upgrade
+                                    </Button>
                                 </div>
-                                {/* Pages */}
-                                <UsageRow
-                                    label="Pages"
-                                    used={usage?.pages.used}
-                                    limit={usage?.pages.limit ?? 500}
-                                />
-                                {/* Simple Interactions */}
-                                <UsageRow
-                                    label="Simple Interactions"
-                                    used={usage?.simple_interactions.used}
-                                    limit={usage?.simple_interactions.limit ?? 350}
-                                />
-                                {/* Complex Interactions */}
-                                <UsageRow
-                                    label="Complex Interactions"
-                                    used={usage?.complex_interactions.used}
-                                    limit={usage?.complex_interactions.limit ?? 100}
-                                />
+                                <div className="space-y-2.5 text-xs">
+                                    {/* Plan row */}
+                                    <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
+                                        <span>Plan</span>
+                                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                                            {usage?.plan ?? "Core"}
+                                        </span>
+                                    </div>
+                                    {/* Pages */}
+                                    <UsageRow
+                                        label="Pages"
+                                        used={usage?.pages.used}
+                                        limit={usage?.pages.limit ?? 500}
+                                    />
+                                    {/* Simple Interactions */}
+                                    <UsageRow
+                                        label="Simple Interactions"
+                                        used={usage?.simple_interactions.used}
+                                        limit={usage?.simple_interactions.limit ?? 350}
+                                    />
+                                    {/* Complex Interactions */}
+                                    <UsageRow
+                                        label="Complex Interactions"
+                                        used={usage?.complex_interactions.used}
+                                        limit={usage?.complex_interactions.limit ?? 100}
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Profile Section */}
                         <div className="space-y-0.5">
@@ -736,13 +739,15 @@ export default function TopBar({
                                 </DropdownMenuPortal>
                             </DropdownMenuSub>
 
-                            <DropdownMenuItem
-                                onClick={() => navigate("/subscription")}
-                                className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-700 dark:text-zinc-300 hover:bg-[#60646B1A] dark:hover:bg-zinc-800 focus:bg-[#60646B1A] dark:focus:bg-zinc-800 cursor-pointer"
-                            >
-                                <CreditCard className="h-4 w-4 text-zinc-500" />
-                                <span className="font-medium">Subscription</span>
-                            </DropdownMenuItem>
+                            {canViewBilling && (
+                                <DropdownMenuItem
+                                    onClick={() => navigate("/subscription")}
+                                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-700 dark:text-zinc-300 hover:bg-[#60646B1A] dark:hover:bg-zinc-800 focus:bg-[#60646B1A] dark:focus:bg-zinc-800 cursor-pointer"
+                                >
+                                    <CreditCard className="h-4 w-4 text-zinc-500" />
+                                    <span className="font-medium">Subscription</span>
+                                </DropdownMenuItem>
+                            )}
 
                             {/* Language Submenu */}
                             <DropdownMenuSub>

@@ -46,6 +46,7 @@ export default function OrganizationProfileDrawer({
     const { getToken } = useKindeAuth();
     const { hasPermission } = usePermissions();
     const canEditOrg = hasPermission(PERMISSIONS.ORG_EDIT);
+    const canViewBilling = hasPermission(PERMISSIONS.BILLING_VIEW);
     const [orgData, setOrgData] = useState<OrganizationData | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -467,148 +468,150 @@ export default function OrganizationProfileDrawer({
                         </div>
 
                         {/* Billing Address Section */}
-                        <div className="space-y-4 border-t border-zinc-200 dark:border-zinc-700 pt-4">
-                            <h3 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                                Billing Address
-                            </h3>
+                        {canViewBilling && (
+                            <div className="space-y-4 border-t border-zinc-200 dark:border-zinc-700 pt-4">
+                                <h3 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                    Billing Address
+                                </h3>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                {/* Line 1 */}
-                                <div className="col-span-2 space-y-1">
-                                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
-                                        Address Line 1
-                                    </label>
-                                    {isEditing ? (
-                                        <input
-                                            type="text"
-                                            name="line1"
-                                            value={formData.line1}
-                                            onChange={handleInputChange}
-                                            placeholder="123 Main St"
-                                            className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    ) : (
-                                        <p className="text-sm text-zinc-900 dark:text-zinc-100">
-                                            {formData.line1 || "—"}
-                                        </p>
-                                    )}
-                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Line 1 */}
+                                    <div className="col-span-2 space-y-1">
+                                        <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                                            Address Line 1
+                                        </label>
+                                        {isEditing ? (
+                                            <input
+                                                type="text"
+                                                name="line1"
+                                                value={formData.line1}
+                                                onChange={handleInputChange}
+                                                placeholder="123 Main St"
+                                                className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        ) : (
+                                            <p className="text-sm text-zinc-900 dark:text-zinc-100">
+                                                {formData.line1 || "—"}
+                                            </p>
+                                        )}
+                                    </div>
 
-                                {/* Line 2 */}
-                                <div className="col-span-2 space-y-1">
-                                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
-                                        Address Line 2
-                                    </label>
-                                    {isEditing ? (
-                                        <input
-                                            type="text"
-                                            name="line2"
-                                            value={formData.line2}
-                                            onChange={handleInputChange}
-                                            placeholder="Suite 100 (optional)"
-                                            className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    ) : (
-                                        <p className="text-sm text-zinc-900 dark:text-zinc-100">
-                                            {formData.line2 || "—"}
-                                        </p>
-                                    )}
-                                </div>
+                                    {/* Line 2 */}
+                                    <div className="col-span-2 space-y-1">
+                                        <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                                            Address Line 2
+                                        </label>
+                                        {isEditing ? (
+                                            <input
+                                                type="text"
+                                                name="line2"
+                                                value={formData.line2}
+                                                onChange={handleInputChange}
+                                                placeholder="Suite 100 (optional)"
+                                                className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        ) : (
+                                            <p className="text-sm text-zinc-900 dark:text-zinc-100">
+                                                {formData.line2 || "—"}
+                                            </p>
+                                        )}
+                                    </div>
 
-                                {/* City */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
-                                        City
-                                    </label>
-                                    {isEditing ? (
-                                        <input
-                                            type="text"
-                                            name="city"
-                                            value={formData.city}
-                                            onChange={handleInputChange}
-                                            placeholder="San Francisco"
-                                            className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    ) : (
-                                        <p className="text-sm text-zinc-900 dark:text-zinc-100">
-                                            {formData.city || "—"}
-                                        </p>
-                                    )}
-                                </div>
+                                    {/* City */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                                            City
+                                        </label>
+                                        {isEditing ? (
+                                            <input
+                                                type="text"
+                                                name="city"
+                                                value={formData.city}
+                                                onChange={handleInputChange}
+                                                placeholder="San Francisco"
+                                                className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        ) : (
+                                            <p className="text-sm text-zinc-900 dark:text-zinc-100">
+                                                {formData.city || "—"}
+                                            </p>
+                                        )}
+                                    </div>
 
-                                {/* State */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
-                                        State/Province
-                                    </label>
-                                    {isEditing ? (
-                                        <input
-                                            type="text"
-                                            name="state"
-                                            value={formData.state}
-                                            onChange={handleInputChange}
-                                            placeholder="California"
-                                            className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    ) : (
-                                        <p className="text-sm text-zinc-900 dark:text-zinc-100">
-                                            {formData.state || "—"}
-                                        </p>
-                                    )}
-                                </div>
+                                    {/* State */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                                            State/Province
+                                        </label>
+                                        {isEditing ? (
+                                            <input
+                                                type="text"
+                                                name="state"
+                                                value={formData.state}
+                                                onChange={handleInputChange}
+                                                placeholder="California"
+                                                className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        ) : (
+                                            <p className="text-sm text-zinc-900 dark:text-zinc-100">
+                                                {formData.state || "—"}
+                                            </p>
+                                        )}
+                                    </div>
 
-                                {/* Postal Code */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
-                                        Postal Code
-                                    </label>
-                                    {isEditing ? (
-                                        <input
-                                            type="text"
-                                            name="postal_code"
-                                            value={formData.postal_code}
-                                            onChange={handleInputChange}
-                                            placeholder="94105"
-                                            className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    ) : (
-                                        <p className="text-sm text-zinc-900 dark:text-zinc-100">
-                                            {formData.postal_code || "—"}
-                                        </p>
-                                    )}
-                                </div>
+                                    {/* Postal Code */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                                            Postal Code
+                                        </label>
+                                        {isEditing ? (
+                                            <input
+                                                type="text"
+                                                name="postal_code"
+                                                value={formData.postal_code}
+                                                onChange={handleInputChange}
+                                                placeholder="94105"
+                                                className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        ) : (
+                                            <p className="text-sm text-zinc-900 dark:text-zinc-100">
+                                                {formData.postal_code || "—"}
+                                            </p>
+                                        )}
+                                    </div>
 
-                                {/* Country */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
-                                        Country
-                                    </label>
-                                    {isEditing ? (
-                                        <select
-                                            name="country"
-                                            value={formData.country}
-                                            onChange={handleInputChange}
-                                            className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        >
-                                            <option value="">Select Country</option>
-                                            <option value="US">United States</option>
-                                            <option value="IN">India</option>
-                                            <option value="CA">Canada</option>
-                                            <option value="GB">United Kingdom</option>
-                                            <option value="AU">Australia</option>
-                                            <option value="DE">Germany</option>
-                                            <option value="FR">France</option>
-                                            <option value="IT">Italy</option>
-                                            <option value="ES">Spain</option>
-                                        </select>
-                                    ) : (
-                                        <p className="text-sm text-zinc-900 dark:text-zinc-100">
-                                            {formData.country || "—"}
-                                        </p>
-                                    )}
+                                    {/* Country */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                                            Country
+                                        </label>
+                                        {isEditing ? (
+                                            <select
+                                                name="country"
+                                                value={formData.country}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="">Select Country</option>
+                                                <option value="US">United States</option>
+                                                <option value="IN">India</option>
+                                                <option value="CA">Canada</option>
+                                                <option value="GB">United Kingdom</option>
+                                                <option value="AU">Australia</option>
+                                                <option value="DE">Germany</option>
+                                                <option value="FR">France</option>
+                                                <option value="IT">Italy</option>
+                                                <option value="ES">Spain</option>
+                                            </select>
+                                        ) : (
+                                            <p className="text-sm text-zinc-900 dark:text-zinc-100">
+                                                {formData.country || "—"}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     {/* Footer */}
