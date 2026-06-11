@@ -39,6 +39,8 @@ function parseErrorDetail(errorData: any, defaultMsg: string): string {
 class ApiClient {
     private baseURL = config.apiBaseUrl;
     private token: string | null = null;
+    private tokenRefresher: (() => Promise<string | null>) | null = null;
+    private _refreshing = false;
 
     setToken(token: string) {
         this.token = token;
@@ -47,6 +49,38 @@ class ApiClient {
     clearToken() {
         this.token = null;
         cacheManager.clear();
+    }
+
+    setTokenRefresher(refresher: () => Promise<string | null>) {
+        this.tokenRefresher = refresher;
+    }
+
+    private async _refreshToken(): Promise<string | null> {
+        if (this._refreshing || !this.tokenRefresher) return null;
+        this._refreshing = true;
+        try {
+            const fresh = await this.tokenRefresher();
+            if (fresh) this.token = fresh;
+            return fresh;
+        } catch {
+            return null;
+        } finally {
+            this._refreshing = false;
+        }
+    }
+
+    private async _fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+        const response = await fetch(url, init);
+        if (response.status !== 401 || !this.tokenRefresher) return response;
+
+        const fresh = await this._refreshToken();
+        if (!fresh) return response;
+
+        const retryInit: RequestInit = {
+            ...init,
+            headers: { ...(init.headers as Record<string, string>), Authorization: `Bearer ${fresh}` },
+        };
+        return fetch(url, retryInit);
     }
 
     async get<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
@@ -84,10 +118,7 @@ class ApiClient {
         }
 
         try {
-            const response = await fetch(url, {
-                method: "GET",
-                headers,
-            });
+            const response = await this._fetchWithRetry(url, { method: "GET", headers });
 
             // 304 Not Modified - use cached data
             if (response.status === 304) {
@@ -98,9 +129,9 @@ class ApiClient {
                     return cachedData;
                 }
                 // No stale cache available — fall through to a fresh fetch without ETag
-                // by retrying without the If-None-Match header
                 const retryHeaders: HeadersInit = { "Content-Type": "application/json" };
-                if (activeToken) retryHeaders["Authorization"] = `Bearer ${activeToken}`;
+                const currentToken = this.token;
+                if (currentToken) retryHeaders["Authorization"] = `Bearer ${currentToken}`;
                 const retryResponse = await fetch(url, { method: "GET", headers: retryHeaders });
                 if (!retryResponse.ok) {
                     const errorData = await retryResponse.json().catch(() => ({}));
@@ -122,11 +153,9 @@ class ApiClient {
             const data = await response.json();
             const newETag = response.headers.get("ETag");
 
-            // Store in cache
             if (cache && newETag) {
                 cacheManager.set(cacheKey, data, newETag, cacheTTL);
             } else if (cache) {
-                // Also cache if no ETag but cache is requested
                 cacheManager.set(cacheKey, data, `etag-${Date.now()}`, cacheTTL);
             }
 
@@ -155,11 +184,7 @@ class ApiClient {
             fetchBody = JSON.stringify(body);
         }
 
-        const response = await fetch(url, {
-            method: "POST",
-            headers,
-            body: fetchBody,
-        });
+        const response = await this._fetchWithRetry(url, { method: "POST", headers, body: fetchBody });
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -167,10 +192,7 @@ class ApiClient {
         }
 
         const data = await response.json();
-
-        // Invalidate related caches
         this.invalidateRelatedCaches(endpoint);
-
         return data;
     }
 
@@ -186,7 +208,7 @@ class ApiClient {
             headers["Authorization"] = `Bearer ${activeToken}`;
         }
 
-        const response = await fetch(url, {
+        const response = await this._fetchWithRetry(url, {
             method: "PATCH",
             headers,
             body: JSON.stringify(body),
@@ -198,10 +220,7 @@ class ApiClient {
         }
 
         const data = await response.json();
-
-        // Invalidate related caches
         this.invalidateRelatedCaches(endpoint);
-
         return data;
     }
 
@@ -220,18 +239,13 @@ class ApiClient {
             fetchBody = JSON.stringify(body);
         }
 
-        const response = await fetch(url, {
-            method: "DELETE",
-            headers,
-            body: fetchBody,
-        });
+        const response = await this._fetchWithRetry(url, { method: "DELETE", headers, body: fetchBody });
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(parseErrorDetail(errorData, `API error: ${response.status}`));
         }
 
-        // Invalidate related caches
         this.invalidateRelatedCaches(endpoint);
 
         const text = await response.text();
@@ -302,16 +316,16 @@ class ApiClient {
                 cacheManager.invalidatePattern("rbac");
             }
         }
-        // Handle auth/invite operations
-        if (endpoint.includes("/invite") || endpoint.includes("/auth")) {
+        // Handle invite operations
+        if (endpoint.includes("/invite")) {
+            cacheManager.invalidatePattern("invite");
+        }
+        // Handle auth operations
+        if (endpoint.includes("/auth")) {
             const isEmployeeInvite = endpoint.includes("employee");
             if (isEmployeeInvite) {
-                // Only invalidate employees cache (not all auth)
                 cacheManager.invalidatePattern("employees");
-            } else if (endpoint.includes("/auth/refresh")) {
-                // Don't invalidate anything for token refresh
-            } else {
-                // For other auth changes, invalidate auth caches
+            } else if (!endpoint.includes("/auth/refresh")) {
                 cacheManager.invalidatePattern("auth");
             }
         }

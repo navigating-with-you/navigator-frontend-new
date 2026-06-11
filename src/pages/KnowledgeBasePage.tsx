@@ -47,6 +47,7 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { useUserProfile } from "@/contexts/UserContext";
 
 import {
     getRootContents,
@@ -124,7 +125,6 @@ interface BreadcrumbItem {
 
 interface Filters {
     creator: string;
-    type: string;
     ocrStatus: string;
 }
 
@@ -132,16 +132,9 @@ interface Filters {
 
 export default function KnowledgeBasePage() {
     const { getToken, user } = useKindeAuth();
-    const { role, isLoading: isPermissionsLoading } = usePermissions();
+    const { role, isLoading: isPermissionsLoading, hasPermission } = usePermissions();
     const isMember = role === "member";
-    const [profile, setProfile] = useState<any>(null);
-
-    useEffect(() => {
-        const stored = sessionStorage.getItem("navigator_user_profile");
-        if (stored) {
-            try { setProfile(JSON.parse(stored)); } catch { /* ignore */ }
-        }
-    }, [user]);
+    const { userProfile: profile } = useUserProfile();
 
     const currentUserName = profile?.display_name || (user?.givenName ? `${user.givenName} ${user.familyName || ""}`.trim() : user?.email?.split("@")[0] || "Admin");
     const currentUserEmail = profile?.email || user?.email || "";
@@ -193,7 +186,6 @@ export default function KnowledgeBasePage() {
 
     const [filters, setFilters] = useState<Filters>({
         creator: "",
-        type: "",
         ocrStatus: "",
     });
 
@@ -215,7 +207,7 @@ export default function KnowledgeBasePage() {
 
     useEffect(() => {
         const fetchEmployeesData = async () => {
-            if (isPermissionsLoading || isMember) return;
+            if (isPermissionsLoading || isMember || !hasPermission(PERMISSIONS.EMPLOYEE_VIEW)) return;
             try {
                 const token = await getToken();
                 if (!token) return;
@@ -227,7 +219,7 @@ export default function KnowledgeBasePage() {
             }
         };
         fetchEmployeesData();
-    }, [getToken, isMember, isPermissionsLoading]);
+    }, [getToken, isMember, isPermissionsLoading, hasPermission]);
 
     // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -317,7 +309,7 @@ export default function KnowledgeBasePage() {
 
     useEffect(() => {
         const handleWsChange = (event: any) => {
-            console.log("[KBPage] WS Event received:", event);
+            if (import.meta.env.DEV) console.log("[KBPage] WS Event received:", event);
 
             // Directly update the OCR status of the file in the state in real-time
             if (event && (event.event === "ocr:job_created" || event.event === "ocr:job_updated" || event.event === "ocr:job_completed")) {
@@ -408,7 +400,7 @@ export default function KnowledgeBasePage() {
             cacheWebSocket.off("ocr:job_updated", handleWsChange);
             cacheWebSocket.off("ocr:job_completed", handleWsChange);
         };
-    }, [currentFolderId, fetchContents]);
+    }, [currentFolderId, fetchContents, folderStack]);
 
     // ── Derived data ───────────────────────────────────────────────────────────
 
@@ -449,7 +441,7 @@ export default function KnowledgeBasePage() {
                     rawRole = emp.role;
                 }
                 const r = (rawRole || "").toLowerCase().replace("_", "");
-                return r === "admin" || r === "superadmin";
+                return r === "admin" || r === "superadmin" || r === "editor";
             })
             .map((emp: any) => {
                 const firstName = emp.first_name || emp.given_name || "";
@@ -514,7 +506,7 @@ export default function KnowledgeBasePage() {
 
     const navigateInto = (entry: KBEntry) => {
         setSearchInput("");  // ✅ Update to use searchInput instead of search
-        setFilters({ creator: "", type: "", ocrStatus: "" });
+        setFilters({ creator: "", ocrStatus: "" });
         setSelected(new Set());
         setFolderStack((prev) => {
             if (prev.length > 0 && prev[prev.length - 1].id === entry.id) {
@@ -526,7 +518,7 @@ export default function KnowledgeBasePage() {
 
     const navigateTo = (index: number) => {
         setSearchInput("");  // ✅ Update to use searchInput instead of search
-        setFilters({ creator: "", type: "", ocrStatus: "" });
+        setFilters({ creator: "", ocrStatus: "" });
         setSelected(new Set());
         if (index < 0) {
             setFolderStack([]);

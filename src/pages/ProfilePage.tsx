@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { useNavigate } from "react-router-dom";
 import { uploadAvatar, deleteAvatar, updateProfile, syncUser } from "@/lib/api";
+import { useUserProfile } from "@/contexts/UserContext";
 import { toast } from "sonner";
 import {
     X,
@@ -16,7 +17,8 @@ import { validateEmployeeCode, getEmployeeCodeConstraintsText } from "@/utils/em
 export default function ProfilePage({ onClose }: { onClose?: () => void }) {
     const { getToken, user } = useKindeAuth();
     const navigate = useNavigate();
-    const [profile, setProfile] = useState<any>(null);
+    const { userProfile: contextProfile, setUserProfile } = useUserProfile();
+    const [profile, setProfile] = useState<any>(contextProfile);
     const [isSaving, setIsSaving] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [tempFile, setTempFile] = useState<File | null>(null);
@@ -30,22 +32,17 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
     const [editEmployeeCode, setEditEmployeeCode] = useState("");
     const [employeeCodeError, setEmployeeCodeError] = useState("");
 
-    // Load profile from sessionStorage on mount, or sync if not present
+    // Sync from context; if context is empty, fetch from backend
     useEffect(() => {
-        const stored = sessionStorage.getItem("navigator_user_profile");
-        if (stored) {
-            try {
-                setProfile(JSON.parse(stored));
-            } catch (e) {
-                console.error("Failed to parse stored profile", e);
-            }
+        if (contextProfile) {
+            setProfile(contextProfile);
         } else {
             const fetchProfile = async () => {
                 try {
                     const token = await getToken();
                     if (token) {
                         const syncRes = await syncUser(token);
-                        sessionStorage.setItem("navigator_user_profile", JSON.stringify(syncRes));
+                        setUserProfile(syncRes);
                         setProfile(syncRes);
                     }
                 } catch (err) {
@@ -54,7 +51,7 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
             };
             fetchProfile();
         }
-    }, [getToken]);
+    }, [contextProfile, getToken, setUserProfile]);
 
     const fullName = profile?.display_name || (user?.givenName ? `${user.givenName} ${user.familyName || ""}`.trim() : "User");
     const email = profile?.email || user?.email || "-";
@@ -173,11 +170,9 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
             if (profileUpdated) {
                 // Force a user profile sync from backend to get updated data
                 const syncRes = await syncUser(token);
-                sessionStorage.setItem("navigator_user_profile", JSON.stringify(syncRes));
+                setUserProfile(syncRes);
                 setProfile(syncRes);
                 toast.success("Profile details updated successfully!");
-                // Dispatch global storage event so TopBar and other components update instantly
-                window.dispatchEvent(new Event("storage"));
             }
 
             // Reset temp states and exit edit mode

@@ -99,14 +99,19 @@ export default function EmployeesPage() {
     const handleBatchDelete = async () => {
         setIsBatchProcessing(true);
         try {
-            const promises = selectedEmployees.map(async (emp) => {
-                if (emp.isActive !== false) {
-                    await handleDeleteEmployee(emp.id);
-                } else {
-                    await handleRevokeInvite(emp.inviteId || emp.id);
-                }
-            });
-            await Promise.all(promises);
+            const results = await Promise.allSettled(
+                selectedEmployees.map(async (emp) => {
+                    if (emp.isActive !== false) {
+                        await handleDeleteEmployee(emp.id);
+                    } else {
+                        await handleRevokeInvite(emp.inviteId || emp.id);
+                    }
+                })
+            );
+            const failed = results.filter((r) => r.status === "rejected").length;
+            if (failed > 0) {
+                toast.error(`${failed} item(s) failed to delete`);
+            }
             setSelected(new Set());
         } catch (error) {
             console.error("Batch delete error", error);
@@ -119,10 +124,13 @@ export default function EmployeesPage() {
     const handleBatchResend = async () => {
         setIsBatchProcessing(true);
         try {
-            const promises = selectedEmployees.map(async (emp) => {
-                await handleResendInvite(emp.inviteId || emp.id);
-            });
-            await Promise.all(promises);
+            const results = await Promise.allSettled(
+                selectedEmployees.map((emp) => handleResendInvite(emp.inviteId || emp.id))
+            );
+            const failed = results.filter((r) => r.status === "rejected").length;
+            if (failed > 0) {
+                toast.error(`${failed} invite(s) failed to resend`);
+            }
             setSelected(new Set());
         } catch (error) {
             console.error("Batch resend error", error);
@@ -134,10 +142,13 @@ export default function EmployeesPage() {
     const handleBatchRevoke = async () => {
         setIsBatchProcessing(true);
         try {
-            const promises = selectedEmployees.map(async (emp) => {
-                await handleRevokeInvite(emp.inviteId || emp.id);
-            });
-            await Promise.all(promises);
+            const results = await Promise.allSettled(
+                selectedEmployees.map((emp) => handleRevokeInvite(emp.inviteId || emp.id))
+            );
+            const failed = results.filter((r) => r.status === "rejected").length;
+            if (failed > 0) {
+                toast.error(`${failed} invite(s) failed to revoke`);
+            }
             setSelected(new Set());
         } catch (error) {
             console.error("Batch revoke error", error);
@@ -161,7 +172,7 @@ export default function EmployeesPage() {
 
     const fetchEmployees = useCallback(async (showSkeleton = false) => {
         try {
-            if (showSkeleton || employees.length === 0) {
+            if (showSkeleton) {
                 setIsLoading(true);
             }
             const token = await getToken();
@@ -230,7 +241,7 @@ export default function EmployeesPage() {
                 const email = emp.email && typeof emp.email === "string" && emp.email.trim() ? emp.email.trim() : "";
 
                 return {
-                    id: emp.id || `EMP-${Date.now()}`,
+                    id: emp.id || crypto.randomUUID(),
                     inviteId: emp.invite_id || emp.id,
                     name: fullName,
                     role: roleName,
@@ -450,7 +461,7 @@ export default function EmployeesPage() {
 
     return (
         <PermissionGate
-            permission={PERMISSIONS.EMPLOYEE_EDIT}
+            permission={PERMISSIONS.EMPLOYEE_VIEW}
             fallback={
                 <div className="p-3 sm:p-6 md:p-8 flex flex-col h-full w-full bg-transparent overflow-hidden">
                     <UnifiedEmptyState

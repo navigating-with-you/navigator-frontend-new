@@ -79,7 +79,7 @@ import {
 
 export default function CategoryPage() {
     const { getToken, isAuthenticated } = useKindeAuth();
-    const { role, isLoading: isPermissionsLoading } = usePermissions();
+    const { role, isLoading: isPermissionsLoading, hasPermission } = usePermissions();
     const isMember = role === "member";
 
     const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
@@ -118,6 +118,7 @@ export default function CategoryPage() {
 
     const [categories, setCategories] = useState<Category[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [isSaving, setIsSaving] = useState<boolean>(false);
     const [search, setSearch] = useState<string>("");
     const [employeesList, setEmployeesList] = useState<any[]>([]);
     // Drawer open/edit states
@@ -151,13 +152,18 @@ export default function CategoryPage() {
                 // Non-members can fetch all groups
                 const groupsResult = await listGroups(token).catch(() => null);
                 groupsData = groupsResult?.items ?? groupsResult ?? [];
-                
-                const [empResult, rolesResult] = await Promise.allSettled([
-                    listEmployees(token),
-                    listRoles(token),
-                ]);
-                employeesData = empResult.status === "fulfilled" ? empResult.value : [];
-                rolesData = rolesResult.status === "fulfilled" ? rolesResult.value : [];
+
+                const tasks: Promise<any>[] = [listRoles(token)];
+                if (hasPermission(PERMISSIONS.EMPLOYEE_VIEW)) {
+                    tasks.unshift(listEmployees(token));
+                }
+                const settled = await Promise.allSettled(tasks);
+                if (hasPermission(PERMISSIONS.EMPLOYEE_VIEW)) {
+                    employeesData = settled[0].status === "fulfilled" ? settled[0].value : [];
+                    rolesData = settled[1]?.status === "fulfilled" ? settled[1].value : [];
+                } else {
+                    rolesData = settled[0].status === "fulfilled" ? settled[0].value : [];
+                }
             } else {
                 // Members: fetch only their own groups (which comes from their group memberships)
                 // Skip employee and role data - members don't have access
@@ -182,7 +188,7 @@ export default function CategoryPage() {
                     id: emp.id,
                     name,
                     role: emp.role?.name || "Member",
-                    avatar: emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+                    avatar: emp.avatar || ""
                 };
             });
             setEmployeesList(mappedEmployees);
@@ -241,7 +247,7 @@ export default function CategoryPage() {
                                         id: m.id,
                                         name: name,
                                         role: role,
-                                        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+                        avatar: ""
                                     };
                                 }),
                                 files: mappedFiles,
@@ -425,7 +431,7 @@ export default function CategoryPage() {
 
     // CRUD Handlers
     const handleCreateOrUpdateCategory = async (newCat: Category) => {
-        setIsLoading(true);
+        setIsSaving(true);
         try {
             if (isAuthenticated) {
                 const token = await getToken();
@@ -507,7 +513,7 @@ export default function CategoryPage() {
                                     id: m.id,
                                     name: name,
                                     role: empDetails?.role || m.role_name || "Member",
-                                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+                    avatar: ""
                                 };
                             }),
                             kbCount: mappedFiles.length,
@@ -568,7 +574,7 @@ export default function CategoryPage() {
                                     id: m.id,
                                     name: name,
                                     role: empDetails?.role || m.role_name || "Member",
-                                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+                    avatar: ""
                                 };
                             }),
                             files: mappedFiles,
@@ -595,7 +601,7 @@ export default function CategoryPage() {
             console.error("API Error creating/updating category:", err);
             toast.error("API error creating/updating category");
         } finally {
-            setIsLoading(false);
+            setIsSaving(false);
         }
     };
 
@@ -635,12 +641,20 @@ export default function CategoryPage() {
             const token = await getToken();
             if (!token) return;
 
-            const promises = Array.from(selected).map((id) => deleteGroup(id, token));
-            await Promise.all(promises);
+            const ids = Array.from(selected);
+            const results = await Promise.allSettled(ids.map((id) => deleteGroup(id, token)));
 
-            setCategories((prev) => prev.filter((c) => !selected.has(c.id)));
+            const succeeded = ids.filter((_, i) => results[i].status === "fulfilled");
+            const failed = ids.length - succeeded.length;
+
+            setCategories((prev) => prev.filter((c) => !succeeded.includes(c.id)));
             setSelected(new Set());
-            toast.success("Selected categories deleted successfully");
+
+            if (failed > 0) {
+                toast.error(`${failed} categor${failed === 1 ? "y" : "ies"} failed to delete`);
+            } else {
+                toast.success("Selected categories deleted successfully");
+            }
         } catch (err) {
             console.error("Batch delete error:", err);
             toast.error("Failed to delete selected categories");

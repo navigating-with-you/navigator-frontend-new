@@ -257,7 +257,7 @@ export default function KnowledgeBaseDetailDrawer({
         if (!open || !entry || entry.type !== "file") return;
 
         const handleWsEvent = (event: any) => {
-            console.log("[DetailDrawer] WS Event received:", event);
+            if (import.meta.env.DEV) console.log("[DetailDrawer] WS Event received:", event);
 
             // Check if this event belongs to the currently active file/job
             const isForCurrentFile = event.resource_id === entry.id || event.metadata?.file_id === entry.id;

@@ -6,6 +6,7 @@ import {
     type JSX,
 } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { useUserProfile } from "@/contexts/UserContext";
 import { useParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -568,7 +569,7 @@ export default function NewChatPage(): JSX.Element {
     const { id } = useParams<{ id?: string }>();
     const navigate = useNavigate();
 
-    const [profile, setProfile] = useState<any>(null);
+    const { userProfile: profile } = useUserProfile();
     const [inputVal, setInputVal] = useState("");
     const [messages, setMessages] = useState<Message[]>([]);
     const [isResponding, setIsResponding] = useState(false);
@@ -730,13 +731,6 @@ export default function NewChatPage(): JSX.Element {
     }, [conversationId, isResponding, getToken]);
 
     // ── Profile / greeting ────────────────────────────────────────────────────
-
-    useEffect(() => {
-        const stored = sessionStorage.getItem("navigator_user_profile");
-        if (stored) {
-            try { setProfile(JSON.parse(stored)); } catch { /* ignore */ }
-        }
-    }, [user]);
 
     useEffect(() => {
         const h = new Date().getHours();
@@ -962,7 +956,7 @@ export default function NewChatPage(): JSX.Element {
                         citations.push(citation);
                     },
                     onDone: (data) => {
-                        console.log(`[Token Usage] Total tokens used for response: ${data.tokens_used ?? "unknown"}`);
+                        if (import.meta.env.DEV) console.log(`[Token Usage] Total tokens used for response: ${data.tokens_used ?? "unknown"}`);
                         if (convId !== currentConversationIdRef.current) return;
                         setMessages((prev) => {
                             if (!prev.some((m) => m.id === streamingId)) return prev;

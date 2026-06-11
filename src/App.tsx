@@ -6,9 +6,11 @@ import LandingPage from "@/pages/LandingPage";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import PermissionRoute from "@/components/auth/PermissionRoute";
 import AuthInitializer from "@/components/auth/AuthInitializer";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/sonner";
 import { useTokenExpiration } from "@/hooks/useTokenExpiration";
 import { PERMISSIONS } from "@/utils/rbacConfig";
+import { UserProvider } from "@/contexts/UserContext";
 import type { JSX } from "react";
 
 // ✅ CODE SPLITTING: Lazy load all route pages
@@ -37,6 +39,17 @@ function PageLoader(): JSX.Element {
     );
 }
 
+/** Combines ErrorBoundary + Suspense for each lazy route */
+function PageBoundary({ children }: { children: JSX.Element }): JSX.Element {
+    return (
+        <ErrorBoundary>
+            <Suspense fallback={<PageLoader />}>
+                {children}
+            </Suspense>
+        </ErrorBoundary>
+    );
+}
+
 function AppRoutes(): JSX.Element {
     const { isAuthenticated } = useKindeAuth();
 
@@ -61,9 +74,9 @@ function AppRoutes(): JSX.Element {
             <Route
                 path="/invite/accept"
                 element={
-                    <Suspense fallback={<PageLoader />}>
+                    <PageBoundary>
                         <InviteAcceptancePage />
-                    </Suspense>
+                    </PageBoundary>
                 }
             />
 
@@ -73,86 +86,84 @@ function AppRoutes(): JSX.Element {
                     <Route
                         path="/dashboard"
                         element={
-                            <Suspense fallback={<PageLoader />}>
+                            <PageBoundary>
                                 <PermissionRoute permission={PERMISSIONS.EMPLOYEE_VIEW} redirectTo="/">
                                     <DashboardPage />
                                 </PermissionRoute>
-                            </Suspense>
+                            </PageBoundary>
                         }
                     />
 
                     <Route
                         path="/employees"
                         element={
-                            <Suspense fallback={<PageLoader />}>
-                                <PermissionRoute permission={PERMISSIONS.EMPLOYEE_VIEW}>
+                            <PageBoundary>
+                                <PermissionRoute permission={PERMISSIONS.EMPLOYEE_VIEW} redirectTo="/chat">
                                     <EmployeesPage />
                                 </PermissionRoute>
-                            </Suspense>
+                            </PageBoundary>
                         }
                     />
 
                     <Route
                         path="/teams"
                         element={
-                            <Suspense fallback={<PageLoader />}>
-                                <PermissionRoute permission={PERMISSIONS.GROUP_VIEW}>
+                            <PageBoundary>
+                                <PermissionRoute permission={PERMISSIONS.GROUP_VIEW} redirectTo="/chat">
                                     <CategoryPage />
                                 </PermissionRoute>
-                            </Suspense>
+                            </PageBoundary>
                         }
                     />
 
                     <Route
                         path="/knowledge-base"
                         element={
-                            <Suspense fallback={<PageLoader />}>
-                                <PermissionRoute permission={PERMISSIONS.FOLDER_VIEW}>
+                            <PageBoundary>
+                                <PermissionRoute permission={PERMISSIONS.FOLDER_VIEW} redirectTo="/chat">
                                     <KnowledgeBasePage />
                                 </PermissionRoute>
-                            </Suspense>
+                            </PageBoundary>
                         }
                     />
 
                     <Route
                         path="/integration"
                         element={
-                            <Suspense fallback={<PageLoader />}>
-                                <PermissionRoute permission={PERMISSIONS.INTEGRATION_VIEW}>
+                            <PageBoundary>
+                                <PermissionRoute permission={PERMISSIONS.INTEGRATION_VIEW} redirectTo="/chat">
                                     <IntegrationPage />
                                 </PermissionRoute>
-                            </Suspense>
+                            </PageBoundary>
                         }
                     />
 
                     <Route
                         path="/subscription"
                         element={
-                            <Suspense fallback={<PageLoader />}>
-                                <PermissionRoute permission={PERMISSIONS.BILLING_VIEW}>
+                            <PageBoundary>
+                                <PermissionRoute permission={PERMISSIONS.BILLING_VIEW} redirectTo="/chat">
                                     <SubscriptionPage />
                                 </PermissionRoute>
-                            </Suspense>
+                            </PageBoundary>
                         }
                     />
-
-
 
                     <Route
                         path="/chat"
                         element={
-                            <Suspense fallback={<PageLoader />}>
+                            <PageBoundary>
                                 <ChatPage />
-                            </Suspense>
+                            </PageBoundary>
                         }
                     />
 
                     <Route
                         path="/chat/:id"
                         element={
-                            <Suspense fallback={<PageLoader />}>
+                            <PageBoundary>
                                 <ChatPage />
-                            </Suspense>
+                            </PageBoundary>
                         }
                     />
 
@@ -172,9 +183,9 @@ function AppRoutes(): JSX.Element {
             <Route
                 path="*"
                 element={
-                    <Suspense fallback={<PageLoader />}>
+                    <PageBoundary>
                         <NotFoundPage />
-                    </Suspense>
+                    </PageBoundary>
                 }
             />
         </Routes>
@@ -185,8 +196,10 @@ function App(): JSX.Element {
     return (
         <div className="App">
             <BrowserRouter>
-                <AuthInitializer />
-                <AppRoutes />
+                <UserProvider>
+                    <AuthInitializer />
+                    <AppRoutes />
+                </UserProvider>
             </BrowserRouter>
 
             <Toaster position="bottom-right" />

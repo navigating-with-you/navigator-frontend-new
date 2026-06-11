@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/utils/rbacConfig";
+import { useUserProfile } from "@/contexts/UserContext";
 
 export interface OrganizationData {
     id: string;
@@ -44,6 +45,7 @@ export default function OrganizationProfileDrawer({
     onOpenChange,
 }: OrganizationProfileDrawerProps) {
     const { getToken } = useKindeAuth();
+    const { userProfile } = useUserProfile();
     const { hasPermission } = usePermissions();
     const canEditOrg = hasPermission(PERMISSIONS.ORG_EDIT);
     const canViewBilling = hasPermission(PERMISSIONS.BILLING_VIEW);
@@ -95,18 +97,7 @@ export default function OrganizationProfileDrawer({
         const loadOrganization = async () => {
             try {
                 setIsLoading(true);
-                // Get the stored user profile which has organization_id
-                const stored = sessionStorage.getItem("navigator_user_profile");
-                let orgId: string | null = null;
-
-                if (stored) {
-                    try {
-                        const profile = JSON.parse(stored);
-                        orgId = profile.organization_id;
-                    } catch (e) {
-                        console.error("Failed to parse stored profile", e);
-                    }
-                }
+                const orgId: string | null = userProfile?.organization_id ?? null;
 
                 if (!orgId) {
                     toast.error("No organization ID found");

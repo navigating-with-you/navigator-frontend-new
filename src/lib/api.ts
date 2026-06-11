@@ -33,7 +33,7 @@ export async function changeEmployeeRole(userId: string, roleName: string, token
 }
 
 export async function toggleEmployeeStatus(userId: string, isActive: boolean, token: string) {
-    return apiClient.patch<any>(`/auth/employees/${userId}/status`, { is_active: isActive }, { token });
+    return apiClient.patch<any>(`/auth/${userId}/status`, { is_active: isActive }, { token });
 }
 
 // ── Invites ───────────────────────────────────────────────────────────────────
@@ -638,7 +638,7 @@ export async function markNotificationRead(notificationId: string, token: string
 }
 
 export async function markAllNotificationsRead(token: string): Promise<{ message: string }> {
-    return apiClient.patch<{ message: string }>("/notifications/read-all", undefined, { token });
+    return apiClient.patch<{ message: string }>("/notifications/read-all", {}, { token });
 }
 
 export async function deleteNotification(notificationId: string, token: string): Promise<{ message: string }> {

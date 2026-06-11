@@ -10,6 +10,7 @@ import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { listConversations, type Conversation } from "@/lib/api";
 import OnboardingPage from "@/pages/OnboardingPage";
 import { cn } from "@/lib/utils";
+import { useUserProfile } from "@/contexts/UserContext";
 
 /** Group conversations into time buckets */
 function groupByTime(conversations: Conversation[]) {
@@ -136,44 +137,29 @@ export default function AppLayout(): JSX.Element {
     const navigate = useNavigate();
     const { getToken, isAuthenticated, logout } = useKindeAuth();
 
-    const [profile, setProfile] = useState<any>(() => {
-        const stored = sessionStorage.getItem("navigator_user_profile");
-        return stored ? JSON.parse(stored) : null;
-    });
-    const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(!profile);
+    const { userProfile: profile, updateUserProfile } = useUserProfile();
+    const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(true);
     const [loadingTime, setLoadingTime] = useState<number>(0);
     const [hasError, setHasError] = useState<boolean>(false);
     const [retryCount, setRetryCount] = useState<number>(0);
 
     useEffect(() => {
-        const handleSync = () => {
-            const stored = sessionStorage.getItem("navigator_user_profile");
-            if (stored) {
-                setProfile(JSON.parse(stored));
-                setIsLoadingProfile(false);
-                setHasError(false);
-                setRetryCount(0);
-            }
-        };
+        if (profile) {
+            setIsLoadingProfile(false);
+            setHasError(false);
+            setRetryCount(0);
+        }
+    }, [profile]);
+
+    useEffect(() => {
         const handleSyncFailed = () => {
             setIsLoadingProfile(false);
             setHasError(true);
             setRetryCount((prev) => prev + 1);
         };
-        
-        window.addEventListener("navigator_user_synced", handleSync);
         window.addEventListener("navigator_user_sync_failed", handleSyncFailed);
-        
-        // If we already have a profile, turn off loading
-        if (profile) {
-            setIsLoadingProfile(false);
-        }
-
-        return () => {
-            window.removeEventListener("navigator_user_synced", handleSync);
-            window.removeEventListener("navigator_user_sync_failed", handleSyncFailed);
-        };
-    }, [profile]);
+        return () => window.removeEventListener("navigator_user_sync_failed", handleSyncFailed);
+    }, []);
 
     // Timer logic to track loading duration and trip the error after 15s timeout
     useEffect(() => {
@@ -353,9 +339,7 @@ export default function AppLayout(): JSX.Element {
         return (
             <OnboardingPage 
                 onComplete={(newOrgId) => {
-                    const updated = { ...profile, organization_id: newOrgId };
-                    setProfile(updated);
-                    sessionStorage.setItem("navigator_user_profile", JSON.stringify(updated));
+                    updateUserProfile({ organization_id: newOrgId });
                     window.dispatchEvent(new Event("navigator_conversation_created"));
                     navigate("/dashboard", { replace: true });
                 }} 

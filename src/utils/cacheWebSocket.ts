@@ -36,7 +36,7 @@ class CacheWebSocketManager {
 
             // Avoid stacking connections
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                console.log("[WebSocket] Already connected, skipping new connection");
+                if (import.meta.env.DEV) console.log("[WebSocket] Already connected, skipping new connection");
                 resolve();
                 return;
             }
@@ -44,7 +44,7 @@ class CacheWebSocketManager {
             try {
                 const wsBase = this.url.replace("http://", "ws://").replace("https://", "wss://");
                 const wsUrl = `${wsBase}/cache/ws/invalidation?token=${this.token}`;
-                console.log("[WebSocket] Attempting to connect to:", wsUrl);
+                if (import.meta.env.DEV) console.log("[WebSocket] Attempting to connect to:", wsUrl);
                 this.ws = new WebSocket(wsUrl);
 
                 // Track whether the initial handshake succeeded
@@ -63,7 +63,7 @@ class CacheWebSocketManager {
 
                 this.ws.onopen = () => {
                     clearTimeout(timeout);
-                    console.log("[WebSocket] Connected successfully");
+                    if (import.meta.env.DEV) console.log("[WebSocket] Connected successfully");
                     this.reconnectAttempts = 0;
                     settled = true;
                     this.emit("ws:connected", {});
@@ -86,7 +86,7 @@ class CacheWebSocketManager {
 
                 this.ws.onclose = () => {
                     clearTimeout(timeout);
-                    console.log("[WebSocket] Disconnected");
+                    if (import.meta.env.DEV) console.log("[WebSocket] Disconnected");
                     this.emit("ws:disconnected", {});
                     if (settled) {
                         // Was connected, then dropped — attempt reconnect
@@ -109,7 +109,7 @@ class CacheWebSocketManager {
             }
 
             const event: CacheInvalidationEvent = JSON.parse(data);
-            console.log("[Cache Invalidation]", event);
+            if (import.meta.env.DEV) console.log("[Cache Invalidation]", event);
 
             // Invalidate cache based on event type
             this.invalidateByEvent(event);
@@ -159,14 +159,14 @@ class CacheWebSocketManager {
                 break;
 
             default:
-                console.log("[Cache] Unknown event:", event.event);
+                if (import.meta.env.DEV) console.log("[Cache] Unknown event:", event.event);
         }
     }
 
     private attemptReconnect() {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
-            console.log(
+            if (import.meta.env.DEV) console.log(
                 `[WebSocket] Reconnecting... (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
             );
             setTimeout(() => this.connect().catch(console.error), this.reconnectDelay);

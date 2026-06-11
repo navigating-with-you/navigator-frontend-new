@@ -32,6 +32,7 @@ import OrganizationProfileDrawer from "@/components/layout/OrganizationProfileDr
 import React, { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { useUserProfile } from "@/contexts/UserContext";
 import { getUsage, type UsageData, getNotifications, markNotificationRead, markAllNotificationsRead, deleteNotification, clearAllNotifications, type NotificationItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
@@ -255,8 +256,8 @@ export default function TopBar({
     const { hasPermission } = usePermissions();
     const canViewOrgDetails = hasPermission(PERMISSIONS.ORG_VIEW);
     const canViewBilling = hasPermission(PERMISSIONS.BILLING_VIEW);
+    const { userProfile: profile } = useUserProfile();
     const [usage, setUsage] = useState<UsageData | null>(null);
-    const [profile, setProfile] = useState<any>(null);
     const [changePasswordOpen, setChangePasswordOpen] = useState(false);
     const [organizationProfileOpen, setOrganizationProfileOpen] = useState(false);
     const navigate = useNavigate();
@@ -279,27 +280,6 @@ export default function TopBar({
     }, []);
 
 
-    useEffect(() => {
-        const loadProfile = () => {
-            const stored = sessionStorage.getItem("navigator_user_profile");
-            if (stored) {
-                try {
-                    setProfile(JSON.parse(stored));
-                } catch (e) {
-                    console.error("Failed to parse stored profile", e);
-                }
-            }
-        };
-        loadProfile();
-
-        // Listen for profile changes from ProfilePage or AuthInitializer sync
-        window.addEventListener("storage", loadProfile);
-        window.addEventListener("navigator_user_synced", loadProfile);
-        return () => {
-            window.removeEventListener("storage", loadProfile);
-            window.removeEventListener("navigator_user_synced", loadProfile);
-        };
-    }, [user]);
 
     // Fetch live usage stats whenever the dropdown user changes
     useEffect(() => {
@@ -343,7 +323,7 @@ export default function TopBar({
 
         const handleNotificationCreated = (event: any) => {
             if (profile?.id && event.resource_id === profile.id) {
-                console.log("[WebSocket] Received real-time notification push, fetching...");
+                if (import.meta.env.DEV) console.log("[WebSocket] Received real-time notification push, fetching...");
                 fetchNotifications();
             }
         };
