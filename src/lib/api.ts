@@ -70,9 +70,17 @@ export async function verifyInviteToken(token: string) {
     }>(`/invite/verify?token=${token}`, {});
 }
 
+export async function checkInviteUser(token: string) {
+    return apiClient.get<{
+        requires_password: boolean;
+        existing_kinde_user: boolean;
+        email: string;
+    }>(`/invite/check-user?token=${token}`, {});
+}
+
 export async function acceptInvite(payload: {
     token: string;
-    password: string;
+    password?: string;
 }) {
     return apiClient.post<{
         message: string;

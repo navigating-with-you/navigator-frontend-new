@@ -620,9 +620,21 @@ export default function EmployeeTable({
                                 )}
 
                                 {visibleColumns.includes("category") && (
-                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate px-3">
+                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 px-3">
                                         <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">Categories:</span>
-                                        <span className="truncate">{emp.category}</span>
+                                        <div className="flex flex-col gap-0.5 min-w-0">
+                                            {emp.groups && emp.groups.length > 0
+                                                ? emp.groups.map((g) => (
+                                                    <div key={g.id} className="truncate text-xs">
+                                                        <span className="font-medium">{g.name}</span>
+                                                        {g.manager && (
+                                                            <span className="text-zinc-400 dark:text-zinc-500"> · {g.manager}</span>
+                                                        )}
+                                                    </div>
+                                                ))
+                                                : <span className="truncate">{emp.category}</span>
+                                            }
+                                        </div>
                                     </div>
                                 )}
 

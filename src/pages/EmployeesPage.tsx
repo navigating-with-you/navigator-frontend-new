@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Plus, RefreshCw, Search, X, Trash2, Mail, FolderPlus } from "lucide-react";
+import { Plus, RefreshCw, Search, X, Trash2, Mail, FolderPlus, AlertTriangle, ShieldAlert } from "lucide-react";
 import { PageActionButton } from "@/components/ui/page-action-button";
 import { PermissionGate } from "@/components/PermissionGate";
 import { PERMISSIONS } from "@/utils/rbacConfig";
@@ -96,11 +96,24 @@ export default function EmployeesPage() {
         return selectedEmployees.length > 0 && selectedEmployees.every((emp) => emp.status === "pending" || emp.isActive === false);
     }, [selectedEmployees]);
 
+    const superAdminCount = useMemo(() => {
+        return selectedEmployees.filter((emp) => emp.role?.toLowerCase().replace(/\s+/g, "_") === "super_admin").length;
+    }, [selectedEmployees]);
+
+    const deletableCount = useMemo(() => {
+        return selectedEmployees.length - superAdminCount;
+    }, [selectedEmployees, superAdminCount]);
+
     const handleBatchDelete = async () => {
         setIsBatchProcessing(true);
         try {
+            // Super admins are always skipped — the backend rejects those requests.
+            const toProcess = selectedEmployees.filter(
+                (emp) => emp.role?.toLowerCase().replace(/\s+/g, "_") !== "super_admin"
+            );
+
             const results = await Promise.allSettled(
-                selectedEmployees.map(async (emp) => {
+                toProcess.map(async (emp) => {
                     if (emp.isActive !== false) {
                         await handleDeleteEmployee(emp.id);
                     } else {
@@ -209,12 +222,22 @@ export default function EmployeesPage() {
             const groupsList = Array.isArray(groupsData) ? groupsData : (groupsData?.items || groupsData?.groups || []);
             setTeams(groupsList.map((g: any) => ({ id: g.id, name: g.name })));
 
-            const roleNames = rolesList.map((r: any) => {
-                return r.name === "super_admin"
-                    ? "Super Admin"
-                    : r.name.charAt(0).toUpperCase() + r.name.slice(1);
-            });
-            setRoleOptions(roleNames);
+            // Role options: prefer the RBAC list; fall back to roles visible in the
+            // current employee list so members (who can't call listRoles) still get options.
+            const roleNamesFromApi = rolesList.map((r: any) =>
+                r.name === "super_admin" ? "Super Admin" : r.name.charAt(0).toUpperCase() + r.name.slice(1)
+            );
+            const roleNamesFromData = Array.from(
+                new Set(
+                    employeeList
+                        .map((emp: any) => {
+                            const n = emp.role?.name ?? emp.role ?? "";
+                            return n === "super_admin" ? "Super Admin" : n.charAt(0).toUpperCase() + n.slice(1);
+                        })
+                        .filter(Boolean)
+                )
+            );
+            setRoleOptions(roleNamesFromApi.length > 0 ? roleNamesFromApi : roleNamesFromData as string[]);
 
             const mappedEmployees: Employee[] = employeeList.map((emp: any) => {
                 const firstName = emp.first_name || emp.given_name || "";
@@ -240,12 +263,17 @@ export default function EmployeesPage() {
                 // Ensure email is always a string, not "-"
                 const email = emp.email && typeof emp.email === "string" && emp.email.trim() ? emp.email.trim() : "";
 
+                const empGroups = Array.isArray(emp.groups)
+                    ? emp.groups.map((g: any) => ({ id: g.id, name: g.name, manager: g.manager ?? null }))
+                    : [];
+
                 return {
                     id: emp.id || crypto.randomUUID(),
                     inviteId: emp.invite_id || emp.id,
                     name: fullName,
                     role: roleName,
                     category: emp.category || "-",
+                    groups: empGroups,
                     avatar: emp.avatar_url || emp.avatar || "",
                     status: "accepted",
                     kbFiles: emp.kb_files !== undefined && emp.kb_files !== null ? emp.kb_files : "-",
@@ -293,6 +321,7 @@ export default function EmployeesPage() {
                         name: fullName,
                         role: roleName,
                         category: "-",
+                        groups: [],
                         avatar: "",
                         status: "pending",
                         kbFiles: "-",
@@ -321,7 +350,23 @@ export default function EmployeesPage() {
             const filteredEmployees = [...mappedEmployees, ...uniqueInvites];
 
             setCurrentUserEmployee(currentUser);
-            // creators removed — no longer building creator filter list
+
+            // If listGroups() returned nothing (e.g. member-level users lack permission),
+            // derive category options from the groups embedded in each employee row.
+            if (groupsList.length === 0) {
+                const derivedGroups: { id: string; name: string }[] = [];
+                const seen = new Set<string>();
+                for (const emp of mappedEmployees) {
+                    for (const g of emp.groups) {
+                        if (!seen.has(g.id)) {
+                            seen.add(g.id);
+                            derivedGroups.push({ id: g.id, name: g.name });
+                        }
+                    }
+                }
+                if (derivedGroups.length > 0) setTeams(derivedGroups);
+            }
+
             setEmployees(filteredEmployees);
         } catch (error: any) {
             console.error("Fetch employees error:", error);
@@ -399,7 +444,13 @@ export default function EmployeesPage() {
             // Filters (check first as they're faster)
             if (status && (emp.status || "").trim().toLowerCase() !== status.trim().toLowerCase()) return false;
             if (role && (emp.role || "").trim().toLowerCase() !== role.trim().toLowerCase()) return false;
-            if (category && (emp.category || "").trim().toLowerCase() !== category.trim().toLowerCase()) return false;
+            // Category: an employee may belong to multiple groups (comma-separated);
+            // check if the selected category appears in the list rather than exact-matching the whole string.
+            if (category) {
+                const lowerCat = category.trim().toLowerCase();
+                const empCats = (emp.category || "").split(",").map((c: string) => c.trim().toLowerCase());
+                if (!empCats.includes(lowerCat)) return false;
+            }
 
             // Search - includes name, email, id, role, category, createdBy, and employeeCode
             if (query) {
@@ -546,11 +597,11 @@ export default function EmployeesPage() {
                                             setSelected(new Set());
                                             setSelectedGroupBatch([]);
                                             setBatchTeamPickerOpen(false);
-                                            
+
                                             // Clear the groups/categories cache so team membership updates are fetched
                                             const { cacheManager } = await import("@/utils/cacheManager");
                                             cacheManager.invalidatePattern("/groups/");
-                                            
+
                                             // Refresh employee list to reflect team membership changes
                                             await fetchEmployees(false);
                                         } catch (err: any) {
@@ -847,26 +898,135 @@ export default function EmployeesPage() {
 
                 {/* Batch Delete Confirmation Dialog */}
                 <Dialog open={confirmBatchDelete} onOpenChange={(open) => !open && setConfirmBatchDelete(false)}>
-                    <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md border border-zinc-150 dark:border-zinc-800 shadow-xl p-6">
-                        <DialogHeader>
-                            <DialogTitle className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">Delete Selected Employees</DialogTitle>
-                            <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-2">
-                                Are you sure you want to delete the {selected.size} selected employees? This action cannot be undone and will permanently remove their access or revoke their invites.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter className="mt-6 gap-2">
-                            <Button variant="outline" onClick={() => setConfirmBatchDelete(false)} disabled={isBatchProcessing} className="rounded-lg text-zinc-700 dark:text-zinc-300">
+                    <DialogContent className="bg-white dark:bg-zinc-900 rounded-2xl max-w-[420px] border border-zinc-200 dark:border-zinc-800 shadow-2xl p-0 overflow-hidden gap-0">
+                        {/* Header */}
+                        <div className="px-6 pt-6 pb-5 border-b border-zinc-100 dark:border-zinc-800">
+                            <div className="flex items-start gap-4">
+                                <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-red-100 dark:bg-red-950/60">
+                                    <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <DialogTitle className="text-base font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">
+                                        Delete {selected.size} {selected.size === 1 ? "employee" : "employees"}?
+                                    </DialogTitle>
+                                    <DialogDescription className="mt-1 text-sm text-zinc-500 dark:text-zinc-400 leading-snug">
+                                        {deletableCount > 0
+                                            ? "The following will be permanently removed."
+                                            : "No accounts can be deleted from your selection."}
+                                    </DialogDescription>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="px-6 py-4 space-y-3">
+                            {/* Role breakdown — deletable users */}
+                            {deletableCount > 0 && (() => {
+                                const deletable = selectedEmployees.filter(
+                                    (emp) => emp.role?.toLowerCase().replace(/\s+/g, "_") !== "super_admin"
+                                );
+                                const roleCounts: Record<string, number> = {};
+                                deletable.forEach((emp) => {
+                                    const r = emp.role || "Member";
+                                    roleCounts[r] = (roleCounts[r] || 0) + 1;
+                                });
+                                const roleEntries = Object.entries(roleCounts).sort((a, b) => b[1] - a[1]);
+
+                                const roleDot: Record<string, string> = {
+                                    "Super Admin": "bg-red-500",
+                                    "Admin":       "bg-blue-500",
+                                    "Editor":      "bg-violet-500",
+                                    "Member":      "bg-zinc-400",
+                                };
+
+                                return (
+                                    <div className="space-y-2">
+                                        {/* Summary line */}
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                                                {deletableCount === 1 ? "1 employee" : `${deletableCount} employees`} will be removed
+                                            </p>
+                                        </div>
+
+                                        {/* Role rows */}
+                                        <div className="rounded-xl border border-zinc-150 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800 overflow-hidden">
+                                            {roleEntries.map(([role, count]) => (
+                                                <div key={role} className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-zinc-900/60">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${roleDot[role] ?? "bg-zinc-400"}`} />
+                                                        <span className="text-sm text-zinc-700 dark:text-zinc-200">{role}</span>
+                                                    </div>
+                                                    <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 tabular-nums">
+                                                        {count}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Warning note */}
+                                        <p className="text-xs text-zinc-400 dark:text-zinc-500 flex items-center gap-1.5">
+                                            <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                                            This action is permanent and cannot be undone.
+                                        </p>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Super Admin — cannot delete */}
+                            {superAdminCount > 0 && (
+                                <div className="flex items-start gap-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 px-4 py-3">
+                                    <ShieldAlert className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+                                            {superAdminCount === 1
+                                                ? "1 Super Admin selected — will be ignored"
+                                                : `${superAdminCount} Super Admins selected — will be ignored`}
+                                        </p>
+                                        <p className="text-xs text-amber-700/80 dark:text-amber-300/70 mt-0.5">
+                                            Super Admin accounts cannot be deleted. They will be skipped automatically.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 py-4 bg-zinc-50 dark:bg-zinc-800/40 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-end gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setConfirmBatchDelete(false)}
+                                disabled={isBatchProcessing}
+                                className="h-9 px-4 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                            >
                                 Cancel
                             </Button>
-                            <Button
-                                variant="destructive"
-                                className="bg-red-650 hover:bg-red-700 text-white rounded-lg"
-                                disabled={isBatchProcessing}
-                                onClick={handleBatchDelete}
-                            >
-                                {isBatchProcessing ? "Deleting..." : "Confirm Delete"}
-                            </Button>
-                        </DialogFooter>
+                            {deletableCount > 0 ? (
+                                <Button
+                                    onClick={handleBatchDelete}
+                                    disabled={isBatchProcessing}
+                                    className="h-9 px-4 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 text-white shadow-sm disabled:opacity-60 flex items-center gap-2"
+                                >
+                                    {isBatchProcessing ? (
+                                        <>
+                                            <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                            Deleting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                            Delete {deletableCount} {deletableCount === 1 ? "employee" : "employees"}
+                                        </>
+                                    )}
+                                </Button>
+                            ) : (
+                                <Button
+                                    onClick={() => setConfirmBatchDelete(false)}
+                                    className="h-9 px-4 rounded-lg text-sm font-medium bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-white"
+                                >
+                                    Got it
+                                </Button>
+                            )}
+                        </div>
                     </DialogContent>
                 </Dialog>
 

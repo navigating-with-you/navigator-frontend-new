@@ -9,7 +9,6 @@ import {
     FileText,
     ChevronLeft,
     ChevronRight,
-    ChevronDown,
     Loader2,
     FolderClosed,
     Pencil,
@@ -21,7 +20,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { type Category, type CategoryEmployee, type CategoryFile } from "@/types/category";
 import { cn } from "@/lib/utils";
 import AddEmployeesDialog from "./AddEmployeesDialog";
@@ -58,11 +56,8 @@ export default function CategoryDrawer({
     // Form fields
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [managerId, setManagerId] = useState("");
     const [selectedEmployees, setSelectedEmployees] = useState<CategoryEmployee[]>([]);
     const [selectedFiles, setSelectedFiles] = useState<CategoryFile[]>([]);
-    const [managerSearch, setManagerSearch] = useState("");
-    const [managerOpen, setManagerOpen] = useState(false);
 
     // UI state
     const [activeTab, setActiveTab] = useState<"files" | "employees">("employees");
@@ -73,7 +68,7 @@ export default function CategoryDrawer({
     const [empPage, setEmpPage] = useState(1);
     const [filePage, setFilePage] = useState(1);
     const [rowsPerPage] = useState(50);
-    const [touched, setTouched] = useState<{ name?: boolean; managerId?: boolean; description?: boolean }>({});
+    const [touched, setTouched] = useState<{ name?: boolean; description?: boolean }>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Reset drawer state on open/close or category changes
@@ -95,7 +90,6 @@ export default function CategoryDrawer({
             if (category && (mode === "edit" || mode === "view")) {
                 setName(category.name);
                 setDescription(category.description || "");
-                setManagerId(category.managerId || "");
 
                 // Merge existing members and all super admins, avoiding duplicates
                 const existing = category.employees || [];
@@ -110,7 +104,6 @@ export default function CategoryDrawer({
             } else {
                 setName("");
                 setDescription("");
-                setManagerId("");
                 setSelectedEmployees(superAdmins);
                 setSelectedFiles([]);
             }
@@ -118,31 +111,15 @@ export default function CategoryDrawer({
             setActiveTab(isMember ? "files" : "employees");
             setEmployeeSearch("");
             setFileSearch("");
-            setManagerSearch("");
-            setManagerOpen(false);
             setEmpPage(1);
             setFilePage(1);
             setIsSubmitting(false);
         }
     }, [open, category, mode, isMember, allEmployees]);
 
-    const handleBlur = (field: "name" | "managerId") => {
+    const handleBlur = (field: "name") => {
         setTouched((prev) => ({ ...prev, [field]: true }));
     };
-
-    // Filter available managers (all employees list)
-    const managerOptions = useMemo(() => {
-        return allEmployees
-            .filter((emp) => {
-                if (!emp.id || !emp.name) return false;
-                const r = (emp.role || "").toLowerCase().replace("_", "");
-                return r === "admin" || r === "superadmin";
-            })
-            .map((emp) => ({
-                id: emp.id,
-                name: emp.name,
-            }));
-    }, [allEmployees]);
 
     const unselectedEmployees = useMemo(() => {
         return allEmployees.filter(
@@ -153,7 +130,7 @@ export default function CategoryDrawer({
     const availableFilesPool = allFiles;
 
     // Validation
-    const validation = teamSchema.safeParse({ name, description, managerId });
+    const validation = teamSchema.safeParse({ name, description });
     const canSave = validation.success && !isReadOnly;
     const fieldErrors = !validation.success ? validation.error.flatten().fieldErrors : {};
 
@@ -291,7 +268,6 @@ export default function CategoryDrawer({
         if (category) {
             setName(category.name);
             setDescription(category.description || "");
-            setManagerId(category.managerId || "");
 
             const superAdmins = allEmployees
                 .filter((emp) => {
@@ -323,14 +299,10 @@ export default function CategoryDrawer({
 
         setIsSubmitting(true);
         try {
-            const selectedManager = managerOptions.find((m) => m.id === managerId);
-
             const newCategory: Category = {
                 id: category?.id || `CAT-${Date.now()}`,
                 name: name.trim(),
                 description: description.trim(),
-                managerId,
-                managerName: selectedManager ? selectedManager.name : "Unassigned",
                 kbCount: selectedFiles.length,
                 employeeCount: selectedEmployees.length,
                 employees: selectedEmployees,
@@ -458,71 +430,6 @@ export default function CategoryDrawer({
                             )}
                         </div>
 
-                        {/* Manager */}
-                        {!isMember && (
-                            <div className="space-y-1.5 flex flex-col">
-                                <Label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                                    Manager <span className="text-red-500 ml-0.5">*</span>
-                                </Label>
-                                <Popover open={managerOpen} onOpenChange={setManagerOpen}>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            role="combobox"
-                                            aria-expanded={managerOpen}
-                                            disabled={isReadOnly}
-                                            className={cn("h-11 justify-between w-full rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-normal hover:bg-zinc-50 dark:hover:bg-zinc-700",
-                                                !managerId && "text-zinc-400"
-                                            )}
-                                        >
-                                            {managerId
-                                                ? managerOptions.find((m) => m.id === managerId)?.name
-                                                : "Select manager..."}
-                                            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 shadow-md">
-                                        <div className="flex flex-col">
-                                            <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-700">
-                                                <Input
-                                                    value={managerSearch}
-                                                    onChange={(e) => setManagerSearch(e.target.value)}
-                                                    placeholder="Search manager..."
-                                                    className="h-8 border-none focus-visible:ring-0 px-0 rounded-none shadow-none text-sm bg-transparent placeholder:text-zinc-400 text-zinc-900 dark:text-zinc-100"
-                                                />
-                                            </div>
-                                            <div className="max-h-56 overflow-y-auto py-1">
-                                                {managerOptions.filter(m => (m.name ?? "").toLowerCase().includes(managerSearch.toLowerCase())).map((emp) => (
-                                                    <div
-                                                        key={emp.id}
-                                                        className="px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center justify-between"
-                                                        onClick={() => {
-                                                            setManagerId(emp.id);
-                                                            setManagerOpen(false);
-                                                            setManagerSearch("");
-                                                            setTouched((p) => ({ ...p, managerId: true }));
-                                                        }}
-                                                    >
-                                                        {emp.name}
-                                                    </div>
-                                                ))}
-                                                {managerOptions.filter(m => (m.name ?? "").toLowerCase().includes(managerSearch.toLowerCase())).length === 0 && (
-                                                    <div className="px-3 py-4 text-center text-sm text-zinc-500">
-                                                        No results found.
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                                {touched.managerId && fieldErrors.managerId && (
-                                    <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
-                                        <AlertCircle className="h-3.5 w-3.5" />
-                                        <span>{fieldErrors.managerId[0]}</span>
-                                    </div>
-                                )}
-                            </div>
-                        )}
                     </div>
 
                     {/* RIGHT PANEL: Files and Employees Tabs with Lists */}

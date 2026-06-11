@@ -525,7 +525,7 @@ export default function DashboardPage(): JSX.Element {
     };
 
     return (
-        <div className="p-3 sm:p-6 md:p-8 pb-8 flex flex-col w-full bg-transparent select-none animate-fade-in" data-testid="dashboard-page">
+        <div className="p-3 sm:p-6 md:p-8 pb-8 flex flex-col w-full bg-transparent animate-fade-in" data-testid="dashboard-page">
             {/* Header - Fixed */}
             <div className="shrink-0 flex flex-col gap-1">
                 <div className="flex flex-row items-center justify-between gap-4">
@@ -765,7 +765,7 @@ export default function DashboardPage(): JSX.Element {
 
             {/* View All Activities Popup Modal */}
             <Dialog open={isActivitiesModalOpen} onOpenChange={setIsActivitiesModalOpen}>
-                <DialogContent className="max-w-xl bg-[#FEFFFA] dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col max-h-[85vh] select-none">
+                <DialogContent className="max-w-xl bg-[#FEFFFA] dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col max-h-[85vh]">
                     <DialogHeader className="pb-3 border-b border-zinc-150 dark:border-zinc-800">
                         <DialogTitle className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
                             Recent Activities

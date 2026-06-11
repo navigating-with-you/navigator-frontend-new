@@ -28,14 +28,13 @@ import {
 
 const TEAM_COLUMNS = [
     { key: "name", label: "Category Name" },
-    { key: "managerName", label: "Manager" },
     { key: "kbCount", label: "No. Of Knowledge Base" },
     { key: "employeeCount", label: "No. Of Employees" },
     { key: "createdBy", label: "Created By" },
     { key: "createdDate", label: "Created Date" },
 ];
 
-const DEFAULT_TEAM_COLUMNS = ["name", "managerName", "kbCount", "employeeCount"];
+const DEFAULT_TEAM_COLUMNS = ["name", "kbCount", "employeeCount"];
 const MEMBER_TEAM_COLUMNS = ["name", "kbCount"];
 
 import CategoryDrawer from "@/components/category/CategoryDrawer";
@@ -129,7 +128,6 @@ export default function CategoryPage() {
     // Filters
     const [filters, setFilters] = useState({
         creator: "",
-        manager: "",
         kbFiles: "",
     });
 
@@ -147,7 +145,7 @@ export default function CategoryPage() {
             let employeesData: any = [];
             let rolesData: any = [];
             let groupsData: any = [];
-            
+
             if (!isMember) {
                 // Non-members can fetch all groups
                 const groupsResult = await listGroups(token).catch(() => null);
@@ -209,9 +207,7 @@ export default function CategoryPage() {
                         try {
                             const details = await getGroup(g.id, token);
                             const members = (details?.members || []) as any[];
-                            const rawManagerId = g.created_by || details?.created_by || "";
-                            const matchedEmp = mappedEmployees.find((emp: any) => emp.id === rawManagerId);
-                            const managerName = matchedEmp ? matchedEmp.name : (rawManagerId || "Administrator");
+                            const creatorName = details?.creator_name || g.creator_name || "Administrator";
 
                             const groupFiles = (details?.files || []) as any[];
                             const mappedFiles = groupFiles.map((f: any) => ({
@@ -227,8 +223,6 @@ export default function CategoryPage() {
                                 id: g.id,
                                 name: g.name,
                                 description: g.description || "",
-                                managerId: rawManagerId,
-                                managerName: managerName,
                                 kbCount: mappedFiles.length,
                                 employeeCount: members.length,
                                 employees: members.map((m: any) => {
@@ -247,12 +241,12 @@ export default function CategoryPage() {
                                         id: m.id,
                                         name: name,
                                         role: role,
-                        avatar: ""
+                                        avatar: ""
                                     };
                                 }),
                                 files: mappedFiles,
                                 type: "Department",
-                                createdBy: managerName,
+                                createdBy: creatorName,
                                 createdDate: new Date(g.created_at || Date.now()).toLocaleDateString("en-GB", {
                                     day: "numeric",
                                     month: "long",
@@ -266,8 +260,6 @@ export default function CategoryPage() {
                                 id: g.id,
                                 name: g.name,
                                 description: g.description || "",
-                                managerId: g.created_by || "",
-                                managerName: "Administrator",
                                 kbCount: 0,
                                 employeeCount: 0,
                                 employees: [],
@@ -384,18 +376,9 @@ export default function CategoryPage() {
     };
 
     // Filter Lists options
-    const authorizedUsers = useMemo(() => {
-        return employeesList
-            .filter((emp) => {
-                const r = (emp.role || "").toLowerCase().replace("_", "");
-                return r === "admin" || r === "superadmin";
-            })
-            .map((emp) => emp.name)
-            .sort();
-    }, [employeesList]);
-
-    const creatorOptions = authorizedUsers;
-    const managerOptions = authorizedUsers;
+    const creatorOptions = useMemo(() => {
+        return Array.from(new Set(categories.map(c => c.createdBy).filter(Boolean))).sort() as string[];
+    }, [categories]);
 
     const kbFilesOptions = useMemo(() => {
         return ["0-10 Files", "10-25 Files", "25+ Files"];
@@ -407,13 +390,12 @@ export default function CategoryPage() {
         return categories.filter((cat) => {
             // Text Search
             if (query) {
-                const searchString = `${cat.name} ${cat.managerName} ${cat.description} ${cat.id}`.toLowerCase();
+                const searchString = `${cat.name} ${cat.description} ${cat.id}`.toLowerCase();
                 if (!searchString.includes(query)) return false;
             }
 
             // Dropdown Filters
             if (filters.creator && cat.createdBy !== filters.creator) return false;
-            if (filters.manager && cat.managerName !== filters.manager) return false;
 
             if (filters.kbFiles) {
                 const count = cat.kbCount;
@@ -485,9 +467,6 @@ export default function CategoryPage() {
                         // 4. Fetch real updated group details from the database
                         const details = await getGroup(newCat.id, token);
                         const members = (details?.members || []) as any[];
-                        const rawManagerId = details?.created_by || newCat.managerId || "";
-                        const matchedEmp = employeesList.find((emp: any) => emp.id === rawManagerId);
-                        const managerName = matchedEmp ? matchedEmp.name : (rawManagerId || "Administrator");
 
                         const groupFiles = (details?.files || []) as any[];
                         const mappedFiles = groupFiles.map((f: any) => ({
@@ -503,8 +482,6 @@ export default function CategoryPage() {
                             ...c,
                             name: newCat.name,
                             description: newCat.description,
-                            managerId: rawManagerId,
-                            managerName: managerName,
                             employeeCount: members.length,
                             employees: members.map((m: any) => {
                                 const empDetails = employeesList.find((emp: any) => emp.id === m.id);
@@ -513,7 +490,7 @@ export default function CategoryPage() {
                                     id: m.id,
                                     name: name,
                                     role: empDetails?.role || m.role_name || "Member",
-                    avatar: ""
+                                    avatar: ""
                                 };
                             }),
                             kbCount: mappedFiles.length,
@@ -545,9 +522,7 @@ export default function CategoryPage() {
                         // 4. Fetch the real group state from the database (includes auto-added super admin)
                         const details = await getGroup(newGroupId, token);
                         const members = (details?.members || []) as any[];
-                        const rawManagerId = response.created_by || details?.created_by || "";
-                        const matchedEmp = employeesList.find((emp: any) => emp.id === rawManagerId);
-                        const managerName = matchedEmp ? matchedEmp.name : (rawManagerId || "Administrator");
+                        const creatorName = details?.creator_name || response.creator_name || "Administrator";
 
                         const groupFiles = (details?.files || []) as any[];
                         const mappedFiles = groupFiles.map((f: any) => ({
@@ -563,8 +538,6 @@ export default function CategoryPage() {
                             id: newGroupId,
                             name: response.name || newCat.name,
                             description: response.description || newCat.description,
-                            managerId: rawManagerId,
-                            managerName: managerName,
                             kbCount: mappedFiles.length,
                             employeeCount: members.length,
                             employees: members.map((m: any) => {
@@ -574,12 +547,12 @@ export default function CategoryPage() {
                                     id: m.id,
                                     name: name,
                                     role: empDetails?.role || m.role_name || "Member",
-                    avatar: ""
+                                    avatar: ""
                                 };
                             }),
                             files: mappedFiles,
                             type: "Department",
-                            createdBy: managerName,
+                            createdBy: creatorName,
                             createdDate: new Date(response.created_at || Date.now()).toLocaleDateString("en-GB", {
                                 day: "numeric",
                                 month: "long",
@@ -940,14 +913,6 @@ export default function CategoryPage() {
                         />
 
                         <FilterDropdown
-                            label="Manager"
-                            value={filters.manager}
-                            options={managerOptions}
-                            onChange={(v) => setFilters((f) => ({ ...f, manager: v }))}
-                            testId="filter-manager"
-                        />
-
-                        <FilterDropdown
                             label="Knowledge Base"
                             value={filters.kbFiles}
                             options={kbFilesOptions}
@@ -970,11 +935,10 @@ export default function CategoryPage() {
             <div className="mt-4 flex-1 flex flex-col min-h-0 animate-fade-in">
                 {isLoading ? (
                     <SkeletonTable
-                        gridCols="[48px_2.5fr_2fr_1.8fr_1.5fr_56px]"
+                        gridCols="[48px_2.5fr_1.8fr_1.5fr_56px]"
                         headers={[
                             <div className="h-4 w-4 rounded bg-zinc-200 dark:bg-zinc-700 animate-pulse" />,
                             "Category Name",
-                            "Manager",
                             "No. Of Knowledge Base",
                             "No. Of Employees",
                             "",
@@ -982,7 +946,6 @@ export default function CategoryPage() {
                         columns={[
                             { width: "w-4", render: () => <div className="h-4 w-4 rounded bg-zinc-100 dark:bg-zinc-800 animate-pulse" /> },
                             { width: "w-48", render: () => <div className="h-4 w-40 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" /> },
-                            { width: "w-32", render: () => <div className="h-4 w-28 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" /> },
                             { width: "w-16" },
                             { width: "w-16" },
                             { width: "w-8", render: () => <div className="h-8 w-8 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" /> },
@@ -1006,7 +969,7 @@ export default function CategoryPage() {
                             className="text-blue-600 font-semibold text-sm hover:underline p-0 h-auto"
                             onClick={() => {
                                 setSearch("");
-                                setFilters({ creator: "", manager: "", kbFiles: "" });
+                                setFilters({ creator: "", kbFiles: "" });
                             }}
                         >
                             Clear All Search & Filters

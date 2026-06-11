@@ -35,8 +35,8 @@ class CacheWebSocketManager {
             }
 
             // Avoid stacking connections
-            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                if (import.meta.env.DEV) console.log("[WebSocket] Already connected, skipping new connection");
+            if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+                if (import.meta.env.DEV) console.log("[WebSocket] Already connected or connecting, skipping new connection");
                 resolve();
                 return;
             }

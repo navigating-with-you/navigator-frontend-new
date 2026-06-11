@@ -18,8 +18,6 @@ export interface Category {
   id: string;
   name: string;
   description: string;
-  managerId: string;
-  managerName: string;
   kbCount: number;
   employeeCount: number;
   employees: CategoryEmployee[];

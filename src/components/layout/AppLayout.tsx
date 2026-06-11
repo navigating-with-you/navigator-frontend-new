@@ -350,7 +350,7 @@ export default function AppLayout(): JSX.Element {
     return (
         <div className="w-full bg-[#FEFFFA] dark:bg-zinc-950 flex justify-center">
             <div
-                className="flex h-dvh w-full overflow-hidden bg-[#FEFFFA] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 relative select-none"
+                className="flex h-dvh w-full overflow-hidden bg-[#FEFFFA] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 relative"
                 data-testid="app-layout"
             >
             {/* Sidebar mobile overlay backdrop */}

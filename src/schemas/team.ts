@@ -10,8 +10,6 @@ export const teamSchema = z.object({
         .max(200, "Description cannot exceed 200 characters")
         .optional()
         .or(z.literal("")),
-    managerId: z.string()
-        .min(1, "Please select a manager"),
 });
 
 export type TeamInput = z.infer<typeof teamSchema>;

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
 import { PageActionButton } from "@/components/ui/page-action-button";
@@ -176,6 +176,8 @@ export default function KnowledgeBasePage() {
 
     // Root folder ID returned by backend
     const [rootFolderId, setRootFolderId] = useState<string | null>(null);
+    // Ref mirrors rootFolderId so fetchContents can read it without being a dep
+    const rootFolderIdRef = useRef<string | null>(null);
     const [folderJobs, setFolderJobs] = useState<any[]>([]);
 
     // PERFORMANCE: Search with debouncing
@@ -243,10 +245,11 @@ export default function KnowledgeBasePage() {
             setChildFiles(files);
 
             if (!folderId && data.root_folder_id) {
+                rootFolderIdRef.current = data.root_folder_id;
                 setRootFolderId(data.root_folder_id);
             }
 
-            const targetFolderId = folderId || data.root_folder_id || rootFolderId;
+            const targetFolderId = folderId || data.root_folder_id || rootFolderIdRef.current;
             // Members don't have access to OCR job status — skip the fetch
             if (targetFolderId && !isMember) {
                 try {
@@ -262,7 +265,7 @@ export default function KnowledgeBasePage() {
         } finally {
             setIsLoading(false);
         }
-    }, [getToken, rootFolderId, isMember]);
+    }, [getToken, isMember]);
 
     const fileIds = useMemo(() => childFiles.map(f => f.id), [childFiles]);
 
@@ -365,12 +368,13 @@ export default function KnowledgeBasePage() {
                 }
             }
 
-            // Always call fetchContents to make sure we refresh the whole list for created/deleted/completed/updated events
+            // Refresh list for structural changes (create/delete/folder updates).
+            // ocr:job_completed is intentionally excluded — useRealTimeFileProcessing
+            // already calls fetchContents via onStatusChange for OCR completions.
             if (
                 event &&
                 (event.event === "file:created" ||
                     event.event === "file:deleted" ||
-                    event.event === "ocr:job_completed" ||
                     event.event === "folder:created" ||
                     event.event === "folder:updated" ||
                     event.event === "folder:deleted")
@@ -387,7 +391,6 @@ export default function KnowledgeBasePage() {
         cacheWebSocket.on("folder:deleted", handleWsChange);
         cacheWebSocket.on("ocr:job_created", handleWsChange);
         cacheWebSocket.on("ocr:job_updated", handleWsChange);
-        cacheWebSocket.on("ocr:job_completed", handleWsChange);
 
         return () => {
             cacheWebSocket.off("file:created", handleWsChange);
@@ -398,7 +401,6 @@ export default function KnowledgeBasePage() {
             cacheWebSocket.off("folder:deleted", handleWsChange);
             cacheWebSocket.off("ocr:job_created", handleWsChange);
             cacheWebSocket.off("ocr:job_updated", handleWsChange);
-            cacheWebSocket.off("ocr:job_completed", handleWsChange);
         };
     }, [currentFolderId, fetchContents, folderStack]);
 
@@ -432,25 +434,29 @@ export default function KnowledgeBasePage() {
     );
 
     const allCreators = useMemo(() => {
-        return employeesList
-            .filter((emp: any) => {
-                let rawRole = "member";
-                if (emp.role && typeof emp.role === "object") {
-                    rawRole = emp.role.name;
-                } else if (emp.role && typeof emp.role === "string") {
-                    rawRole = emp.role;
-                }
-                const r = (rawRole || "").toLowerCase().replace("_", "");
-                return r === "admin" || r === "superadmin" || r === "editor";
-            })
-            .map((emp: any) => {
-                const firstName = emp.first_name || emp.given_name || "";
-                const lastName = emp.last_name || emp.family_name || "";
-                return emp.display_name || `${firstName} ${lastName}`.trim() || emp.name || emp.email?.split("@")[0];
-            })
-            .filter(Boolean)
-            .sort();
-    }, [employeesList]);
+        if (employeesList.length > 0) {
+            return employeesList
+                .filter((emp: any) => {
+                    let rawRole = "member";
+                    if (emp.role && typeof emp.role === "object") {
+                        rawRole = emp.role.name;
+                    } else if (emp.role && typeof emp.role === "string") {
+                        rawRole = emp.role;
+                    }
+                    const r = (rawRole || "").toLowerCase().replace("_", "");
+                    return r === "admin" || r === "superadmin" || r === "editor";
+                })
+                .map((emp: any) => {
+                    const firstName = emp.first_name || emp.given_name || "";
+                    const lastName = emp.last_name || emp.family_name || "";
+                    return emp.display_name || `${firstName} ${lastName}`.trim() || emp.name || emp.email?.split("@")[0];
+                })
+                .filter(Boolean)
+                .sort();
+        }
+        // For members (employee list not loaded), derive from visible entries
+        return Array.from(new Set([...folderEntries, ...fileEntries].map(e => e.owner).filter(e => e && e !== "Unknown"))).sort() as string[];
+    }, [employeesList, folderEntries, fileEntries]);
 
     const OCR_STATUS_OPTIONS = ["Queued", "Processing", "Indexed", "Failed", "Cancelled"];
     const OCR_STATUS_FILTER_MAP: Record<string, string> = {
@@ -765,7 +771,7 @@ export default function KnowledgeBasePage() {
             {/* Header / Breadcrumbs */}
             <div className="flex-shrink-0 flex flex-col gap-1">
                 <div className="flex flex-row items-center justify-between gap-4">
-                    <div className="flex items-center flex-wrap gap-2 text-2xl tracking-tight select-none min-w-0 flex-1">
+                    <div className="flex items-center flex-wrap gap-2 text-2xl tracking-tight min-w-0 flex-1">
                         <div className="flex items-center gap-2.5">
                             <button
                                 onClick={() => folderStack.length > 0 && navigateTo(-1)}

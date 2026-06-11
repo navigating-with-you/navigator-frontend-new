@@ -21,7 +21,7 @@ export default function UnifiedEmptyState({
     return (
         <div
             className={cn(
-                "flex h-full w-full flex-col items-center justify-center rounded-[16px] bg-[#F6F7F2] dark:bg-zinc-900/40 px-6 py-12 text-center select-none",
+                "flex h-full w-full flex-col items-center justify-center rounded-[16px] bg-[#F6F7F2] dark:bg-zinc-900/40 px-6 py-12 text-center",
                 className
             )}
             data-testid={testId}

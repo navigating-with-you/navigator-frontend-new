@@ -202,7 +202,7 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
     ];
 
     return (
-        <div className="min-h-screen w-full flex flex-col bg-[#FEFFFA] dark:bg-zinc-950 transition-colors duration-300 relative select-none">
+        <div className="min-h-screen w-full flex flex-col bg-[#FEFFFA] dark:bg-zinc-950 transition-colors duration-300 relative">
             {/* Header / Top Bar */}
             <header className="w-full border-b border-zinc-100 dark:border-zinc-800/80 bg-[#FEFFFA] dark:bg-zinc-950 px-4 sm:px-6 md:px-12 py-4 shrink-0">
                 <div className="w-full max-w-7xl mx-auto flex items-center justify-between">

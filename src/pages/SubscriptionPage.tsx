@@ -157,7 +157,7 @@ export default function SubscriptionPage(): JSX.Element {
     };
 
     return (
-        <div className="flex flex-col min-h-full w-full max-w-7xl mx-auto p-3 sm:p-6 md:p-8 space-y-5 bg-transparent select-none shrink-0">
+        <div className="flex flex-col min-h-full w-full max-w-7xl mx-auto p-3 sm:p-6 md:p-8 space-y-5 bg-transparent shrink-0">
             {/* Header Title Row */}
             <div className="flex flex-row items-center w-full shrink-0">
                 <h1 className="text-[22px] font-medium text-zinc-900 dark:text-zinc-100">Subscription</h1>
@@ -246,7 +246,7 @@ export default function SubscriptionPage(): JSX.Element {
             {/* Plans Horizontal Scroll Layout (Scrollbar Hidden) */}
             <div
                 ref={scrollContainerRef}
-                className="flex-1 flex flex-col md:flex-row gap-6 pt-2 select-none max-w-full items-center md:items-start md:overflow-x-auto pb-6 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                className="flex-1 flex flex-col md:flex-row gap-6 pt-2 max-w-full items-center md:items-start md:overflow-x-auto pb-6 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             >
                 {plans.map((plan) => {
                     const price = "XX";

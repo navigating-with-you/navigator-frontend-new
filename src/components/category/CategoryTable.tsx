@@ -129,7 +129,6 @@ function RowMenu({
 
 const COLUMN_WIDTHS: Record<string, string> = {
     name: "2.5fr",
-    managerName: "2fr",
     kbCount: "1.8fr",
     employeeCount: "1.5fr",
     createdBy: "1.5fr",
@@ -141,7 +140,7 @@ export default function CategoryTable({
     onDelete,
     onView,
     onAddEmployees,
-    visibleColumns = ["name", "managerName", "kbCount", "employeeCount"],
+    visibleColumns = ["name", "kbCount", "employeeCount"],
     selected,
     setSelected,
 }: CategoryTableProps): JSX.Element {
@@ -260,11 +259,6 @@ export default function CategoryTable({
                                 Category Name <SortIcon columnKey="name" />
                             </div>
                         )}
-                        {visibleColumns.includes("managerName") && (
-                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80" onClick={() => handleSort("managerName")}>
-                                Manager <SortIcon columnKey="managerName" />
-                            </div>
-                        )}
                         {visibleColumns.includes("kbCount") && (
                             <div className="text-sm normal-case tracking-normal text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 whitespace-nowrap" onClick={() => handleSort("kbCount")}>
                                 No. Of Knowledge Base <SortIcon columnKey="kbCount" />
@@ -360,13 +354,6 @@ export default function CategoryTable({
                                                 </span>
                                             )}
                                         </div>
-                                    </div>
-                                )}
-
-                                {visibleColumns.includes("managerName") && (
-                                    <div className="flex justify-between w-full md:block md:w-auto md:min-w-0 text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                        <span className="md:hidden text-zinc-505 font-medium mr-2">Manager:</span>
-                                        {cat.managerName || "-"}
                                     </div>
                                 )}
 

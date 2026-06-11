@@ -4,9 +4,9 @@ import { Loader2, CheckCircle, AlertCircle, Eye, EyeOff, User } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { verifyInviteToken, acceptInvite } from "@/lib/api";
+import { verifyInviteToken, checkInviteUser, acceptInvite } from "@/lib/api";
 
-type Step = "verify" | "set-password" | "success";
+type Step = "verify" | "set-password" | "join" | "success";
 
 interface TokenData {
     email?: string;
@@ -34,7 +34,7 @@ export default function InviteAcceptancePage() {
     // User data for success screen
     const [userData, setUserData] = useState<any>(null);
 
-    // ── Step 1: Verify Token ──────────────────────────────────────────────
+    // ── Step 1: Verify Token then check if user exists in Kinde ──────────────
     useEffect(() => {
         if (!token) {
             setError("Invalid invitation link. Token is missing.");
@@ -47,15 +47,24 @@ export default function InviteAcceptancePage() {
 
             try {
                 const response = await verifyInviteToken(token);
-                if (response.valid) {
-                    setStep("set-password");
-                    setTokenData({
-                        email: response.email,
-                        first_name: response.first_name,
-                        last_name: response.last_name,
-                    });
-                } else {
+                if (!response.valid) {
                     setError(response.message || "Invalid invitation token");
+                    return;
+                }
+
+                const tokenInfo: TokenData = {
+                    email: response.email,
+                    first_name: response.first_name,
+                    last_name: response.last_name,
+                };
+                setTokenData(tokenInfo);
+
+                // Check if user already has a Kinde account with a password
+                const userCheck = await checkInviteUser(token);
+                if (userCheck.requires_password) {
+                    setStep("set-password");
+                } else {
+                    setStep("join");
                 }
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Failed to verify invitation");
@@ -67,12 +76,33 @@ export default function InviteAcceptancePage() {
         verifyToken();
     }, [token]);
 
-    // ── Step 2: Validate & Submit Password ────────────────────────────────
+    // ── Step 2a: Existing Kinde user — accept without password ───────────────
+    const handleJoinOrganization = async () => {
+        setError(null);
+        setLoading(true);
+
+        try {
+            const response = await acceptInvite({ token: token || "" });
+            setUserData({
+                email: response.email,
+                user_id: response.user_id,
+                organization_id: response.organization_id,
+            });
+            setStep("success");
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : "Failed to join organization";
+            setError(errorMsg);
+            toast.error(errorMsg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ── Step 2b: New user — validate & submit password ────────────────────────
     const handleSetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
 
-        // Validation
         if (!password || !confirmPassword) {
             setError("Please enter and confirm your password");
             return;
@@ -126,8 +156,6 @@ export default function InviteAcceptancePage() {
         }
     };
 
-
-
     // Helper to evaluate checklist item states
     const isMinLength = password.length >= 12;
     const hasUppercase = /[A-Z]/.test(password);
@@ -135,11 +163,11 @@ export default function InviteAcceptancePage() {
     const hasSpecial = /[!@#$%^&*]/.test(password);
     const passwordsMatch = password === confirmPassword && password.length > 0;
 
-    // ── Main Page Layout ──────────────────────────────────────────────────
+    // ── Main Page Layout ──────────────────────────────────────────────────────
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#FEFFFA] dark:bg-zinc-950">
             <main className="flex flex-1 items-center justify-center p-6">
-                {/* ── Step 1: Loading ── */}
+                {/* ── Verifying ── */}
                 {loading && step === "verify" && (
                     <div className="w-full max-w-md flex flex-col items-center gap-4 text-center">
                         <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -147,7 +175,7 @@ export default function InviteAcceptancePage() {
                     </div>
                 )}
 
-                {/* ── Step 2: Error ── */}
+                {/* ── Error on verify ── */}
                 {error && step === "verify" && (
                     <div className="w-full max-w-[400px] flex flex-col items-center gap-4 text-center">
                         <AlertCircle className="w-12 h-12 text-red-500" />
@@ -162,15 +190,13 @@ export default function InviteAcceptancePage() {
                     </div>
                 )}
 
-                {/* ── Step 3: Set Password (Redesigned Mockup) ── */}
-                {step === "set-password" && (
+                {/* ── Existing Kinde user: Join without password ── */}
+                {step === "join" && (
                     <div className="w-full max-w-[360px] space-y-6">
-                        {/* Centered Title Header */}
                         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight text-center">
-                            Set Password
+                            Accept Invitation
                         </h1>
 
-                        {/* Avatar + Email */}
                         <div className="flex items-center gap-3">
                             <div className="w-11 h-11 rounded-full bg-[#60646B1A] dark:bg-zinc-800/40 flex items-center justify-center shrink-0">
                                 <User className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
@@ -180,6 +206,49 @@ export default function InviteAcceptancePage() {
                             </span>
                         </div>
 
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                            You already have an account. Click below to join the organization using your existing credentials.
+                        </p>
+
+                        {error && (
+                            <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/60 rounded-lg flex gap-3">
+                                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+                            </div>
+                        )}
+
+                        <Button
+                            onClick={handleJoinOrganization}
+                            disabled={loading}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold h-11 rounded-lg shadow-sm transition-all cursor-pointer text-[14px]"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" />
+                                    Joining...
+                                </>
+                            ) : (
+                                "Join Organization"
+                            )}
+                        </Button>
+                    </div>
+                )}
+
+                {/* ── New user: Set Password ── */}
+                {step === "set-password" && (
+                    <div className="w-full max-w-[360px] space-y-6">
+                        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight text-center">
+                            Set Password
+                        </h1>
+
+                        <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-full bg-[#60646B1A] dark:bg-zinc-800/40 flex items-center justify-center shrink-0">
+                                <User className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+                            </div>
+                            <span className="text-[15px] font-medium text-zinc-800 dark:text-zinc-200">
+                                {tokenData?.email}
+                            </span>
+                        </div>
 
                         {error && (
                             <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/60 rounded-lg flex gap-3">
@@ -189,7 +258,6 @@ export default function InviteAcceptancePage() {
                         )}
 
                         <form onSubmit={handleSetPassword} className="space-y-6">
-                            {/* New Password input block */}
                             <div className="space-y-2">
                                 <label htmlFor="password" className="block text-[13px] font-medium text-zinc-650 dark:text-zinc-300">
                                     New Password
@@ -219,7 +287,6 @@ export default function InviteAcceptancePage() {
                                 </div>
                             </div>
 
-                            {/* Confirm Password input block */}
                             <div className="space-y-2">
                                 <label htmlFor="confirmPassword" className="block text-[13px] font-medium text-zinc-650 dark:text-zinc-300">
                                     Confirm Password
@@ -249,7 +316,6 @@ export default function InviteAcceptancePage() {
                                 </div>
                             </div>
 
-                            {/* Set Password button */}
                             <Button
                                 type="submit"
                                 disabled={loading}
@@ -265,40 +331,34 @@ export default function InviteAcceptancePage() {
                                 )}
                             </Button>
 
-                            {/* Password Requirements Checklist */}
                             <ul className="text-[13px] space-y-2.5 text-zinc-550 dark:text-zinc-450 pt-2">
                                 <li className="flex items-center gap-2.5">
                                     <CheckCircle
-                                        className={`w-5 h-5 shrink-0 transition-colors ${isMinLength ? "text-green-600 dark:text-green-500" : "text-zinc-300 dark:text-zinc-700"
-                                            }`}
+                                        className={`w-5 h-5 shrink-0 transition-colors ${isMinLength ? "text-green-600 dark:text-green-500" : "text-zinc-300 dark:text-zinc-700"}`}
                                     />
                                     <span>Minimum 12 characters</span>
                                 </li>
                                 <li className="flex items-center gap-2.5">
                                     <CheckCircle
-                                        className={`w-5 h-5 shrink-0 transition-colors ${hasUppercase ? "text-green-600 dark:text-green-500" : "text-zinc-300 dark:text-zinc-700"
-                                            }`}
+                                        className={`w-5 h-5 shrink-0 transition-colors ${hasUppercase ? "text-green-600 dark:text-green-500" : "text-zinc-300 dark:text-zinc-700"}`}
                                     />
                                     <span>At least one uppercase letter</span>
                                 </li>
                                 <li className="flex items-center gap-2.5">
                                     <CheckCircle
-                                        className={`w-5 h-5 shrink-0 transition-colors ${hasNumber ? "text-green-600 dark:text-green-500" : "text-zinc-300 dark:text-zinc-700"
-                                            }`}
+                                        className={`w-5 h-5 shrink-0 transition-colors ${hasNumber ? "text-green-600 dark:text-green-500" : "text-zinc-300 dark:text-zinc-700"}`}
                                     />
                                     <span>At least one number</span>
                                 </li>
                                 <li className="flex items-center gap-2.5">
                                     <CheckCircle
-                                        className={`w-5 h-5 shrink-0 transition-colors ${hasSpecial ? "text-green-600 dark:text-green-500" : "text-zinc-300 dark:text-zinc-700"
-                                            }`}
+                                        className={`w-5 h-5 shrink-0 transition-colors ${hasSpecial ? "text-green-600 dark:text-green-500" : "text-zinc-300 dark:text-zinc-700"}`}
                                     />
                                     <span>At least one special character (!@#$%^&*)</span>
                                 </li>
                                 <li className="flex items-center gap-2.5">
                                     <CheckCircle
-                                        className={`w-5 h-5 shrink-0 transition-colors ${passwordsMatch ? "text-green-600 dark:text-green-500" : "text-zinc-300 dark:text-zinc-700"
-                                            }`}
+                                        className={`w-5 h-5 shrink-0 transition-colors ${passwordsMatch ? "text-green-600 dark:text-green-500" : "text-zinc-300 dark:text-zinc-700"}`}
                                     />
                                     <span>Passwords match</span>
                                 </li>
@@ -307,7 +367,7 @@ export default function InviteAcceptancePage() {
                     </div>
                 )}
 
-                {/* ── Step 4: Success ── */}
+                {/* ── Success ── */}
                 {step === "success" && userData && (
                     <div className="w-full max-w-[400px] flex flex-col items-center text-center gap-6">
                         <div className="w-16 h-16 rounded-full bg-green-50 dark:bg-green-950/20 flex items-center justify-center text-green-600 dark:text-green-400">
@@ -315,11 +375,11 @@ export default function InviteAcceptancePage() {
                         </div>
 
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100 tracking-tight">
-                            Password Set Successfully!
+                            You're In!
                         </h1>
 
                         <p className="text-sm text-gray-500 dark:text-zinc-400 leading-relaxed">
-                            Your password has been set successfully. Please sign in using your new password.
+                            You have successfully joined the organization. Sign in to get started.
                         </p>
 
                         <Button

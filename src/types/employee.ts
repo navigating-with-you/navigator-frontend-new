@@ -1,6 +1,12 @@
 export type EmployeeStatus = "online" | "away" | "offline" | "pending" | "Accepted";
 export type EmployeeRole = "Super Admin" | "Admin" | "Editor" | "Member";
 
+export interface EmployeeGroup {
+    id: string;
+    name: string;
+    manager: string | null;
+}
+
 export interface Employee {
     id: string;
     name: string;
@@ -9,6 +15,7 @@ export interface Employee {
     status: EmployeeStatus;
     role: string;
     category: string;
+    groups: EmployeeGroup[];
     createdBy: string;
     createdDate: string;
     kbFiles: number | null;

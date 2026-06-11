@@ -9,25 +9,22 @@ export function WebSocketStatus() {
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
-        // Check if WebSocket is already connected
-        const isInitiallyConnected = cacheWebSocket.isConnected();
-        setIsConnected(isInitiallyConnected);
+        const sync = () => setIsConnected(cacheWebSocket.isConnected());
+        sync();
 
-        // Listen for connection events
-        const handleConnect = () => {
-            setIsConnected(true);
-        };
+        cacheWebSocket.on('ws:connected', sync);
+        cacheWebSocket.on('ws:disconnected', sync);
 
-        const handleDisconnect = () => {
-            setIsConnected(false);
-        };
-
-        cacheWebSocket.on('ws:connected', handleConnect);
-        cacheWebSocket.on('ws:disconnected', handleDisconnect);
+        // Poll briefly on mount to catch the race where ws:connected fires
+        // before this effect registers its listener (common on first login).
+        const pollInterval = setInterval(sync, 250);
+        const stopPolling = setTimeout(() => clearInterval(pollInterval), 6000);
 
         return () => {
-            cacheWebSocket.off('ws:connected', handleConnect);
-            cacheWebSocket.off('ws:disconnected', handleDisconnect);
+            clearInterval(pollInterval);
+            clearTimeout(stopPolling);
+            cacheWebSocket.off('ws:connected', sync);
+            cacheWebSocket.off('ws:disconnected', sync);
         };
     }, []);
 

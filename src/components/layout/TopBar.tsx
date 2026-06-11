@@ -265,17 +265,22 @@ export default function TopBar({
     const [isWsConnected, setIsWsConnected] = useState(false);
 
     useEffect(() => {
-        setIsWsConnected(cacheWebSocket.isConnected());
+        const syncWs = () => setIsWsConnected(cacheWebSocket.isConnected());
+        syncWs();
 
-        const handleConnect = () => setIsWsConnected(true);
-        const handleDisconnect = () => setIsWsConnected(false);
+        cacheWebSocket.on("ws:connected", syncWs);
+        cacheWebSocket.on("ws:disconnected", syncWs);
 
-        cacheWebSocket.on("ws:connected", handleConnect);
-        cacheWebSocket.on("ws:disconnected", handleDisconnect);
+        // Poll briefly to catch the race where ws:connected fires before this
+        // effect's listener is registered (happens on first login).
+        const pollInterval = setInterval(syncWs, 250);
+        const stopPolling = setTimeout(() => clearInterval(pollInterval), 6000);
 
         return () => {
-            cacheWebSocket.off("ws:connected", handleConnect);
-            cacheWebSocket.off("ws:disconnected", handleDisconnect);
+            clearInterval(pollInterval);
+            clearTimeout(stopPolling);
+            cacheWebSocket.off("ws:connected", syncWs);
+            cacheWebSocket.off("ws:disconnected", syncWs);
         };
     }, []);
 
