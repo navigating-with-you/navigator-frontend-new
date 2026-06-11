@@ -34,7 +34,6 @@ const EMPLOYEE_COLUMNS = [
     { key: "kbFiles", label: "No. Of KB Files" },
     { key: "simpleInteraction", label: "Simple Interaction" },
     { key: "complexInteraction", label: "Complex Interaction" },
-    { key: "id", label: "Employee ID" },
     { key: "email", label: "Email" },
     { key: "role", label: "Role" },
     { key: "category", label: "Categories" },

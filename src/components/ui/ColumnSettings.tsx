@@ -55,19 +55,6 @@ export default function ColumnSettings({
         }
     }, [open, visibleColumns, maxAllowed]);
 
-    const isAllSelected = tempVisible.size === columns.length;
-    const isIndeterminate = tempVisible.size > 0 && tempVisible.size < columns.length;
-
-    const handleSelectAll = (checked: boolean | "indeterminate") => {
-        if (columns.length > maxAllowed) return; // Disabled if columns exceed limit
-
-        if (checked === true) {
-            setTempVisible(new Set(columns.map((c) => c.key)));
-        } else {
-            setTempVisible(new Set());
-        }
-    };
-
     const handleToggleColumn = (key: string, checked: boolean | "indeterminate") => {
         setTempVisible((prev) => {
             const next = new Set(prev);
@@ -106,28 +93,12 @@ export default function ColumnSettings({
                 </Button>
             </PopoverTrigger>
             <PopoverContent align={align} className="w-60 p-0 bg-white dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 rounded-xl shadow-lg">
-                {/* Select All */}
-                <div
-                    className={`flex items-center justify-between px-4 py-3 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 ${columns.length > maxAllowed ? "cursor-not-allowed" : "cursor-pointer"}`}
-                    onClick={() => columns.length <= maxAllowed && handleSelectAll(!isAllSelected)}
-                >
-                    <div className="flex items-center gap-3">
-                        <Checkbox
-                            checked={isAllSelected ? true : isIndeterminate ? "indeterminate" : false}
-                            onCheckedChange={handleSelectAll}
-                            onClick={(e) => e.stopPropagation()}
-                            disabled={columns.length > maxAllowed}
-                        />
-                        <span className={`text-sm font-medium select-none ${columns.length > maxAllowed ? "text-zinc-400 dark:text-zinc-650" : "text-zinc-700 dark:text-zinc-350"}`}>
-                            Select All
-                        </span>
-                    </div>
-                    <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium select-none">
-                        Max {maxAllowed}
+                {/* Column Limit Info */}
+                <div className="px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800">
+                    <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 select-none">
+                        Max {maxAllowed} columns
                     </span>
                 </div>
-
-                <div className="border-b border-zinc-100 dark:border-zinc-800" />
 
                 {/* Columns List */}
                 <div className="max-h-64 overflow-y-auto py-1">

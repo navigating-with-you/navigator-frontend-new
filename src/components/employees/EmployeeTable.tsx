@@ -239,7 +239,6 @@ const COLUMN_WIDTHS: Record<string, string> = {
     kbFiles: "1fr",
     simpleInteraction: "1.2fr",
     complexInteraction: "1.2fr",
-    id: "1.2fr",
     email: "1.5fr",
     role: "1.2fr",
     category: "1.2fr",
@@ -436,12 +435,6 @@ export default function EmployeeTable({
                             </div>
                         )}
 
-                        {visibleColumns.includes("id") && (
-                            <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("id")}>
-                                Employee ID <SortIcon columnKey="id" />
-                            </div>
-                        )}
-
                         {visibleColumns.includes("email") && (
                             <div className="text-sm normal-case tracking-normal text-[#171717] dark:text-[#E7E7E0] font-semibold cursor-pointer hover:opacity-80 px-3" onClick={() => handleSort("email")}>
                                 Email <SortIcon columnKey="email" />
@@ -612,13 +605,6 @@ export default function EmployeeTable({
                                     </div>
                                 )}
 
-                                {visibleColumns.includes("id") && (
-                                    <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate px-3">
-                                        <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">Employee ID:</span>
-                                        <span className="truncate">{emp.id}</span>
-                                    </div>
-                                )}
-
                                 {visibleColumns.includes("email") && (
                                     <div className="flex justify-between w-full md:w-auto text-sm text-zinc-700 dark:text-zinc-300 truncate px-3">
                                         <span className="md:hidden text-zinc-500 font-medium min-w-fit pr-2">Email:</span>
@@ -654,7 +640,7 @@ export default function EmployeeTable({
                                     </div>
                                 )}
 
-                                <div className="hidden md:flex justify-end items-center gap-1.5 px-2" onClick={(e) => e.stopPropagation()}>
+                                <div className="hidden md:flex justify-end items-center gap-1.5 px-2 z-40 relative" onClick={(e) => e.stopPropagation()}>
                                     <RowMenu
                                         employee={emp}
                                         onDelete={(id) => setConfirmDeleteId(id)}

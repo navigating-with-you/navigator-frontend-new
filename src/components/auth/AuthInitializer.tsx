@@ -8,6 +8,7 @@ import { cacheWebSocket } from "@/utils/cacheWebSocket";
 export default function AuthInitializer() {
     const { isAuthenticated, getToken, user } = useKindeAuth();
     const syncStarted = useRef(false);
+    const wsRetryCount = useRef(0);
 
     useEffect(() => {
         const performSync = async () => {
@@ -20,11 +21,27 @@ export default function AuthInitializer() {
                         apiClient.setToken(token);
                         cacheWebSocket.setToken(token);
 
-                        try {
-                            await cacheWebSocket.connect();
-                            cacheWebSocket.startHeartbeat();
-                        } catch (wsError) {
-                            console.warn("[WebSocket] Cache invalidation WS unavailable — real-time updates disabled:", wsError);
+                        // Retry WebSocket connection up to 3 times
+                        let wsConnected = false;
+                        for (let i = 0; i < 3; i++) {
+                            try {
+                                await cacheWebSocket.connect();
+                                cacheWebSocket.startHeartbeat();
+                                wsConnected = true;
+                                wsRetryCount.current = 0;
+                                console.log("[WebSocket] Connected successfully on attempt", i + 1);
+                                break;
+                            } catch (wsError) {
+                                console.warn(`[WebSocket] Connection attempt ${i + 1} failed:`, wsError);
+                                if (i < 2) {
+                                    // Wait 1 second before retry
+                                    await new Promise(resolve => setTimeout(resolve, 1000));
+                                }
+                            }
+                        }
+                        
+                        if (!wsConnected) {
+                            console.warn("[WebSocket] Cache invalidation WS unavailable after 3 attempts — real-time updates disabled");
                         }
 
                         const userData = await syncUser(token);

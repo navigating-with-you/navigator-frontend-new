@@ -36,6 +36,7 @@ class CacheWebSocketManager {
 
             // Avoid stacking connections
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                console.log("[WebSocket] Already connected, skipping new connection");
                 resolve();
                 return;
             }
@@ -43,13 +44,26 @@ class CacheWebSocketManager {
             try {
                 const wsBase = this.url.replace("http://", "ws://").replace("https://", "wss://");
                 const wsUrl = `${wsBase}/cache/ws/invalidation?token=${this.token}`;
+                console.log("[WebSocket] Attempting to connect to:", wsUrl);
                 this.ws = new WebSocket(wsUrl);
 
                 // Track whether the initial handshake succeeded
                 let settled = false;
+                const timeout = setTimeout(() => {
+                    if (!settled) {
+                        console.error("[WebSocket] Connection timeout (30s)");
+                        settled = true;
+                        if (this.ws) {
+                            this.ws.close();
+                            this.ws = null;
+                        }
+                        reject(new Error("WebSocket connection timeout"));
+                    }
+                }, 30000);
 
                 this.ws.onopen = () => {
-                    console.log("[WebSocket] Connected");
+                    clearTimeout(timeout);
+                    console.log("[WebSocket] Connected successfully");
                     this.reconnectAttempts = 0;
                     settled = true;
                     this.emit("ws:connected", {});
@@ -61,6 +75,7 @@ class CacheWebSocketManager {
                 };
 
                 this.ws.onerror = (error) => {
+                    clearTimeout(timeout);
                     console.error("[WebSocket] Error:", error);
                     if (!settled) {
                         // Initial connection failed — reject and don't reconnect
@@ -70,6 +85,7 @@ class CacheWebSocketManager {
                 };
 
                 this.ws.onclose = () => {
+                    clearTimeout(timeout);
                     console.log("[WebSocket] Disconnected");
                     this.emit("ws:disconnected", {});
                     if (settled) {

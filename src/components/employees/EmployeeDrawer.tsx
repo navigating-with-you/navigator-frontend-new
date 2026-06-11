@@ -99,7 +99,8 @@ export default function EmployeeDetailsDrawer({
         
         setIsEditing(initialEditMode);
         
-        const names = (employee.name || "").split(" ");
+        // Parse employee name into first and last name
+        const names = (employee.name || "").trim().split(" ");
         setFirstName(names[0] || "");
         setLastName(names.slice(1).join(" ") || "");
         setEmail(employee.email || "");
@@ -119,7 +120,7 @@ export default function EmployeeDetailsDrawer({
             }
         };
         fetchRolesData();
-    }, [open, employee, initialEditMode]);
+    }, [open, employee, initialEditMode, getToken]);
 
     if (!employee) return null;
 
@@ -138,18 +139,12 @@ export default function EmployeeDetailsDrawer({
         { id: "member", name: "member" }
     ];
 
-    if ((isTargetSuperAdmin || isCurrentUserSuperAdmin) && !baseRoles.some(r => (r.name || "").toLowerCase() === "super_admin")) {
-        baseRoles = [
-            ...baseRoles,
-            { id: "super_admin", name: "super_admin", description: "Super Admin" }
-        ];
-    }
-
+    // Super Admin role is not changeable - never show it for role selection unless just for display
     const displayRoles = baseRoles.filter((r) => {
         const name = (r.name || "").toLowerCase();
+        // Completely hide Super Admin from the role dropdown
         if (name === "super_admin") {
-            if (isTargetSuperAdmin) return true;
-            return isCurrentUserSuperAdmin && (!superAdminExists || employee?.id === currentUserId);
+            return false;
         }
         return ["admin", "member", "editor"].includes(name);
     });
@@ -171,17 +166,19 @@ export default function EmployeeDetailsDrawer({
                 await changeEmployeeRole(employee.id, normalizedRole, token);
             }
 
-            // Update details
-            const hasNameChange = `${firstName} ${lastName}`.trim() !== employee.name;
+            // Update details if changed
+            const newFullName = `${firstName} ${lastName}`.trim();
+            const oldFullName = employee.name || "";
+            const hasNameChange = newFullName !== oldFullName;
             const hasEmployeeCodeChange = (employeeCode || null) !== (employee.employeeCode || null);
 
             if (hasNameChange || hasEmployeeCodeChange) {
                 await updateEmployeeDetails(
                     employee.id,
                     {
-                        first_name: hasNameChange ? firstName : undefined,
-                        last_name: hasNameChange ? lastName : undefined,
-                        employee_code: hasEmployeeCodeChange ? (employeeCode || null) : undefined,
+                        first_name: firstName,
+                        last_name: lastName,
+                        employee_code: employeeCode || null,
                     },
                     token
                 );
@@ -189,7 +186,7 @@ export default function EmployeeDetailsDrawer({
 
             const updatedEmployee: Employee = {
                 ...employee,
-                name: `${firstName} ${lastName}`.trim(),
+                name: newFullName,
                 email,
                 role: roleName,
                 employeeCode: employeeCode || null,
@@ -299,12 +296,12 @@ export default function EmployeeDetailsDrawer({
                             <div className="grid grid-cols-2 gap-x-6 gap-y-5">
                                 <Field
                                     label="First Name"
-                                    value={firstName}
+                                    value={employee.name?.split(" ")[0] || "-"}
                                     testId="details-first-name"
                                 />
                                 <Field
                                     label="Last Name"
-                                    value={lastName}
+                                    value={employee.name?.split(" ").slice(1).join(" ") || "-"}
                                     testId="details-last-name"
                                 />
                                 <Field
@@ -426,7 +423,7 @@ export default function EmployeeDetailsDrawer({
                                     placeholder="Email address"
                                     maxLength={255}
                                     disabled={employee.isActive !== false}
-                                    className="h-11 rounded-xl border-zinc-200 dark:border-zinc-700 bg-[#F9FAFB] dark:bg-zinc-850 text-zinc-500 dark:text-zinc-400 px-3.5 cursor-not-allowed shadow-none disabled:opacity-100"
+                                    className="h-11 rounded-xl border-zinc-200 dark:border-zinc-700 bg-[#F9FAFB] dark:bg-zinc-850 text-zinc-500 dark:text-zinc-500 px-3.5 cursor-not-allowed shadow-none disabled:opacity-100"
                                 />
                                 {touched.email && fieldErrors.email && (
                                     <div className="text-red-500 text-[10px] flex items-center gap-1 mt-0.5 font-medium">
@@ -447,9 +444,9 @@ export default function EmployeeDetailsDrawer({
                                             : val.charAt(0).toUpperCase() + val.slice(1);
                                         setRoleName(displayVal);
                                     }} 
-                                    disabled={isSelf}
+                                    disabled={isSelf || isTargetSuperAdmin}
                                 >
-                                    <SelectTrigger className="h-11 rounded-xl border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 bg-white dark:bg-zinc-800 shadow-none px-3.5">
+                                    <SelectTrigger className="h-11 rounded-xl border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 bg-white dark:bg-zinc-800 shadow-none px-3.5 disabled:opacity-50 disabled:cursor-not-allowed">
                                         <SelectValue placeholder="Select role" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700">
@@ -466,6 +463,11 @@ export default function EmployeeDetailsDrawer({
                                         })}
                                     </SelectContent>
                                 </Select>
+                                {isTargetSuperAdmin && (
+                                    <div className="text-zinc-450 text-[10px] text-amber-600 dark:text-amber-500">
+                                        Super Admin role cannot be changed
+                                    </div>
+                                )}
                             </div>
 
                             {/* Employee Code */}
