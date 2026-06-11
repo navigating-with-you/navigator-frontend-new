@@ -51,6 +51,7 @@ import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import {
     getRootContents,
     getFolderContents,
+    getFolder,
     createFolder,
     deleteFolder,
     uploadFiles,
@@ -351,8 +352,37 @@ export default function KnowledgeBasePage() {
                 }
             }
 
-            // Always call fetchContents to make sure we refresh the whole list for created/deleted/completed events
-            if (event && (event.event === "file:created" || event.event === "file:deleted" || event.event === "ocr:job_completed")) {
+            // If a folder is updated, check if it's in the breadcrumb stack and update its name in real-time
+            if (event && event.event === "folder:updated") {
+                const folderId = event.resource_id;
+                if (folderId) {
+                    const inStack = folderStack.some(item => item.id === folderId);
+                    if (inStack) {
+                        getToken().then(token => {
+                            if (token) {
+                                getFolder(folderId, token).then(folderData => {
+                                    setFolderStack(prev =>
+                                        prev.map(item =>
+                                            item.id === folderId ? { ...item, name: folderData.name } : item
+                                        )
+                                    );
+                                }).catch(err => console.error("Error updating folder stack from WS:", err));
+                            }
+                        }).catch(err => console.error("Error getting token for folder stack update:", err));
+                    }
+                }
+            }
+
+            // Always call fetchContents to make sure we refresh the whole list for created/deleted/completed/updated events
+            if (
+                event &&
+                (event.event === "file:created" ||
+                    event.event === "file:deleted" ||
+                    event.event === "ocr:job_completed" ||
+                    event.event === "folder:created" ||
+                    event.event === "folder:updated" ||
+                    event.event === "folder:deleted")
+            ) {
                 fetchContents(currentFolderId);
             }
         };
@@ -360,6 +390,9 @@ export default function KnowledgeBasePage() {
         cacheWebSocket.on("file:created", handleWsChange);
         cacheWebSocket.on("file:updated", handleWsChange);
         cacheWebSocket.on("file:deleted", handleWsChange);
+        cacheWebSocket.on("folder:created", handleWsChange);
+        cacheWebSocket.on("folder:updated", handleWsChange);
+        cacheWebSocket.on("folder:deleted", handleWsChange);
         cacheWebSocket.on("ocr:job_created", handleWsChange);
         cacheWebSocket.on("ocr:job_updated", handleWsChange);
         cacheWebSocket.on("ocr:job_completed", handleWsChange);
@@ -368,6 +401,9 @@ export default function KnowledgeBasePage() {
             cacheWebSocket.off("file:created", handleWsChange);
             cacheWebSocket.off("file:updated", handleWsChange);
             cacheWebSocket.off("file:deleted", handleWsChange);
+            cacheWebSocket.off("folder:created", handleWsChange);
+            cacheWebSocket.off("folder:updated", handleWsChange);
+            cacheWebSocket.off("folder:deleted", handleWsChange);
             cacheWebSocket.off("ocr:job_created", handleWsChange);
             cacheWebSocket.off("ocr:job_updated", handleWsChange);
             cacheWebSocket.off("ocr:job_completed", handleWsChange);
