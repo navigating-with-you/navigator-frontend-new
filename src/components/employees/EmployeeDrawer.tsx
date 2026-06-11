@@ -62,7 +62,6 @@ type EmployeeDetailsDrawerProps = {
     initialEditMode?: boolean;
     onSave?: (updated: Employee) => void;
     currentUserRole?: string;
-    superAdminExists?: boolean;
     currentUserId?: string;
 };
 
@@ -73,7 +72,6 @@ export default function EmployeeDetailsDrawer({
     initialEditMode = false,
     onSave,
     currentUserRole,
-    superAdminExists,
     currentUserId,
 }: EmployeeDetailsDrawerProps) {
     const { getToken } = useKindeAuth();

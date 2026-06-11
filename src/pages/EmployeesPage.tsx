@@ -65,7 +65,6 @@ export default function EmployeesPage() {
     const { getToken, isAuthenticated, user } = useKindeAuth();
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [currentUserEmployee, setCurrentUserEmployee] = useState<Employee | null>(null);
-    const [superAdminExists, setSuperAdminExists] = useState<boolean>(false);
     const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
         const saved = localStorage.getItem("employee_visible_columns");
         return saved ? JSON.parse(saved) : DEFAULT_EMPLOYEE_COLUMNS;
@@ -311,10 +310,6 @@ export default function EmployeesPage() {
             const filteredEmployees = [...mappedEmployees, ...uniqueInvites];
 
             setCurrentUserEmployee(currentUser);
-            // Determine if any super admin exists in employees or invites
-            const anySuper = [...mappedEmployees, ...mappedInvites].some(e => (e.role || "").toLowerCase().replace(/\s+/g, "_") === "super_admin");
-            setSuperAdminExists(anySuper);
-
             // creators removed — no longer building creator filter list
             setEmployees(filteredEmployees);
         } catch (error: any) {
@@ -820,7 +815,6 @@ export default function EmployeesPage() {
                     onOpenChange={setDrawerOpen}
                     onSubmit={handleAddEmployee}
                     currentUserRole={currentUserEmployee?.role}
-                    superAdminExists={superAdminExists}
                 />
 
                 <EmployeeDetailsDrawer
@@ -837,7 +831,6 @@ export default function EmployeesPage() {
                         setEmployees(prev => prev.map(emp => emp.id === updated.id ? updated : emp));
                     }}
                     currentUserRole={currentUserEmployee?.role}
-                    superAdminExists={superAdminExists}
                     currentUserId={currentUserEmployee?.id}
                 />
 
