@@ -85,24 +85,39 @@ export default function EditEmployeeDrawer({
         : {};
 
     // Filter roles and only allow Super Admin option when permitted
-    const displayRoles = roles.length > 0
-        ? roles.filter((r) => {
-            const name = (r.name || "").toLowerCase();
-            if (name === "super_admin") {
-                // Allow Super Admin selection when current user is Super Admin and either:
-                // - there is no existing super admin, or
-                // - we're editing the current super admin (maintain role), or
-                // - we're editing ourselves
-                const isCurrentSuper = (employee?.role || "").toLowerCase().replace(/\s+/g, "_") === "super_admin";
-                return (currentUserRole || "").toLowerCase().replace(/\s+/g, "_") === "super_admin" && (!superAdminExists || isCurrentSuper || employee?.id === currentUserId);
-            }
-            return ["admin", "member", "editor"].includes(name);
-        })
-        : [
-            { id: "admin", name: "admin" },
-            { id: "editor", name: "editor" },
-            { id: "member", name: "member" }
+    const isTargetSuperAdmin = (employee?.role || "").toLowerCase().replace(/\s+/g, "_") === "super_admin";
+    const isCurrentUserSuperAdmin = (currentUserRole || "").toLowerCase().replace(/\s+/g, "_") === "super_admin";
+
+    // Build base roles list: start with API roles if loaded, else fallback to defaults
+    let baseRoles = roles.length > 0 ? roles : [
+        { id: "admin", name: "admin" },
+        { id: "editor", name: "editor" },
+        { id: "member", name: "member" }
+    ];
+
+    // If target employee is a Super Admin or current user is a Super Admin,
+    // make sure super_admin is in baseRoles (since API lists omit it)
+    if ((isTargetSuperAdmin || isCurrentUserSuperAdmin) && !baseRoles.some(r => (r.name || "").toLowerCase() === "super_admin")) {
+        baseRoles = [
+            ...baseRoles,
+            { id: "super_admin", name: "super_admin", description: "Super Admin" }
         ];
+    }
+
+    const displayRoles = baseRoles.filter((r) => {
+        const name = (r.name || "").toLowerCase();
+        if (name === "super_admin") {
+            // Always show super_admin role if the employee already has it, so the dropdown doesn't render empty
+            if (isTargetSuperAdmin) {
+                return true;
+            }
+            // Otherwise, allow selecting/assigning it only if current user is Super Admin and either
+            // there is no existing super admin, or we're editing ourselves
+            return isCurrentUserSuperAdmin && (!superAdminExists || employee?.id === currentUserId);
+        }
+        return ["admin", "member", "editor"].includes(name);
+    });
+
 
     const handleSave = async () => {
         if (!canSave || isSaving) return;
@@ -278,17 +293,27 @@ export default function EditEmployeeDrawer({
                         {/* Role */}
                         <div className="space-y-1.5">
                             <Label className="text-xs font-medium text-zinc-500">Role</Label>
-                            <Select value={roleName} onValueChange={setRoleName}>
+                            <Select 
+                                value={(roleName || "").toLowerCase().replace(/\s+/g, "_")} 
+                                onValueChange={(val) => {
+                                    const displayVal = val === "super_admin"
+                                        ? "Super Admin"
+                                        : val.charAt(0).toUpperCase() + val.slice(1);
+                                    setRoleName(displayVal);
+                                }} 
+                                disabled={employee.id === currentUserId}
+                            >
                                 <SelectTrigger className="h-10 rounded-lg border-zinc-200 text-base md:text-sm font-normal">
                                     <SelectValue placeholder="Select role" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {displayRoles.map((r) => {
+                                        const backendRoleName = (r.name || "").toLowerCase().replace(/\s+/g, "_");
                                         const displayRole = r.name === "super_admin"
                                             ? "Super Admin"
                                             : r.name.charAt(0).toUpperCase() + r.name.slice(1);
                                         return (
-                                            <SelectItem key={r.id} value={displayRole}>
+                                            <SelectItem key={r.id} value={backendRoleName}>
                                                 {displayRole}
                                             </SelectItem>
                                         );

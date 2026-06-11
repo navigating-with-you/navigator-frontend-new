@@ -198,11 +198,7 @@ export default function EmployeesPage() {
                 })
             ]);
 
-            const rawEmployeeList = empData?.employees || (Array.isArray(empData) ? empData : []);
-            const employeeList = rawEmployeeList.filter((emp: any) => {
-                if (!user?.email) return true;
-                return emp.email?.toLowerCase() !== user.email.toLowerCase();
-            });
+            const employeeList = empData?.employees || (Array.isArray(empData) ? empData : []);
             const inviteList = empData?.pending_invites || (Array.isArray(inviteData) ? inviteData : ((inviteData as any)?.invites || []));
             const rolesList = Array.isArray(rolesData) ? (rolesData as any) : [];
             // Handle paginated groups response: items array or fallback to groups or empty
@@ -314,15 +310,10 @@ export default function EmployeesPage() {
 
             // Separate current user from employees
             let currentUser: Employee | null = null;
-            const filteredEmployees = [...mappedEmployees, ...uniqueInvites].filter((emp) => {
-                if (!user?.email) return true;
-                const isCurrentUser = emp.email?.toLowerCase() === user.email.toLowerCase();
-                if (isCurrentUser) {
-                    currentUser = emp;
-                    return false;
-                }
-                return true;
-            });
+            if (user?.email) {
+                currentUser = [...mappedEmployees, ...uniqueInvites].find((emp) => emp.email?.toLowerCase() === user.email.toLowerCase()) || null;
+            }
+            const filteredEmployees = [...mappedEmployees, ...uniqueInvites];
 
             setCurrentUserEmployee(currentUser);
             // Determine if any super admin exists in employees or invites
@@ -584,68 +575,6 @@ export default function EmployeesPage() {
                     </p>
                 </div>
 
-                {/* My Profile Section */}
-                {currentUserEmployee && (
-                    <div className="mt-6 shrink-0 p-4 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30">
-                        <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-start gap-3 flex-1">
-                                <Avatar className="h-12 w-12 rounded-lg flex-shrink-0">
-                                    <AvatarImage
-                                        src={currentUserEmployee.avatar}
-                                        alt={currentUserEmployee.name}
-                                    />
-                                    <AvatarFallback className="rounded-lg text-sm font-medium">
-                                        {currentUserEmployee.name
-                                            ? currentUserEmployee.name
-                                                .split(" ")
-                                                .filter(Boolean)
-                                                .map((n: string) => n[0])
-                                                .join("")
-                                                .slice(0, 2)
-                                                .toUpperCase()
-                                            : "ME"}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                                        {currentUserEmployee.name} (You)
-                                    </h3>
-                                    <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
-                                        {currentUserEmployee.email}
-                                    </p>
-                                    {currentUserEmployee.employeeCode && (
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                                            <span className="font-medium">Code:</span> {currentUserEmployee.employeeCode}
-                                        </p>
-                                    )}
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <Badge variant="outline" className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
-                                            {currentUserEmployee.role}
-                                        </Badge>
-                                        {currentUserEmployee.isActive !== false && (
-                                            <Badge variant="outline" className="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
-                                                Active
-                                            </Badge>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                    setSelectedEmployee(currentUserEmployee);
-                                    setEditDrawerOpen(true);
-                                }}
-                                className="h-8 px-3 text-xs flex-shrink-0"
-                            >
-                                <Pencil className="h-3.5 w-3.5 mr-1" />
-                                Edit Profile
-                            </Button>
-                        </div>
-                    </div>
-                )}
-
                 {/* Import Avatar component if not already imported */}
 
                 {/* Actions - Fixed */}
@@ -884,6 +813,7 @@ export default function EmployeesPage() {
                             onResendInvite={handleResendInvite}
                             onRevokeInvite={handleRevokeInvite}
                             currentUserEmail={user?.email ?? undefined}
+                            currentUserRole={currentUserEmployee?.role}
                             selected={selected}
                             setSelected={setSelected}
                             visibleColumns={visibleColumns}

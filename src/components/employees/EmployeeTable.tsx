@@ -76,6 +76,7 @@ type RowMenuProps = {
     onRevokeInvite?: (id: string) => void;
     currentUserEmail?: string;
     onAddToTeam?: (employee: Employee) => void;
+    currentUserRole?: string;
 };
 
 type EmployeeTableProps = {
@@ -86,6 +87,7 @@ type EmployeeTableProps = {
     onResendInvite?: (id: string) => void;
     onRevokeInvite?: (id: string) => void;
     currentUserEmail?: string;
+    currentUserRole?: string;
     selected: Set<string>;
     setSelected: React.Dispatch<React.SetStateAction<Set<string>>>;
     visibleColumns?: string[];
@@ -127,11 +129,14 @@ function RowMenu({
     onRevokeInvite,
     currentUserEmail,
     onAddToTeam,
+    currentUserRole,
 }: RowMenuProps): JSX.Element {
     // Delete is hidden if: target is Super Admin, OR target is the current user
     const isSelf = currentUserEmail && employee.email === currentUserEmail;
-    const isTargetSuperAdmin = employee.role === "Super Admin";
+    const isTargetSuperAdmin = (employee.role || "").toLowerCase().replace(/\s+/g, "_") === "super_admin";
     const canDelete = !isSelf && !isTargetSuperAdmin;
+    const currentIsSuperAdmin = (currentUserRole || "").toLowerCase().replace(/\s+/g, "_") === "super_admin";
+    const canEdit = !isTargetSuperAdmin || currentIsSuperAdmin;
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -144,7 +149,7 @@ function RowMenu({
                     <MoreVertical className="h-4 w-4" />
                 </button>
             </DropdownMenuTrigger>
-
+ 
             <DropdownMenuContent
                 align="end"
                 className="w-44 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
@@ -159,20 +164,30 @@ function RowMenu({
                     <Eye className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                     View Details
                 </DropdownMenuItem>
-
+ 
                 <PermissionGate permission={PERMISSIONS.EMPLOYEE_EDIT} fallback={
-                    <div className="cursor-not-allowed opacity-60">
-                        <Pencil className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                        Edit
-                    </div>
-                }>
-                    <DropdownMenuItem
-                        onClick={() => onEdit?.(employee)}
-                        className="cursor-pointer"
-                    >
+                    <DropdownMenuItem disabled className="cursor-not-allowed opacity-60 flex items-center">
                         <Pencil className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                         Edit
                     </DropdownMenuItem>
+                }>
+                    {canEdit ? (
+                        <DropdownMenuItem
+                            onClick={() => onEdit?.(employee)}
+                            className="cursor-pointer"
+                        >
+                            <Pencil className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                            Edit
+                        </DropdownMenuItem>
+                    ) : (
+                        <DropdownMenuItem
+                            disabled
+                            className="cursor-not-allowed opacity-60"
+                        >
+                            <Pencil className="mr-2 h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                            Edit (Super Admin only)
+                        </DropdownMenuItem>
+                    )}
                 </PermissionGate>
 
 
@@ -208,10 +223,10 @@ function RowMenu({
                 {employee.isActive !== false ? (
                     canDelete && (
                         <PermissionGate permission={PERMISSIONS.EMPLOYEE_DELETE} fallback={
-                            <div className="text-red-600 opacity-60">
+                            <DropdownMenuItem disabled className="text-red-600 cursor-not-allowed opacity-60 flex items-center">
                                 <Trash2 className="mr-2 h-4 w-4 text-red-600" />
                                 Delete
-                            </div>
+                            </DropdownMenuItem>
                         }>
                             <DropdownMenuItem
                                 data-testid={`delete-${employee.id}`}
@@ -226,10 +241,10 @@ function RowMenu({
                 ) : (
                     canDelete && onRevokeInvite && (
                         <PermissionGate permission={PERMISSIONS.EMPLOYEE_DELETE} fallback={
-                            <div className="text-red-600 opacity-60">
+                            <DropdownMenuItem disabled className="text-red-600 cursor-not-allowed opacity-60 flex items-center">
                                 <Trash2 className="mr-2 h-4 w-4 text-red-600" />
                                 Revoke Invite
-                            </div>
+                            </DropdownMenuItem>
                         }>
                             <DropdownMenuItem
                                 onClick={() =>
@@ -271,6 +286,7 @@ export default function EmployeeTable({
     onResendInvite,
     onRevokeInvite,
     currentUserEmail,
+    currentUserRole,
     selected,
     setSelected,
     visibleColumns = ["name", "status", "role", "kbFiles"],
@@ -521,6 +537,7 @@ export default function EmployeeTable({
                                             onRevokeInvite={(id) => setConfirmRevokeId(id)}
                                             currentUserEmail={currentUserEmail}
                                             onAddToTeam={(e) => { setTeamTarget(e); setTeamPickerOpen(true); setSelectedGroup(""); }}
+                                            currentUserRole={currentUserRole}
                                         />
                                     </div>
                                 </div>
@@ -682,6 +699,7 @@ export default function EmployeeTable({
                                         onRevokeInvite={(id) => setConfirmRevokeId(id)}
                                         currentUserEmail={currentUserEmail}
                                         onAddToTeam={(e) => { setTeamTarget(e); setTeamPickerOpen(true); setSelectedGroup(""); }}
+                                        currentUserRole={currentUserRole}
                                     />
                                 </div>
                             </div>
