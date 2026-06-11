@@ -7,9 +7,49 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { sendChatQueryStream, type Citation } from "@/lib/api";
+import { sendChatQueryStream, type Citation, type ThinkingStep } from "@/lib/api";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { toast } from "sonner";
+
+// ── Drawer Thinking Accordion ─────────────────────────────────────────────────
+function DrawerThinkingAccordion({ isStreaming, thinkingSteps }: { isStreaming: boolean; thinkingSteps: ThinkingStep[] }) {
+    const [isExpanded, setIsExpanded] = useState(isStreaming);
+
+    useEffect(() => { if (isStreaming) setIsExpanded(true); }, [isStreaming]);
+
+    if (!thinkingSteps || thinkingSteps.length === 0) return null;
+
+    const lastStep = thinkingSteps[thinkingSteps.length - 1];
+    const headerText = isStreaming
+        ? (lastStep?.message || "Thinking...")
+        : "Finished thinking";
+
+    return (
+        <div className="w-full mb-1.5 bg-[#E7E7E0] dark:bg-[#E7E7E0]/10 rounded-lg overflow-hidden">
+            <div
+                onClick={() => setIsExpanded(v => !v)}
+                className="flex items-center justify-between cursor-pointer px-2.5 py-1.5"
+            >
+                <div className="flex items-center gap-1.5">
+                    <span className={`h-1 w-1 rounded-full shrink-0 ${isStreaming ? "bg-blue-500" : "bg-green-600"}`} />
+                    <span className={`text-[10px] font-medium ${isStreaming ? "text-zinc-600 dark:text-zinc-400" : "text-green-700 dark:text-green-400"}`}>
+                        {headerText}
+                    </span>
+                </div>
+            </div>
+            {isExpanded && (
+                <div className="space-y-0.5 text-[9px] text-zinc-600 dark:text-zinc-400 px-2.5 py-1.5 max-h-28 overflow-y-auto border-t border-zinc-200 dark:border-zinc-700">
+                    {thinkingSteps.map((step, idx) => (
+                        <div key={idx} className="flex items-center gap-1">
+                            <div className="h-1 w-1 rounded-full bg-zinc-400 shrink-0" />
+                            <span className="leading-tight">{step.message}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 type Message = {
     id: string;
@@ -17,7 +57,7 @@ type Message = {
     content: string;
     citations?: Citation[];
     isStreaming?: boolean;
-    thinkingLabel?: string;
+    thinkingSteps?: ThinkingStep[];
 };
 
 type AskAiDrawerProps = {
@@ -38,6 +78,7 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [conversationId, setConversationId] = useState<string | null>(null);
+    const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
     const scrollRef = useRef<HTMLDivElement>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -64,6 +105,7 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
             setConversationId(null);
             setInput("");
             setIsLoading(false);
+            setThinkingSteps([]);
         }
     }, [open]);
 
@@ -80,6 +122,7 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
         setMessages((prev) => [...prev, userMsg]);
         setInput("");
         setIsLoading(true);
+        setThinkingSteps([]);
 
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
@@ -93,7 +136,7 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
             role: "assistant",
             content: "",
             isStreaming: true,
-            thinkingLabel: "Analyzing request...",
+            thinkingSteps: [],
         };
         setMessages((prev) => [...prev, initialAssistantMsg]);
 
@@ -113,22 +156,49 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
                 token,
                 {
                     onThinking: (step, message) => {
-                        const stepLabels: Record<string, string> = {
-                            understanding: "Analyzing request...",
-                            planning: "Planning steps...",
-                            decomposing: "Decomposing problem...",
-                            searching: "Searching documents...",
-                            evaluating: "Evaluating search results...",
-                            reranking: "Reranking documents...",
-                            refining: "Refining details...",
-                            synthesizing: "Synthesizing answer...",
-                            answering: "Formulating response...",
-                        };
-                        const label = stepLabels[step] ?? message ?? "Thinking...";
-                        setMessages((prev) =>
-                            prev.map((m) =>
+                        setThinkingSteps(prev => {
+                            const last = prev[prev.length - 1];
+                            if (last && last.message === message) return prev; // deduplicate
+                            return [...prev, { step, message, timestamp: new Date().toISOString() }];
+                        });
+                        setMessages(prev =>
+                            prev.map(m =>
                                 m.id === streamingId
-                                    ? { ...m, thinkingLabel: label }
+                                    ? {
+                                        ...m,
+                                        thinkingSteps: (() => {
+                                            const existing = m.thinkingSteps || [];
+                                            const last = existing[existing.length - 1];
+                                            if (last && last.message === message) return existing;
+                                            return [...existing, { step, message, timestamp: new Date().toISOString() }];
+                                        })(),
+                                    }
+                                    : m
+                            )
+                        );
+                    },
+                    onToolCall: (toolName, query) => {
+                        const label = toolName === "search_knowledge_base"
+                            ? `Searching knowledge base for: "${query.slice(0, 50)}${query.length > 50 ? "..." : ""}"`
+                            : toolName === "search_web"
+                                ? `Searching the web for: "${query.slice(0, 50)}${query.length > 50 ? "..." : ""}"`
+                                : `Calling ${toolName}`;
+                        setThinkingSteps(prev => [...prev, { step: "tool_call", message: label, timestamp: new Date().toISOString() }]);
+                        setMessages(prev =>
+                            prev.map(m =>
+                                m.id === streamingId
+                                    ? { ...m, thinkingSteps: [...(m.thinkingSteps || []), { step: "tool_call", message: label, timestamp: new Date().toISOString() }] }
+                                    : m
+                            )
+                        );
+                    },
+                    onToolResult: (toolName, resultCount) => {
+                        const label = `Found ${resultCount} result${resultCount !== 1 ? "s" : ""}`;
+                        setThinkingSteps(prev => [...prev, { step: "tool_result", message: label, timestamp: new Date().toISOString() }]);
+                        setMessages(prev =>
+                            prev.map(m =>
+                                m.id === streamingId
+                                    ? { ...m, thinkingSteps: [...(m.thinkingSteps || []), { step: "tool_result", message: label, timestamp: new Date().toISOString() }] }
                                     : m
                             )
                         );
@@ -161,7 +231,6 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
                                         content: accumulatedContent,
                                         isStreaming: false,
                                         citations: citations.length > 0 ? citations : undefined,
-                                        thinkingLabel: undefined,
                                     }
                                     : m
                             )
@@ -250,25 +319,31 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
                                 "flex flex-col gap-2 flex-1",
                                 m.role === "user" ? "items-end max-w-xs" : "items-start max-w-sm"
                             )}>
-                                {/* Thinking State */}
-                                {m.isStreaming && !m.content && m.thinkingLabel && (
+                                {/* Thinking Accordion */}
+                                {m.role === "assistant" && m.thinkingSteps && m.thinkingSteps.length > 0 && (
+                                    <DrawerThinkingAccordion
+                                        isStreaming={m.isStreaming ?? false}
+                                        thinkingSteps={m.thinkingSteps}
+                                    />
+                                )}
+
+                                {/* Fallback thinking indicator while streaming with no steps yet */}
+                                {m.isStreaming && !m.content && (!m.thinkingSteps || m.thinkingSteps.length === 0) && (
                                     <div className={cn(
                                         "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium",
-                                        m.role === "assistant"
-                                            ? "bg-slate-100 text-slate-600"
-                                            : "bg-slate-100 text-slate-600"
+                                        "bg-slate-100 text-slate-600"
                                     )}>
                                         <div className="flex gap-1 items-center shrink-0">
                                             <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce" />
                                             <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]" />
                                             <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.4s]" />
                                         </div>
-                                        <span>{m.thinkingLabel}</span>
+                                        <span>Thinking...</span>
                                     </div>
                                 )}
 
                                 {/* Message Bubble */}
-                                {(m.content || (m.isStreaming && !m.thinkingLabel)) && (
+                                {(m.content || (m.isStreaming && (!m.thinkingSteps || m.thinkingSteps.length === 0))) && (
                                     <div className={cn(
                                         "rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm",
                                         m.role === "user"

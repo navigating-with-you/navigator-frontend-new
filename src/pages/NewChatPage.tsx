@@ -4,6 +4,7 @@ import {
     useRef,
     useCallback,
     type JSX,
+    type ReactNode,
 } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { useUserProfile } from "@/contexts/UserContext";
@@ -19,6 +20,13 @@ import {
     Cpu,
     Folder,
     Search,
+    Brain,
+    Layers,
+    Sparkles,
+    Zap,
+    BarChart2,
+    RefreshCw,
+    WrenchIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -70,6 +78,25 @@ const THINKING_STEP_LABELS: Record<string, string> = {
     synthesizing: "Synthesizing information...",
     answering: "Generating response...",
 };
+
+// ── Step icon helper ──────────────────────────────────────────────────────────
+function getStepIcon(step: string): ReactNode {
+    switch (step) {
+        case "understanding":  return <Brain      className="h-2 w-2 shrink-0 mt-0.5 text-violet-500" />;
+        case "planning":       return <Layers     className="h-2 w-2 shrink-0 mt-0.5 text-blue-500"   />;
+        case "decomposing":    return <RefreshCw  className="h-2 w-2 shrink-0 mt-0.5 text-amber-500"  />;
+        case "searching":
+        case "searching_kb":
+        case "searching_web":  return <Search     className="h-2 w-2 shrink-0 mt-0.5 text-zinc-500"   />;
+        case "evaluating":     return <BarChart2  className="h-2 w-2 shrink-0 mt-0.5 text-zinc-500"   />;
+        case "reranking":      return <Sparkles   className="h-2 w-2 shrink-0 mt-0.5 text-emerald-500"/>;
+        case "synthesizing":   return <Layers     className="h-2 w-2 shrink-0 mt-0.5 text-teal-500"   />;
+        case "answering":      return <Zap        className="h-2 w-2 shrink-0 mt-0.5 text-amber-500"  />;
+        case "tool_call":
+        case "tool_result":    return <WrenchIcon className="h-2 w-2 shrink-0 mt-0.5 text-zinc-400"   />;
+        default:               return <div className="h-1 w-1 rounded-full bg-zinc-400 dark:bg-zinc-500 shrink-0 mt-1" />;
+    }
+}
 
 // ── Typing dots component ─────────────────────────────────────────────────────
 function TypingDots() {
@@ -163,17 +190,21 @@ function ThinkingAccordion({ isStreaming, thinkingSteps }: ThinkingAccordionProp
                     <div className="h-px bg-zinc-200 dark:bg-zinc-800" />
                     <div className="space-y-0.5 text-[9px] text-zinc-600 dark:text-zinc-400 px-2.5 py-1.5 max-h-32 overflow-y-auto">
                         {thinkingSteps.map((step, idx) => {
-                            const messageLower = (step.message || "").toLowerCase();
-                            const isSearch = step.step === "searching" || messageLower.includes("search");
+                            // Compute inter-step duration from timestamps
+                            const stepMs = idx < thinkingSteps.length - 1
+                                ? Math.round(
+                                    new Date(thinkingSteps[idx + 1].timestamp).getTime() -
+                                    new Date(step.timestamp).getTime()
+                                  )
+                                : null;
 
                             return (
-                                <div key={idx} className="flex items-start gap-1">
-                                    {isSearch ? (
-                                        <Search className="h-2 w-2 text-zinc-500 dark:text-zinc-450 shrink-0 mt-0.5" />
-                                    ) : (
-                                        <div className="h-1 w-1 rounded-full bg-zinc-400 dark:bg-zinc-500 shrink-0 mt-1" />
+                                <div key={idx} className="flex items-center gap-1">
+                                    {getStepIcon(step.step)}
+                                    <span className="leading-tight flex-1">{step.message}</span>
+                                    {stepMs !== null && stepMs > 200 && (
+                                        <span className="text-[8px] text-zinc-400 ml-auto shrink-0 tabular-nums">{stepMs}ms</span>
                                     )}
-                                    <span className="leading-tight">{step.message}</span>
                                 </div>
                             );
                         })}
@@ -400,6 +431,87 @@ function SourcesPill({ sources, onSourceClick }: SourcesPillProps) {
     );
 }
 
+// ── Markdown pre-processor ────────────────────────────────────────────────────
+// Handles code blocks, GFM tables, and inline code before line-by-line processing.
+type MarkdownSegment =
+    | { type: "text"; value: string }
+    | { type: "code_block"; code: string; lang: string }
+    | { type: "table"; html: string };
+
+function parseMarkdown(text: string): MarkdownSegment[] {
+    const segments: MarkdownSegment[] = [];
+
+    // Split on triple-backtick code blocks first
+    const codeBlockRe = /```([\w]*)\n([\s\S]*?)```/g;
+    // Split on GFM pipe tables
+    const tableRe = /(\|.+\|\n\|[-| :]+\|\n(?:\|.+\|\n?)+)/g;
+
+    // Collect all special regions with their positions
+    interface Region {
+        start: number;
+        end: number;
+        segment: MarkdownSegment;
+    }
+    const regions: Region[] = [];
+
+    let m: RegExpExecArray | null;
+
+    // Find code blocks
+    codeBlockRe.lastIndex = 0;
+    while ((m = codeBlockRe.exec(text)) !== null) {
+        const lang = m[1] || "";
+        const code = m[2];
+        regions.push({ start: m.index, end: m.index + m[0].length, segment: { type: "code_block", code, lang } });
+    }
+
+    // Find tables (only outside of already-found code blocks)
+    tableRe.lastIndex = 0;
+    while ((m = tableRe.exec(text)) !== null) {
+        const start = m.index;
+        const end = start + m[0].length;
+        // Skip if overlapping a code block region
+        const overlaps = regions.some(r => start < r.end && end > r.start);
+        if (overlaps) continue;
+
+        const block = m[0];
+        const rows = block.trim().split("\n").filter(r => !/^\|[-| :]+\|$/.test(r));
+        const cells = (r: string) => r.split("|").slice(1, -1).map(c => c.trim());
+        const [hdr, ...body] = rows;
+        if (!hdr) continue;
+
+        const headerCells = cells(hdr)
+            .map(h => `<th class="border border-zinc-300 dark:border-zinc-600 px-1.5 py-0.5 text-left bg-zinc-100 dark:bg-zinc-800">${h}</th>`)
+            .join("");
+        const bodyRows = body
+            .map(r => `<tr>${cells(r).map(c => `<td class="border border-zinc-300 dark:border-zinc-600 px-1.5 py-0.5">${c}</td>`).join("")}</tr>`)
+            .join("");
+        const html = `<table class="text-xs border-collapse my-1.5 w-full"><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
+
+        regions.push({ start, end, segment: { type: "table", html } });
+    }
+
+    // Sort regions by start position
+    regions.sort((a, b) => a.start - b.start);
+
+    let cursor = 0;
+    for (const region of regions) {
+        if (region.start > cursor) {
+            // Text segment before this region — process inline code within it
+            const raw = text.slice(cursor, region.start);
+            segments.push({ type: "text", value: raw });
+        }
+        segments.push(region.segment);
+        cursor = region.end;
+    }
+
+    // Remaining text
+    if (cursor < text.length) {
+        segments.push({ type: "text", value: text.slice(cursor) });
+    }
+
+    return segments;
+}
+
 // ── Render message markdown-lite ──────────────────────────────────────────────
 function MessageContent({
     content,
@@ -416,93 +528,129 @@ function MessageContent({
         return <TypingDots />;
     }
 
-    const lines = content.split("\n");
+    const segments = parseMarkdown(content);
+
+    // Render a text segment line-by-line (existing logic)
+    const renderTextSegment = (text: string, segIdx: number) => {
+        const lines = text.split("\n");
+        return lines.map((line, idx) => {
+            const trimmed = line.trim();
+            if (!trimmed) return <div key={`${segIdx}-${idx}`} className="h-1" />;
+
+            // H3: ###
+            if (trimmed.startsWith("### ")) {
+                return (
+                    <p key={`${segIdx}-${idx}`} className="font-bold text-zinc-900 dark:text-zinc-100 mt-4 first:mt-0 text-[14px] leading-snug">
+                        {formatInline(trimmed.slice(4), citations, onCitationClick)}
+                    </p>
+                );
+            }
+
+            // H2: ##
+            if (trimmed.startsWith("## ")) {
+                return (
+                    <p key={`${segIdx}-${idx}`} className="font-bold text-zinc-900 dark:text-zinc-100 mt-5 first:mt-0 text-[16px] leading-snug">
+                        {formatInline(trimmed.slice(3), citations, onCitationClick)}
+                    </p>
+                );
+            }
+
+            // Bold line: **text**
+            if (trimmed.startsWith("**") && trimmed.endsWith("**") && trimmed.length > 4) {
+                return (
+                    <p key={`${segIdx}-${idx}`} className="font-semibold text-zinc-900 dark:text-zinc-100 mt-4 first:mt-0 text-[15px] leading-snug">
+                        {formatInline(trimmed.slice(2, -2), citations, onCitationClick)}
+                    </p>
+                );
+            }
+
+            // Arrow line: → or ->
+            const arrowMatch = trimmed.match(/^(→|->)\s*(.+)/);
+            if (arrowMatch) {
+                return (
+                    <div key={`${segIdx}-${idx}`} className="flex items-start gap-2 pl-2 text-zinc-800 dark:text-zinc-200">
+                        <span className="shrink-0 text-zinc-500 dark:text-zinc-400 select-none">→</span>
+                        <span className="leading-relaxed">{formatInline(arrowMatch[2], citations, onCitationClick)}</span>
+                    </div>
+                );
+            }
+
+            // Bullet: * or -
+            const bulletMatch = line.match(/^(\s*)[*\-]\s+(.+)/);
+            if (bulletMatch) {
+                const indent = bulletMatch[1].length;
+                return (
+                    <div key={`${segIdx}-${idx}`} className={cn("flex items-start gap-2 text-zinc-800 dark:text-zinc-200", indent > 0 ? "pl-6" : "pl-2")}>
+                        <span className="shrink-0 text-zinc-400 dark:text-zinc-500 select-none font-semibold">•</span>
+                        <span className="leading-relaxed">{formatInline(bulletMatch[2], citations, onCitationClick)}</span>
+                    </div>
+                );
+            }
+
+            // Numbered list: 1. text
+            const numMatch = line.match(/^\s*(\d+)\.\s+(.+)/);
+            if (numMatch) {
+                return (
+                    <div key={`${segIdx}-${idx}`} className="flex items-start gap-2 pl-2">
+                        <span className="shrink-0 text-xs font-semibold text-zinc-400 mt-0.5 w-4">{numMatch[1]}.</span>
+                        <span className="text-zinc-800 dark:text-zinc-155">{formatInline(numMatch[2], citations, onCitationClick)}</span>
+                    </div>
+                );
+            }
+
+            // Plain paragraph
+            return (
+                <p key={`${segIdx}-${idx}`} className="text-zinc-800 dark:text-zinc-200 leading-relaxed">
+                    {formatInline(trimmed, citations, onCitationClick)}
+                </p>
+            );
+        });
+    };
 
     return (
         <div className="space-y-3.5 text-sm leading-relaxed">
-            {lines.map((line, idx) => {
-                const trimmed = line.trim();
-                if (!trimmed) return <div key={idx} className="h-1" />;
-
-                // H3: ###
-                if (trimmed.startsWith("### ")) {
+            {segments.map((seg, segIdx) => {
+                if (seg.type === "code_block") {
                     return (
-                        <p key={idx} className="font-bold text-zinc-900 dark:text-zinc-100 mt-4 first:mt-0 text-[14px] leading-snug">
-                            {formatInline(trimmed.slice(4), citations, onCitationClick)}
-                        </p>
+                        <pre key={segIdx} className="bg-zinc-100 dark:bg-zinc-800 rounded p-2 my-1.5 overflow-x-auto text-xs font-mono whitespace-pre">
+                            {seg.code
+                                .replace(/&/g, "&amp;")
+                                .replace(/</g, "&lt;")
+                                .replace(/>/g, "&gt;")}
+                        </pre>
                     );
                 }
-
-                // H2: ##
-                if (trimmed.startsWith("## ")) {
+                if (seg.type === "table") {
                     return (
-                        <p key={idx} className="font-bold text-zinc-900 dark:text-zinc-100 mt-5 first:mt-0 text-[16px] leading-snug">
-                            {formatInline(trimmed.slice(3), citations, onCitationClick)}
-                        </p>
+                        <div
+                            key={segIdx}
+                            className="overflow-x-auto my-1.5"
+                            dangerouslySetInnerHTML={{ __html: seg.html }}
+                        />
                     );
                 }
-
-                // Bold line: **text**
-                if (trimmed.startsWith("**") && trimmed.endsWith("**") && trimmed.length > 4) {
-                    return (
-                        <p key={idx} className="font-semibold text-zinc-900 dark:text-zinc-100 mt-4 first:mt-0 text-[15px] leading-snug">
-                            {formatInline(trimmed.slice(2, -2), citations, onCitationClick)}
-                        </p>
-                    );
-                }
-
-                // Arrow line: → or ->
-                const arrowMatch = trimmed.match(/^(→|->)\s*(.+)/);
-                if (arrowMatch) {
-                    return (
-                        <div key={idx} className="flex items-start gap-2 pl-2 text-zinc-800 dark:text-zinc-200">
-                            <span className="shrink-0 text-zinc-500 dark:text-zinc-400 select-none">→</span>
-                            <span className="leading-relaxed">{formatInline(arrowMatch[2], citations, onCitationClick)}</span>
-                        </div>
-                    );
-                }
-
-                // Bullet: * or -
-                const bulletMatch = line.match(/^(\s*)[*\-]\s+(.+)/);
-                if (bulletMatch) {
-                    const indent = bulletMatch[1].length;
-                    return (
-                        <div key={idx} className={cn("flex items-start gap-2 text-zinc-800 dark:text-zinc-200", indent > 0 ? "pl-6" : "pl-2")}>
-                            <span className="shrink-0 text-zinc-400 dark:text-zinc-500 select-none font-semibold">•</span>
-                            <span className="leading-relaxed">{formatInline(bulletMatch[2], citations, onCitationClick)}</span>
-                        </div>
-                    );
-                }
-
-                // Numbered list: 1. text
-                const numMatch = line.match(/^\s*(\d+)\.\s+(.+)/);
-                if (numMatch) {
-                    return (
-                        <div key={idx} className="flex items-start gap-2 pl-2">
-                            <span className="shrink-0 text-xs font-semibold text-zinc-400 mt-0.5 w-4">{numMatch[1]}.</span>
-                            <span className="text-zinc-800 dark:text-zinc-155">{formatInline(numMatch[2], citations, onCitationClick)}</span>
-                        </div>
-                    );
-                }
-
-                // Plain paragraph
-                return (
-                    <p key={idx} className="text-zinc-800 dark:text-zinc-200 leading-relaxed">
-                        {formatInline(trimmed, citations, onCitationClick)}
-                    </p>
-                );
+                // text segment — render line-by-line
+                return <span key={segIdx} className="contents">{renderTextSegment(seg.value, segIdx)}</span>;
             })}
             {isStreaming && content && <TypingDots />}
         </div>
     );
 }
 
-/** Apply bold/italic inline formatting + citation pill replacements */
+/** Apply bold/italic/inline-code formatting + citation pill replacements */
 function formatInline(text: string, citations?: Citation[], onCitationClick?: (citation: Citation) => void): JSX.Element {
-    const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\[Source \d+\]|\[Web \d+\]|\[[^\]]+\])/g);
+    const parts = text.split(/(`[^`\n]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[Source \d+\]|\[Web \d+\]|\[[^\]]+\])/g);
     return (
         <>
             {parts.map((part, i) => {
+                // Inline code: `code`
+                if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
+                    return (
+                        <code key={i} className="bg-zinc-100 dark:bg-zinc-800 rounded px-1 text-xs font-mono">
+                            {part.slice(1, -1)}
+                        </code>
+                    );
+                }
                 if (part.startsWith("**") && part.endsWith("**")) {
                     return (
                         <strong key={i} className="font-semibold text-zinc-900 dark:text-zinc-100">
