@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef, type JSX, lazy, Suspense } from "react";
+import { TourEngine } from "@/components/tour/TourEngine";
+import { useTour } from "@/contexts/TourContext";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Pencil, MessageSquare, X, Search, Loader2, Clock } from "lucide-react";
 
@@ -12,6 +14,8 @@ import OnboardingPage from "@/pages/OnboardingPage";
 import { TermsAcceptanceModal } from "@/components/compliance/TermsAcceptanceModal";
 import { cn } from "@/lib/utils";
 import { useUserProfile } from "@/contexts/UserContext";
+import { usePermissions } from "@/hooks/usePermissions";
+import { TOURS, filterStepsForUser } from "@/tours/tours";
 import { groupByTime } from "@/utils/conversationUtils";
 
 function OnboardingSkeleton({ loadingTime }: { loadingTime: number }) {
@@ -106,6 +110,8 @@ export default function AppLayout(): JSX.Element {
     const { getToken, isAuthenticated, logout } = useKindeAuth();
 
     const { userProfile: profile, updateUserProfile } = useUserProfile();
+    const { startTour, completedTours } = useTour();
+    const { isLoading: isPermissionsLoading, hasPermission } = usePermissions();
     const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(true);
     const [loadingTime, setLoadingTime] = useState<number>(0);
     const [hasError, setHasError] = useState<boolean>(false);
@@ -214,19 +220,23 @@ export default function AppLayout(): JSX.Element {
     }, [fetchConversations]);
 
     // ── Keyboard shortcut ──────────────────────────────────────────────────────
+    // Use a ref so the handler is registered once and never re-added on searchOpen changes.
+    const searchOpenRef = useRef(searchOpen);
+    useEffect(() => { searchOpenRef.current = searchOpen; }, [searchOpen]);
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "k") {
                 e.preventDefault();
                 setSearchOpen((prev) => !prev);
             }
-            if (e.key === "Escape" && searchOpen) {
+            if (e.key === "Escape" && searchOpenRef.current) {
                 setSearchOpen(false);
             }
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [searchOpen]);
+    }, []); // stable — Escape reads searchOpen via ref
 
     // ── Tour controls ──────────────────────────────────────────────────────────
     useEffect(() => {
@@ -239,6 +249,22 @@ export default function AppLayout(): JSX.Element {
             window.removeEventListener("navigator_close_search", handleClose);
         };
     }, []);
+
+    // Auto-start app overview tour once: profile loaded, terms accepted, roles fetched
+    useEffect(() => {
+        if (!profile) return;
+        if (termsAccepted !== true) return;
+        if (isPermissionsLoading) return;
+        if (completedTours.size === 0) {
+            const tour = TOURS.find((t) => t.id === "app-overview");
+            if (!tour) return;
+            const visibleSteps = filterStepsForUser(tour.steps, hasPermission);
+            const timer = setTimeout(() => startTour("app-overview", visibleSteps), 800);
+            return () => clearTimeout(timer);
+        }
+    // completedTours intentionally excluded — we only want this to fire once per session
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [profile, termsAccepted, isPermissionsLoading]);
 
     // ── Navigate into a conversation ───────────────────────────────────────────
     const handleSelectConversation = (conv: Conversation) => {
@@ -509,6 +535,9 @@ export default function AppLayout(): JSX.Element {
                         <ProfilePage onClose={() => setProfileOpen(false)} />
                     </Suspense>
                 )}
+
+                {/* Tour engine — renders into a portal on document.body */}
+                <TourEngine />
             </div>
         </div>
     );

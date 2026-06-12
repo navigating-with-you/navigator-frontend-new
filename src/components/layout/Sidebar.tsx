@@ -48,7 +48,8 @@ type NavItemType = {
     to: string;
     label: string;
     icon: LucideIcon;
-    permission?: string; // Optional permission required to view this item
+    permission?: string;
+    tourTarget?: string;
 };
 
 type NavItemProps = NavItemType & {
@@ -62,16 +63,16 @@ type SidebarProps = {
 };
 
 const mainNav: NavItemType[] = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutGrid, permission: PERMISSIONS.EMPLOYEE_VIEW }, // Restricted to Admin/Editor/Super-Admin, not Members
-    { to: "/employees", label: "Employees", icon: Users, permission: PERMISSIONS.EMPLOYEE_VIEW },
-    { to: "/teams", label: "Categories", icon: ListTree, permission: PERMISSIONS.GROUP_VIEW },
-    { to: "/knowledge-base", label: "Knowledge Base", icon: FileStack, permission: PERMISSIONS.FOLDER_VIEW },
-    { to: "/integration", label: "Integration", icon: Plug }, // Visible to all roles (Member, Editor, Admin, Super-Admin)
+    { to: "/dashboard", label: "Dashboard", icon: LayoutGrid, permission: PERMISSIONS.EMPLOYEE_VIEW, tourTarget: "nav-dashboard" },
+    { to: "/employees", label: "Employees", icon: Users, permission: PERMISSIONS.EMPLOYEE_VIEW, tourTarget: "nav-employees" },
+    { to: "/teams", label: "Categories", icon: ListTree, permission: PERMISSIONS.GROUP_VIEW, tourTarget: "nav-categories" },
+    { to: "/knowledge-base", label: "Knowledge Base", icon: FileStack, permission: PERMISSIONS.FOLDER_VIEW, tourTarget: "nav-knowledge-base" },
+    { to: "/integration", label: "Integration", icon: Plug, tourTarget: "nav-integration" },
 ];
 
 const chatNav: NavItemType[] = [
-    { to: "/chat", label: "New Chat", icon: PenSquare },
-    { to: "chatsearch", label: "Search Chats", icon: Search },
+    { to: "/chat", label: "New Chat", icon: PenSquare, tourTarget: "nav-new-chat" },
+    { to: "chatsearch", label: "Search Chats", icon: Search, tourTarget: "nav-search-chats" },
 ];
 
 
@@ -85,6 +86,7 @@ function NavItem({
     label,
     icon: Icon,
     collapsed = false,
+    tourTarget,
 }: NavItemProps) {
     const location = useLocation();
     const testId = `nav-${label.toLowerCase().replace(/\s+/g, "-")}`;
@@ -131,6 +133,7 @@ function NavItem({
         <NavLink
             to={to}
             data-testid={testId}
+            {...(tourTarget ? { "data-tour": tourTarget } : {})}
             className={
                 cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
@@ -459,6 +462,7 @@ export default function Sidebar({
                                                 type="button"
                                                 onClick={onSearchClick}
                                                 data-testid="nav-search-chats"
+                                                data-tour="nav-search-chats"
                                                 className="mx-auto flex items-center justify-center h-10 w-10 rounded-xl transition-all text-zinc-550 dark:text-zinc-400 hover:bg-surface-sidebar dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100 cursor-pointer"
                                             >
                                                 <item.icon className="h-4 w-4" />
@@ -498,6 +502,7 @@ export default function Sidebar({
                     open ? "lg:flex" : "lg:hidden"
                 )}
                 data-testid="sidebar"
+                data-tour="sidebar"
             >
                 {/* Logo and Close Button */}
                 <div className="h-[68px] flex items-center justify-between px-5 shrink-0">
@@ -546,6 +551,7 @@ export default function Sidebar({
                                     type="button"
                                     onClick={onSearchClick}
                                     data-testid="nav-search-chats"
+                                    data-tour="nav-search-chats"
                                     className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-zinc-600 hover:bg-surface-sidebar hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 cursor-pointer text-left w-full"
                                 >
                                     <div className="flex h-4 w-4 items-center justify-center shrink-0">
@@ -564,6 +570,7 @@ export default function Sidebar({
                                     to={item.to}
                                     end
                                     data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                                    {...(item.tourTarget ? { "data-tour": item.tourTarget } : {})}
                                     className={
                                         cn(
                                             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",

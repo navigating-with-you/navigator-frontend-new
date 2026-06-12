@@ -1,41 +1,55 @@
 import { useEffect, useState } from 'react';
 import { cacheWebSocket } from '@/utils/cacheWebSocket';
 
+type ConnectionStatus = 'connected' | 'reconnecting' | 'disconnected';
+
 /**
- * Shows real-time connectivity indicator
- * Green dot = Connected, Yellow dot = Reconnecting, Red dot = Disconnected
+ * Shows real-time connectivity indicator.
+ * Green = Connected, Yellow (pulsing) = Reconnecting, Red = Disconnected
  */
 export function WebSocketStatus() {
-    const [isConnected, setIsConnected] = useState(false);
+    const [status, setStatus] = useState<ConnectionStatus>(() =>
+        cacheWebSocket.isConnected() ? 'connected' : 'disconnected'
+    );
 
     useEffect(() => {
-        const sync = () => setIsConnected(cacheWebSocket.isConnected());
-        sync();
+        const onConnected = () => setStatus('connected');
+        // If we were connected and then dropped, show "Reconnecting".
+        // If we were already disconnected (e.g. initial load), stay "disconnected".
+        const onDisconnected = () => setStatus(prev =>
+            prev === 'connected' ? 'reconnecting' : 'disconnected'
+        );
 
-        cacheWebSocket.on('ws:connected', sync);
-        cacheWebSocket.on('ws:disconnected', sync);
-
-        // Poll briefly on mount to catch the race where ws:connected fires
-        // before this effect registers its listener (common on first login).
-        const pollInterval = setInterval(sync, 250);
-        const stopPolling = setTimeout(() => clearInterval(pollInterval), 6000);
+        // cacheWebSocket.on() replays the current state immediately for ws:connected
+        // and ws:disconnected — no polling needed to catch the initial state.
+        cacheWebSocket.on('ws:connected', onConnected);
+        cacheWebSocket.on('ws:disconnected', onDisconnected);
 
         return () => {
-            clearInterval(pollInterval);
-            clearTimeout(stopPolling);
-            cacheWebSocket.off('ws:connected', sync);
-            cacheWebSocket.off('ws:disconnected', sync);
+            cacheWebSocket.off('ws:connected', onConnected);
+            cacheWebSocket.off('ws:disconnected', onDisconnected);
         };
     }, []);
 
+    const dotClass =
+        status === 'connected'
+            ? 'bg-green-500'
+            : status === 'reconnecting'
+                ? 'bg-yellow-500 animate-pulse'
+                : 'bg-red-500';
+
+    const label =
+        status === 'connected'
+            ? 'Connected'
+            : status === 'reconnecting'
+                ? 'Reconnecting...'
+                : 'Disconnected';
+
     return (
         <div className="flex items-center gap-2 px-2 sm:px-3 py-1 rounded-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shrink-0">
-            <div className={`w-2 h-2 rounded-full shrink-0 ${isConnected
-                ? 'bg-green-500'
-                : 'bg-yellow-500'
-                }`} />
+            <div className={`w-2 h-2 rounded-full shrink-0 ${dotClass}`} />
             <span className="text-[10px] sm:text-xs font-medium text-zinc-650 dark:text-zinc-400 hidden sm:inline select-none">
-                {isConnected ? 'Connected' : 'Connecting...'}
+                {label}
             </span>
         </div>
     );

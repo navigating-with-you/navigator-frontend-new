@@ -117,6 +117,16 @@ function rawFileToEntry(file: any, ocrStatusMap?: Record<string, string>): KBEnt
     };
 }
 
+// Hoisted to module level — these are static constants with no component dependencies.
+const OCR_STATUS_OPTIONS = ["Queued", "Processing", "Indexed", "Failed", "Cancelled"] as const;
+const OCR_STATUS_FILTER_MAP: Record<string, string> = {
+    "queued": "pending",
+    "processing": "processing",
+    "indexed": "completed",
+    "failed": "failed",
+    "cancelled": "cancelled",
+};
+
 /** A breadcrumb item */
 interface BreadcrumbItem {
     id: string;
@@ -235,10 +245,18 @@ export default function KnowledgeBasePage() {
     const isMemberRef = useRef(isMember);
     useEffect(() => { isMemberRef.current = isMember; }, [isMember]);
 
+    // Tracks whether the current folder has any loaded content. Used inside
+    // fetchContents to decide whether to show the skeleton — avoids a stale
+    // closure on childFolders/childFiles which are not deps of fetchContents.
+    const hasContentRef = useRef(false);
+    useEffect(() => {
+        hasContentRef.current = childFolders.length > 0 || childFiles.length > 0;
+    }, [childFolders, childFiles]);
+
     const fetchContents = useCallback(async (folderId: string | null, showSkeleton = false) => {
         const thisVersion = ++fetchVersionRef.current;
         try {
-            if (showSkeleton || (childFolders.length === 0 && childFiles.length === 0)) {
+            if (showSkeleton || !hasContentRef.current) {
                 setIsLoading(true);
             }
             setFolderJobs([]);
@@ -335,10 +353,14 @@ export default function KnowledgeBasePage() {
     const currentFolderIdRef = useRef(currentFolderId);
     const getTokenRef = useRef(getToken);
     const folderStackRef = useRef(folderStack);
-    useEffect(() => { fetchContentsRef.current = fetchContents; });
-    useEffect(() => { currentFolderIdRef.current = currentFolderId; });
-    useEffect(() => { getTokenRef.current = getToken; });
-    useEffect(() => { folderStackRef.current = folderStack; });
+    // Single effect (no deps) — runs after every render, same as four separate effects
+    // but avoids scheduling four distinct microtasks per render.
+    useEffect(() => {
+        fetchContentsRef.current = fetchContents;
+        currentFolderIdRef.current = currentFolderId;
+        getTokenRef.current = getToken;
+        folderStackRef.current = folderStack;
+    });
 
     useEffect(() => {
         const handleWsChange = (event: any) => {
@@ -508,15 +530,6 @@ export default function KnowledgeBasePage() {
         // For members (employee list not loaded), derive from visible entries
         return Array.from(new Set([...folderEntries, ...fileEntries].map(e => e.owner).filter(e => e && e !== "Unknown"))).sort() as string[];
     }, [employeesList, folderEntries, fileEntries]);
-
-    const OCR_STATUS_OPTIONS = ["Queued", "Processing", "Indexed", "Failed", "Cancelled"];
-    const OCR_STATUS_FILTER_MAP: Record<string, string> = {
-        "queued": "pending",
-        "processing": "processing",
-        "indexed": "completed",
-        "failed": "failed",
-        "cancelled": "cancelled"
-    };
 
     const allEntries = useMemo<KBEntry[]>(() => {
         return [...folderEntries, ...fileEntries].filter((e) => {
@@ -898,7 +911,7 @@ export default function KnowledgeBasePage() {
             </div>
 
             {/* Action toolbar — always visible */}
-            <div className="flex-shrink-0 mt-6 flex flex-wrap items-center gap-3">
+            <div className="flex-shrink-0 mt-6 flex flex-wrap items-center gap-3" data-tour="kb-action-toolbar">
                 {/* Create Folder */}
                 {folderStack.length < 2 && (
                     <PermissionGate

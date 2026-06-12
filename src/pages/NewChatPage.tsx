@@ -3,6 +3,7 @@ import {
     useEffect,
     useRef,
     useCallback,
+    useMemo,
     type JSX,
 } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
@@ -39,6 +40,15 @@ import { ThinkingAccordion, THINKING_STEP_LABELS } from "@/components/chat/Think
 import { SourcesPill } from "@/components/chat/SourcesPill";
 import { MessageContent } from "@/components/chat/MessageContent";
 import { safeOpen } from "@/utils/safeUrl";
+
+// ── Module-level constants ─────────────────────────────────────────────────────
+
+// Hoisted outside the component — these never change and don't depend on props/state.
+const CHAT_SUGGESTIONS = [
+    { text: "Summarize the most recently uploaded document in the Knowledge Base.", icon: FileText },
+    { text: "What files were added this week, and what do they cover?", icon: BarChart2 },
+    { text: "Find documents related to a specific topic or keyword.", icon: Search },
+] as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -81,6 +91,10 @@ export default function NewChatPage(): JSX.Element {
     const abortControllerRef = useRef<AbortController | null>(null);
     const isCreatingConversationRef = useRef(false);
     const isAtBottomRef = useRef(true);
+    // Ref so handleSendMessage can read isResponding without listing it as a dep,
+    // preventing the function from being recreated on every streaming token.
+    const isRespondingRef = useRef(isResponding);
+    useEffect(() => { isRespondingRef.current = isResponding; }, [isResponding]);
 
     // ── Scroll helpers ────────────────────────────────────────────────────────
 
@@ -226,13 +240,16 @@ export default function NewChatPage(): JSX.Element {
 
     // ── Profile / greeting ────────────────────────────────────────────────────
 
-    const displayName =
-        profile?.display_name ||
-        (user?.givenName
-            ? `${user.givenName} ${user.familyName || ""}`.trim()
-            : authLoading
-                ? "Loading..."
-                : "there");
+    const displayName = useMemo(
+        () =>
+            profile?.display_name ||
+            (user?.givenName
+                ? `${user.givenName} ${user.familyName || ""}`.trim()
+                : authLoading
+                    ? "Loading..."
+                    : "there"),
+        [profile?.display_name, user?.givenName, user?.familyName, authLoading]
+    );
 
     // ── Textarea resize helper ────────────────────────────────────────────────
 
@@ -268,8 +285,8 @@ export default function NewChatPage(): JSX.Element {
 
     // ── Send message ──────────────────────────────────────────────────────────
 
-    const handleSendMessage = async (text: string, truncateMessageId?: string) => {
-        if (!text.trim() || isResponding) return;
+    const handleSendMessage = useCallback(async (text: string, truncateMessageId?: string) => {
+        if (!text.trim() || isRespondingRef.current) return;
 
         isAtBottomRef.current = true;
 
@@ -531,7 +548,8 @@ export default function NewChatPage(): JSX.Element {
                 abortControllerRef.current = null;
             }
         }
-    };
+    // isResponding accessed via isRespondingRef; conversationId via currentConversationIdRef
+    }, [getToken, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── Stop streaming ────────────────────────────────────────────────────────
 
@@ -595,12 +613,6 @@ export default function NewChatPage(): JSX.Element {
 
     const showEmptyState = !id && messages.length === 0 && !isLoadingMessages;
 
-    const suggestions = [
-        { text: "Summarize the most recently uploaded document in the Knowledge Base.", icon: FileText },
-        { text: "What files were added this week, and what do they cover?", icon: BarChart2 },
-        { text: "Find documents related to a specific topic or keyword.", icon: Search },
-    ];
-
     // ── Render ────────────────────────────────────────────────────────────────
 
     return (
@@ -635,7 +647,7 @@ export default function NewChatPage(): JSX.Element {
                         </h1>
 
                         {/* Centered Input Box */}
-                        <div className="w-full max-w-4xl mb-6 md:mb-10">
+                        <div className="w-full max-w-4xl mb-6 md:mb-10" data-tour="chat-input-welcome">
                             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-full shadow-md focus-within:shadow-lg focus-within:border-zinc-300 dark:focus-within:border-zinc-700 transition-all p-2.5 sm:p-2 pl-4 sm:pl-5 pr-2.5 sm:pr-2 flex flex-col sm:flex-row sm:items-center gap-2">
                                 <textarea
                                     value={inputVal}
@@ -673,8 +685,8 @@ export default function NewChatPage(): JSX.Element {
                         </div>
 
                         {/* Suggestions Cards Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 w-full max-w-5xl">
-                            {suggestions.map((s, idx) => {
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 w-full max-w-5xl" data-tour="chat-suggestions">
+                            {CHAT_SUGGESTIONS.map((s, idx) => {
                                 const Icon = s.icon;
                                 return (
                                     <button

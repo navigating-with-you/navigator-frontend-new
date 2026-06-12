@@ -27,9 +27,13 @@ export default function TopBar({ onToggleSidebar, onProfileClick }: TopBarProps)
                 </Button>
             </div>
 
-            <div className="flex items-center gap-2" data-tour="topbar-actions">
-                <NotificationsDropdown />
-                <UserMenuDropdown onProfileClick={onProfileClick} />
+            <div className="flex items-center gap-2">
+                <span data-tour="tour-notifications">
+                    <NotificationsDropdown />
+                </span>
+                <span data-tour="tour-user-menu">
+                    <UserMenuDropdown onProfileClick={onProfileClick} />
+                </span>
             </div>
         </header>
     );

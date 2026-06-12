@@ -9,15 +9,18 @@ interface CacheInvalidationEvent {
     metadata: Record<string, any>;
 }
 
+type WSListener = (data: any) => void;
+
 class CacheWebSocketManager {
     private ws: WebSocket | null = null;
     private url: string;
     private token: string | null = null;
     private reconnectAttempts = 0;
-    private maxReconnectAttempts = 5;
-    private reconnectDelay = 3000;
-    private listeners: Map<string, Function[]> = new Map();
-    private heartbeatTimer: any = null;
+    private readonly maxReconnectAttempts = 5;
+    private readonly baseReconnectDelay = 3000;
+    private listeners: Map<string, WSListener[]> = new Map();
+    private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+    private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
         this.url = config.wsUrl || config.apiBaseUrl.replace("http://", "ws://").replace("https://", "wss://");
@@ -34,7 +37,6 @@ class CacheWebSocketManager {
                 return;
             }
 
-            // Avoid stacking connections
             if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
                 if (import.meta.env.DEV) console.log("[WebSocket] Already connected or connecting, skipping new connection");
                 resolve();
@@ -43,16 +45,23 @@ class CacheWebSocketManager {
 
             try {
                 const wsBase = this.url.replace("http://", "ws://").replace("https://", "wss://");
+                // NOTE: Token in query string is a known risk (visible in server/proxy logs).
+                // Migrate to a post-connect auth message once the backend WebSocket endpoint
+                // supports reading the token from an initial JSON auth message instead of the URL.
                 const wsUrl = `${wsBase}/cache/ws/invalidation?token=${this.token}`;
-                if (import.meta.env.DEV) console.log("[WebSocket] Attempting to connect to:", wsUrl);
+                if (import.meta.env.DEV) console.log("[WebSocket] Attempting to connect");
                 this.ws = new WebSocket(wsUrl);
 
-                // Track whether the initial handshake succeeded
-                let settled = false;
+                // `resolved` tracks whether the connect() promise has settled.
+                // `connectedOnce` tracks whether onopen ever fired — used to decide
+                // whether onclose should trigger a reconnect (drop) or not (initial failure).
+                let resolved = false;
+                let connectedOnce = false;
+
                 const timeout = setTimeout(() => {
-                    if (!settled) {
+                    if (!resolved) {
                         console.error("[WebSocket] Connection timeout (30s)");
-                        settled = true;
+                        resolved = true;
                         if (this.ws) {
                             this.ws.close();
                             this.ws = null;
@@ -65,7 +74,10 @@ class CacheWebSocketManager {
                     clearTimeout(timeout);
                     if (import.meta.env.DEV) console.log("[WebSocket] Connected successfully");
                     this.reconnectAttempts = 0;
-                    settled = true;
+                    resolved = true;
+                    connectedOnce = true;
+                    // Heartbeat is always restarted here — covers both initial connect and reconnects.
+                    this.startHeartbeat();
                     this.emit("ws:connected", {});
                     resolve();
                 };
@@ -77,9 +89,8 @@ class CacheWebSocketManager {
                 this.ws.onerror = (error) => {
                     clearTimeout(timeout);
                     console.error("[WebSocket] Error:", error);
-                    if (!settled) {
-                        // Initial connection failed — reject and don't reconnect
-                        settled = true;
+                    if (!resolved) {
+                        resolved = true;
                         reject(error);
                     }
                 };
@@ -87,12 +98,13 @@ class CacheWebSocketManager {
                 this.ws.onclose = () => {
                     clearTimeout(timeout);
                     if (import.meta.env.DEV) console.log("[WebSocket] Disconnected");
+                    this.stopHeartbeat();
                     this.emit("ws:disconnected", {});
-                    if (settled) {
-                        // Was connected, then dropped — attempt reconnect
+                    // Reconnect only when the connection was previously established.
+                    // If connectedOnce is false, onerror already rejected — no reconnect.
+                    if (connectedOnce) {
                         this.attemptReconnect();
                     }
-                    // If !settled: onerror already rejected — no reconnect
                 };
             } catch (error) {
                 reject(error);
@@ -102,7 +114,6 @@ class CacheWebSocketManager {
 
     private handleMessage(data: string) {
         try {
-            // Skip non-JSON messages (like "pong" heartbeat)
             if (!data.startsWith("{")) {
                 console.debug("[WebSocket] Skipping non-JSON message:", data);
                 return;
@@ -111,10 +122,7 @@ class CacheWebSocketManager {
             const event: CacheInvalidationEvent = JSON.parse(data);
             if (import.meta.env.DEV) console.log("[Cache Invalidation]", event);
 
-            // Invalidate cache based on event type
             this.invalidateByEvent(event);
-
-            // Notify listeners
             this.emit(event.event, event);
         } catch (error) {
             console.error("[WebSocket] Failed to parse message:", error);
@@ -163,7 +171,6 @@ class CacheWebSocketManager {
                 break;
 
             case "notification:created":
-                // Handled directly in TopBar component subscription
                 break;
 
             case "group:member_added":
@@ -181,25 +188,33 @@ class CacheWebSocketManager {
     }
 
     private attemptReconnect() {
-        if (this.reconnectAttempts < this.maxReconnectAttempts) {
-            this.reconnectAttempts++;
-            if (import.meta.env.DEV) console.log(
-                `[WebSocket] Reconnecting... (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
-            );
-            setTimeout(() => this.connect().catch(console.error), this.reconnectDelay);
-        } else {
+        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
             console.error("[WebSocket] Max reconnection attempts reached");
+            return;
         }
+        this.reconnectAttempts++;
+        // Exponential backoff with jitter to avoid thundering herd on server restart.
+        const backoff = Math.min(30000, this.baseReconnectDelay * 2 ** (this.reconnectAttempts - 1));
+        const delay = backoff + Math.random() * 1000;
+        if (import.meta.env.DEV) console.log(
+            `[WebSocket] Reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
+        );
+        this.reconnectTimer = setTimeout(() => this.connect().catch(console.error), delay);
     }
 
-    on(event: string, callback: Function) {
+    on(event: string, callback: WSListener) {
         if (!this.listeners.has(event)) {
             this.listeners.set(event, []);
         }
         this.listeners.get(event)!.push(callback);
+
+        // Replay current connection state immediately so late subscribers never miss
+        // an event that fired before they registered (e.g. WebSocketStatus on first login).
+        if (event === "ws:connected" && this.isConnected()) callback({});
+        if (event === "ws:disconnected" && !this.isConnected()) callback({});
     }
 
-    off(event: string, callback: Function) {
+    off(event: string, callback: WSListener) {
         const callbacks = this.listeners.get(event);
         if (callbacks) {
             const index = callbacks.indexOf(callback);
@@ -215,10 +230,12 @@ class CacheWebSocketManager {
     }
 
     disconnect() {
-        if (this.heartbeatTimer) {
-            clearInterval(this.heartbeatTimer);
-            this.heartbeatTimer = null;
+        this.stopHeartbeat();
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
         }
+        this.reconnectAttempts = 0;
         if (this.ws) {
             this.ws.close();
             this.ws = null;
@@ -231,14 +248,18 @@ class CacheWebSocketManager {
         }
     }
 
-    // Heartbeat to keep connection alive
     startHeartbeat(interval: number = 30000) {
-        if (this.heartbeatTimer) {
-            clearInterval(this.heartbeatTimer);
-        }
+        this.stopHeartbeat();
         this.heartbeatTimer = setInterval(() => {
             this.send("ping");
         }, interval);
+    }
+
+    private stopHeartbeat() {
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
+        }
     }
 
     isConnected(): boolean {

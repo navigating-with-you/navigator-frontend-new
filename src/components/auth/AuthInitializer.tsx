@@ -40,7 +40,7 @@ export default function AuthInitializer() {
                             for (let i = 0; i < 3; i++) {
                                 try {
                                     await cacheWebSocket.connect();
-                                    cacheWebSocket.startHeartbeat();
+                                    // startHeartbeat() is called automatically inside onopen
                                     wsConnected = true;
                                     wsRetryCount.current = 0;
                                     break;
@@ -90,7 +90,7 @@ export default function AuthInitializer() {
                 if (token) {
                     cacheWebSocket.setToken(token);
                     await cacheWebSocket.connect();
-                    cacheWebSocket.startHeartbeat();
+                    // startHeartbeat() is called automatically inside onopen
                 }
             } catch {
                 // Silent — WS is non-critical
@@ -107,7 +107,7 @@ export default function AuthInitializer() {
                 if (token) {
                     cacheWebSocket.setToken(token);
                     await cacheWebSocket.connect();
-                    cacheWebSocket.startHeartbeat();
+                    // startHeartbeat() is called automatically inside onopen
                 }
             } catch (err) {
                 console.error("[WebSocket] Connection failed after onboarding:", err);
@@ -124,7 +124,7 @@ export default function AuthInitializer() {
             window.removeEventListener("navigator_terms_accepted", handleTermsAccepted);
             window.removeEventListener("navigator_onboarding_completed", handleOnboardingCompleted);
         };
-    }, [isAuthenticated, getToken, user, setUserProfile, clearUserProfile, queryClient]);
+    }, [isAuthenticated, getToken, user?.id, setUserProfile, clearUserProfile, queryClient]);
 
     useEffect(() => {
         return () => {

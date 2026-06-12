@@ -9,13 +9,16 @@ import {
     Languages,
     Info,
     Key,
-    HelpCircle,
+    Compass,
+    CheckCircle2,
     Building2,
     LogOut,
     Check,
 } from "lucide-react";
+import { useTour } from "@/contexts/TourContext";
+import { TOURS, filterStepsForUser } from "@/tours/tours";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { getUsage, type UsageData } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -32,7 +35,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
-import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/utils/rbacConfig";
 import { cacheWebSocket } from "@/utils/cacheWebSocket";
 import { USFlag, FrenchFlag, JapaneseFlag, SpanishFlag } from "@/utils/flagIcons";
@@ -94,23 +96,21 @@ export function UserMenuDropdown({ onProfileClick }: UserMenuDropdownProps): JSX
     const canViewBilling = hasPermission(PERMISSIONS.BILLING_VIEW);
     const navigate = useNavigate();
     const { theme, setTheme } = useTheme();
+    const { startTour, completedTours } = useTour();
     const [usage, setUsage] = useState<UsageData | null>(null);
     const [changePasswordOpen, setChangePasswordOpen] = useState(false);
     const [organizationProfileOpen, setOrganizationProfileOpen] = useState(false);
     const [isWsConnected, setIsWsConnected] = useState(false);
 
     useEffect(() => {
-        const syncWs = () => setIsWsConnected(cacheWebSocket.isConnected());
-        syncWs();
-        cacheWebSocket.on("ws:connected", syncWs);
-        cacheWebSocket.on("ws:disconnected", syncWs);
-        const pollInterval = setInterval(syncWs, 250);
-        const stopPolling = setTimeout(() => clearInterval(pollInterval), 6000);
+        const onConnected = () => setIsWsConnected(true);
+        const onDisconnected = () => setIsWsConnected(false);
+        setIsWsConnected(cacheWebSocket.isConnected());
+        cacheWebSocket.on("ws:connected", onConnected);
+        cacheWebSocket.on("ws:disconnected", onDisconnected);
         return () => {
-            clearInterval(pollInterval);
-            clearTimeout(stopPolling);
-            cacheWebSocket.off("ws:connected", syncWs);
-            cacheWebSocket.off("ws:disconnected", syncWs);
+            cacheWebSocket.off("ws:connected", onConnected);
+            cacheWebSocket.off("ws:disconnected", onDisconnected);
         };
     }, []);
 
@@ -286,7 +286,7 @@ export function UserMenuDropdown({ onProfileClick }: UserMenuDropdownProps): JSX
                         </DropdownMenuSub>
 
                         <DropdownMenuItem
-                            onClick={() => toast.info("About Navigator details")}
+                            onClick={() => navigate("/about")}
                             className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-700 dark:text-zinc-300 hover:bg-[#60646B1A] dark:hover:bg-zinc-800 focus:bg-[#60646B1A] dark:focus:bg-zinc-800 cursor-pointer"
                         >
                             <Info className="h-4 w-4 text-zinc-500" />
@@ -302,11 +302,21 @@ export function UserMenuDropdown({ onProfileClick }: UserMenuDropdownProps): JSX
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
-                            onClick={() => toast.info("Help center")}
+                            onClick={() => {
+                                const tour = TOURS.find((t) => t.id === "app-overview");
+                                if (!tour) return;
+                                const visibleSteps = filterStepsForUser(tour.steps, hasPermission);
+                                startTour("app-overview", visibleSteps);
+                            }}
                             className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-700 dark:text-zinc-300 hover:bg-[#60646B1A] dark:hover:bg-zinc-800 focus:bg-[#60646B1A] dark:focus:bg-zinc-800 cursor-pointer"
                         >
-                            <HelpCircle className="h-4 w-4 text-zinc-500" />
-                            <span className="font-medium">Help</span>
+                            <Compass className="h-4 w-4 text-zinc-500" />
+                            <span className="font-medium flex-1">Take a Tour</span>
+                            {completedTours.has("app-overview") ? (
+                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400 shrink-0" />
+                            ) : (
+                                <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
+                            )}
                         </DropdownMenuItem>
                     </div>
 

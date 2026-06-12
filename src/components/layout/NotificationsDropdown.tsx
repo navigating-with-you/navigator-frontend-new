@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Bell, X, Check, Trash2, UserPlus, UserMinus, FileUp, FileMinus, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
@@ -55,14 +55,21 @@ function getNotificationConfig(type: string) {
 }
 
 export function NotificationsDropdown() {
-    const { getToken, user } = useKindeAuth();
+    const { getToken } = useKindeAuth();
     const { userProfile: profile } = useUserProfile();
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [unreadCount, setUnreadCount] = useState<number>(0);
 
+    // Stable ref so fetchNotifications never needs getToken or profile in its deps.
+    const getTokenRef = useRef(getToken);
+    useEffect(() => { getTokenRef.current = getToken; }, [getToken]);
+
+    const profileIdRef = useRef(profile?.id);
+    useEffect(() => { profileIdRef.current = profile?.id; }, [profile?.id]);
+
     const fetchNotifications = useCallback(async () => {
         try {
-            const token = await getToken();
+            const token = await getTokenRef.current();
             if (token) {
                 const res = await getNotifications(token);
                 setNotifications(res.notifications || []);
@@ -71,23 +78,39 @@ export function NotificationsDropdown() {
         } catch (err) {
             console.error("Failed to fetch notifications:", err);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, []); // truly stable — deps accessed via refs
 
     useEffect(() => {
         fetchNotifications();
-        const interval = setInterval(fetchNotifications, 30000);
+
+        let pollingInterval: ReturnType<typeof setInterval> | null = null;
+
+        const startPolling = () => {
+            if (!pollingInterval) pollingInterval = setInterval(fetchNotifications, 30000);
+        };
+        const stopPolling = () => {
+            if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+        };
         const handleNotificationCreated = (event: any) => {
-            if (profile?.id && event.resource_id === profile.id) {
+            if (profileIdRef.current && event.resource_id === profileIdRef.current) {
                 fetchNotifications();
             }
         };
+
+        // Poll only when WebSocket is disconnected; stop when it reconnects.
+        cacheWebSocket.on("ws:connected", stopPolling);
+        cacheWebSocket.on("ws:disconnected", startPolling);
         cacheWebSocket.on("notification:created", handleNotificationCreated);
+
+        if (!cacheWebSocket.isConnected()) startPolling();
+
         return () => {
-            clearInterval(interval);
+            stopPolling();
+            cacheWebSocket.off("ws:connected", stopPolling);
+            cacheWebSocket.off("ws:disconnected", startPolling);
             cacheWebSocket.off("notification:created", handleNotificationCreated);
         };
-    }, [user, profile?.id]); // fetchNotifications is stable (empty useCallback deps)
+    }, []); // mount only — all state accessed via stable refs or stable callbacks
 
     const handleMarkAsRead = async (notificationId: string) => {
         setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n));

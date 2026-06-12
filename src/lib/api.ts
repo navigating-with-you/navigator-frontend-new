@@ -712,3 +712,29 @@ export async function requestAccountDeletion(token: string) {
         { token },
     );
 }
+
+// ── About ─────────────────────────────────────────────────────────────────────
+
+export interface AboutAppInfo {
+    name: string;
+    description: string;
+    version: string;
+    build: string;
+    release_date: string;
+}
+
+export interface ChangelogEntry {
+    version: string;
+    release_date: string;
+    changes: string[];
+}
+
+export interface AboutData {
+    app: AboutAppInfo;
+    changelog: ChangelogEntry[];
+    latest_version: string;
+}
+
+export async function getAboutInfo(token: string): Promise<AboutData> {
+    return apiClient.get<AboutData>("/about", { token, cache: false });
+}

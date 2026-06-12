@@ -22,6 +22,12 @@ export function useCachedConversations(
   const [error, setError] = useState<Error | null>(null);
   const isFetching = useRef(false);
 
+  // Keep onLoad in a ref so it never appears in fetchConversations' deps.
+  // Without this, an inline `onLoad={() => ...}` from the caller recreates
+  // fetchConversations every render, causing the initial effect to loop.
+  const onLoadRef = useRef(onLoad);
+  useEffect(() => { onLoadRef.current = onLoad; }, [onLoad]);
+
   // Fetch from API with silent mode option
   const fetchConversations = useCallback(
     async (showLoading = true, force = false) => {
@@ -34,7 +40,7 @@ export function useCachedConversations(
           const cached = cacheManager.get(CONVERSATIONS_CACHE_KEY);
           if (cached) {
             setConversations(cached);
-            onLoad?.(cached);
+            onLoadRef.current?.(cached);
             return;
           }
         }
@@ -62,7 +68,7 @@ export function useCachedConversations(
 
         setConversations(convList);
         setError(null);
-        onLoad?.(convList);
+        onLoadRef.current?.(convList);
       } catch (err: any) {
         console.error("Failed to fetch conversations:", err);
         setError(err);
@@ -70,7 +76,7 @@ export function useCachedConversations(
         const stale = cacheManager.getExpired(CONVERSATIONS_CACHE_KEY);
         if (stale) {
           setConversations(stale);
-          onLoad?.(stale);
+          onLoadRef.current?.(stale);
         }
       } finally {
         isFetching.current = false;
@@ -79,7 +85,7 @@ export function useCachedConversations(
         }
       }
     },
-    [isAuthenticated, getToken, onLoad]
+    [isAuthenticated, getToken] // onLoad removed — accessed via ref
   );
 
   // Initial fetch on mount if authenticated
