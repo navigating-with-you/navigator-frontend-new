@@ -335,9 +335,9 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
                                         "bg-slate-100 text-slate-600"
                                     )}>
                                         <div className="flex gap-1 items-center shrink-0">
-                                            <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce" />
-                                            <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]" />
-                                            <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.4s]" />
+                                            <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-[typingDot_1.4s_ease-in-out_0s_infinite]" />
+                                            <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-[typingDot_1.4s_ease-in-out_0.2s_infinite]" />
+                                            <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-[typingDot_1.4s_ease-in-out_0.4s_infinite]" />
                                         </div>
                                         <span>Thinking...</span>
                                     </div>
@@ -358,15 +358,15 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
                                         ) : (
                                             <div className="flex gap-1.5 items-center py-0.5">
                                                 <span className={cn(
-                                                    "h-1.5 w-1.5 rounded-full animate-bounce",
+                                                    "h-1.5 w-1.5 rounded-full animate-[typingDot_1.4s_ease-in-out_0s_infinite]",
                                                     m.role === "user" ? "bg-white/60" : "bg-slate-400"
                                                 )} />
                                                 <span className={cn(
-                                                    "h-1.5 w-1.5 rounded-full animate-bounce [animation-delay:0.2s]",
+                                                    "h-1.5 w-1.5 rounded-full animate-[typingDot_1.4s_ease-in-out_0.2s_infinite]",
                                                     m.role === "user" ? "bg-white/60" : "bg-slate-400"
                                                 )} />
                                                 <span className={cn(
-                                                    "h-1.5 w-1.5 rounded-full animate-bounce [animation-delay:0.4s]",
+                                                    "h-1.5 w-1.5 rounded-full animate-[typingDot_1.4s_ease-in-out_0.4s_infinite]",
                                                     m.role === "user" ? "bg-white/60" : "bg-slate-400"
                                                 )} />
                                             </div>

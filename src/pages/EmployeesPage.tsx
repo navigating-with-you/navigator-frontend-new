@@ -375,7 +375,8 @@ export default function EmployeesPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [getToken]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleResendInvite = async (inviteId: string) => {
         try {
@@ -421,7 +422,7 @@ export default function EmployeesPage() {
         } else {
             setIsLoading(false);
         }
-    }, [isAuthenticated, fetchEmployees]);
+    }, [isAuthenticated]); // fetchEmployees is stable (empty useCallback deps)
 
     const uniqueStatuses = useMemo(() => {
         const list = new Set<string>();

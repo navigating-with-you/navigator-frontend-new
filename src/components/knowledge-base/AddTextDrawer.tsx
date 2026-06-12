@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
 import {
     Select,
     SelectTrigger,
@@ -56,10 +55,9 @@ export default function AddTextDrawer({
         setIsSubmitting(true);
         try {
             await onSubmit({ title: title.trim(), folderId, content: content.trim() });
-            toast.success(`"${title}" saved successfully`, { id: "add-text" });
             onOpenChange(false);
-        } catch (error: any) {
-            toast.error(error.message || "Failed to save text", { id: "add-text" });
+        } catch {
+            // page handler owns all toast messages
         } finally {
             setIsSubmitting(false);
         }

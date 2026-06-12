@@ -41,7 +41,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         };
 
         loadThemeFromBackend();
-    }, [getToken]);
+    }, []); // load theme once on mount; getToken is functionally stable
 
     useEffect(() => {
         const root = window.document.documentElement;

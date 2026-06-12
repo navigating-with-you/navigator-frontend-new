@@ -693,7 +693,7 @@ export default function KnowledgeBaseDetailDrawer({
                                         <div className="flex flex-col items-center justify-center h-full text-zinc-500 py-16">
                                             <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-3" />
                                             {!ocrJob || ocrJob.status === "completed" ? (
-                                                <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 animate-pulse">
+                                                <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
                                                     Loading document content...
                                                 </span>
                                             ) : (

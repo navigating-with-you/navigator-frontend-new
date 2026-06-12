@@ -271,7 +271,7 @@ export default function ChangePasswordDrawer({
                         <div className="flex-1 flex flex-col justify-center items-center px-8 py-12 text-center space-y-6">
                             {/* Security Illustration/Icon */}
                             <div className="relative flex items-center justify-center w-20 h-20 rounded-full bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700/60 shadow-sm">
-                                <div className="absolute inset-0 rounded-full bg-blue-500/5 animate-pulse" />
+                                <div className="absolute inset-0 rounded-full bg-blue-500/5" />
                                 <Mail className="h-9 w-9 text-blue-600 dark:text-blue-400" />
                             </div>
 

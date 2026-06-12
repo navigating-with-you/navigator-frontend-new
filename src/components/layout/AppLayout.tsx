@@ -280,7 +280,7 @@ export default function AppLayout(): JSX.Element {
                 <div className="max-w-md space-y-6">
                     <div className="flex justify-center">
                         <div className="p-3.5 bg-red-50 dark:bg-red-950/20 rounded-full text-red-500">
-                            <svg className="h-10 w-10 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
                         </div>
@@ -337,10 +337,10 @@ export default function AppLayout(): JSX.Element {
 
     return (
         <div className="w-full bg-surface-page dark:bg-zinc-950 flex justify-center">
-            {/* Terms acceptance gate — shown until user accepts ToS + Privacy Policy */}
-            {termsAccepted === false && (
+            {/* Terms acceptance gate — temporarily hidden; re-enable by restoring the condition below */}
+            {/* {termsAccepted === false && (
                 <TermsAcceptanceModal onAccepted={() => setTermsAccepted(true)} />
-            )}
+            )} */}
 
             <div
                 className="flex h-dvh w-full overflow-hidden bg-surface-page dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 relative"

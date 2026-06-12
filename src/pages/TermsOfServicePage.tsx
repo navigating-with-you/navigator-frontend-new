@@ -39,13 +39,15 @@ export default function TermsOfServicePage() {
                             Document in preparation
                         </p>
                         <p className="text-sm text-amber-700 dark:text-amber-500 leading-relaxed">
-                            Our Terms of Service are currently being prepared by our legal team and will be published
-                            prior to the public launch of Navigator. They will govern your use of the Navigator platform
-                            and outline the rights and obligations of both Navigator and its users.
+                            Our Terms of Service are currently being prepared by our legal team and will be
+                            published prior to the public launch of Navigator. They will govern your use of
+                            the Navigator platform and outline the rights and obligations of both Navigator
+                            and its users.
                         </p>
                     </div>
 
                     <div className="space-y-8 text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
+
                         <section className="space-y-3">
                             <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
                                 What our Terms of Service will cover
@@ -55,21 +57,53 @@ export default function TermsOfServicePage() {
                                 <li>Acceptable use of the Navigator platform</li>
                                 <li>Subscription plans, billing, and refund policies</li>
                                 <li>Intellectual property rights and content ownership</li>
-                                <li>Limitation of liability and disclaimers</li>
-                                <li>Termination and account suspension</li>
-                                <li>Governing law and dispute resolution (arbitration clause)</li>
-                                <li>Changes to these terms and notification procedures</li>
+                                <li>AI-generated content — accuracy disclaimers and user responsibility</li>
+                                <li>Limitation of liability and disclaimers of warranties</li>
+                                <li>Termination and account suspension procedures</li>
+                                <li>Governing law and dispute resolution</li>
+                                <li>Changes to these terms and how we will notify you</li>
                             </ul>
                         </section>
 
                         <section className="space-y-3">
                             <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-                                Governing law
+                                Governing law &amp; dispute resolution
                             </h2>
                             <p className="text-zinc-600 dark:text-zinc-400">
                                 These Terms will be governed by and construed in accordance with the laws of
                                 the United States and the state in which Navigator is incorporated,
-                                without regard to conflict of law provisions.
+                                without regard to conflict of law provisions. Any disputes arising from these
+                                Terms or your use of the platform will be resolved through binding arbitration
+                                on an individual basis, except where prohibited by applicable state law.
+                                Nothing in these Terms limits any rights you may have under applicable
+                                US state consumer protection laws.
+                            </p>
+                        </section>
+
+                        <section className="space-y-3">
+                            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                                Consumer protections
+                            </h2>
+                            <p className="text-zinc-600 dark:text-zinc-400">
+                                Regardless of the state in which you reside, Navigator will not use unfair,
+                                deceptive, or abusive practices. We comply with applicable consumer protection
+                                laws across all US states, including but not limited to state unfair and
+                                deceptive trade practices (UDAP) statutes. State-specific rights — such as
+                                auto-renewal cancellation rights, cooling-off periods, or mandatory refund
+                                windows — will be honored to the extent required by the law of your state.
+                            </p>
+                        </section>
+
+                        <section className="space-y-3">
+                            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                                AI-generated content disclaimer
+                            </h2>
+                            <p className="text-zinc-600 dark:text-zinc-400">
+                                Navigator uses artificial intelligence to assist with document analysis and
+                                question answering. AI-generated responses may contain errors or omissions.
+                                You are responsible for independently verifying any information before relying
+                                on it for legal, financial, medical, or other professional decisions. Navigator
+                                does not provide legal, financial, or professional advice.
                             </p>
                         </section>
 
@@ -87,6 +121,7 @@ export default function TermsOfServicePage() {
                                 </a>
                             </p>
                         </section>
+
                     </div>
                 </div>
             </main>

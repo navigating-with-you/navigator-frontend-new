@@ -612,6 +612,7 @@ export default function KnowledgeBasePage() {
             setFilesOpen(false);
         } catch (error: any) {
             toast.error(error.message || "Failed to upload files", { id: "uploading-files" });
+            throw error;
         }
     };
 
@@ -620,6 +621,7 @@ export default function KnowledgeBasePage() {
      * This way it appears in the hierarchy immediately after upload.
      */
     const handleAddText = async (payload: AddTextPayload) => {
+        let toastFired = false;
         try {
             const token = await getToken();
             if (!token) return;
@@ -630,15 +632,18 @@ export default function KnowledgeBasePage() {
             const file = new File([blob], fileName, { type: "text/plain" });
 
             const result = await uploadFiles(payload.folderId, [file], token);
-            
+
             if (result.errors && result.errors.length > 0) {
                 const dup = result.errors.find((e: any) => e.error?.includes("already exists"));
                 if (dup) {
                     toast.error(`"${payload.title}" already present, skipping`, { id: "add-text" });
-                    return;
+                    toastFired = true;
+                    throw new Error("duplicate");
                 }
-                toast.error(result.errors[0].error || "Failed to save text", { id: "add-text" });
-                return;
+                const errMsg = result.errors[0].error || "Failed to save text";
+                toast.error(errMsg, { id: "add-text" });
+                toastFired = true;
+                throw new Error(errMsg);
             }
 
             toast.success(`"${payload.title}" saved successfully`, { id: "add-text" });
@@ -655,9 +660,7 @@ export default function KnowledgeBasePage() {
                     uploader: {
                         display_name: currentUserName,
                         email: currentUserEmail
-                    }
-                    ,
-                    // mark as pending so the UI shows queued/processing until worker completes
+                    },
                     ocr_status: "pending",
                     preview_text: payload.content,
                 };
@@ -665,7 +668,10 @@ export default function KnowledgeBasePage() {
             }
             setTextOpen(false);
         } catch (error: any) {
-            toast.error(error.message || "Failed to save text", { id: "add-text" });
+            if (!toastFired) {
+                toast.error(error.message || "Failed to save text", { id: "add-text" });
+            }
+            throw error;
         }
     };
 

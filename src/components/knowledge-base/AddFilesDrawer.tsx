@@ -185,10 +185,9 @@ export default function AddFilesDrawer({
 
         try {
             await onSubmit(folder, items.map((it) => it.file));
-            toast.success(`${items.length} file${items.length > 1 ? "s" : ""} uploaded successfully`, { id: "files-upload" });
             onOpenChange(false);
-        } catch (error: any) {
-            toast.error(error.message || "Failed to upload files", { id: "files-upload" });
+        } catch {
+            // page handler owns all toast messages
         } finally {
             setIsUploading(false);
         }

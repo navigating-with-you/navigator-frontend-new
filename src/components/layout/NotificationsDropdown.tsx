@@ -71,7 +71,8 @@ export function NotificationsDropdown() {
         } catch (err) {
             console.error("Failed to fetch notifications:", err);
         }
-    }, [getToken]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         fetchNotifications();
@@ -86,7 +87,7 @@ export function NotificationsDropdown() {
             clearInterval(interval);
             cacheWebSocket.off("notification:created", handleNotificationCreated);
         };
-    }, [user, profile?.id, fetchNotifications]);
+    }, [user, profile?.id]); // fetchNotifications is stable (empty useCallback deps)
 
     const handleMarkAsRead = async (notificationId: string) => {
         setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n));
@@ -150,7 +151,7 @@ export function NotificationsDropdown() {
                 >
                     <Bell className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
                     {unreadCount > 0 && (
-                        <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                        <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-orange-500" />
                     )}
                 </button>
             </DropdownMenuTrigger>

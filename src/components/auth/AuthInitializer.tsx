@@ -53,9 +53,12 @@ export default function AuthInitializer() {
                         setUserProfile(userData);
                         window.dispatchEvent(new Event("navigator_user_synced"));
                     }
-                } catch (error) {
+                } catch (error: any) {
                     console.error("Failed to sync user:", error);
-                    toast.error("Failed to sync your account details.");
+                    const detail = error?.message && !error.message.startsWith("API error:")
+                        ? error.message
+                        : "Please refresh the page or sign in again.";
+                    toast.error(`Failed to sync your account details. ${detail}`);
                     syncStarted.current = false;
                     window.dispatchEvent(new Event("navigator_user_sync_failed"));
                 }

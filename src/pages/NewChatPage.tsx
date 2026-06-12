@@ -78,7 +78,7 @@ export default function NewChatPage(): JSX.Element {
         const h = new Date().getHours();
         return h < 12 ? "Good Morning" : h < 18 ? "Good Afternoon" : "Good Evening";
     });
-    const [selectedModel, setSelectedModel] = useState("MiniMax 2.7");
+    const [selectedModel, setSelectedModel] = useState("Default");
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [thinkingLabel, setThinkingLabel] = useState("Thinking...");
 
@@ -356,7 +356,7 @@ export default function NewChatPage(): JSX.Element {
                 {
                     query: text,
                     conversation_id: convId ?? undefined,
-                    model: selectedModel === "MiniMax 2.7" ? "minimax/minimax-01" : undefined,
+                    model: undefined,
                     truncate_message_id: truncateMessageId,
                 },
                 token,
@@ -672,7 +672,7 @@ export default function NewChatPage(): JSX.Element {
                                             </div>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
-                                            <DropdownMenuItem onClick={() => setSelectedModel("MiniMax 2.7")}>MiniMax 2.7</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => setSelectedModel("Default")}>Default</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
 
@@ -722,7 +722,7 @@ export default function NewChatPage(): JSX.Element {
                             return (
                                 <div key={i} className={`flex gap-3 items-start ${isUser ? "justify-end" : "justify-start"}`}>
                                     {!isUser && (
-                                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 animate-pulse shrink-0 mt-1" />
+                                        <div className="h-8 w-8 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse shrink-0 mt-1" />
                                     )}
                                     <div className={`flex flex-col gap-2 ${isUser ? "items-end" : "items-start"} max-w-[75%]`}>
                                         <div className={`h-10 w-56 bg-zinc-100 dark:bg-zinc-800 rounded-2xl animate-pulse`} />
@@ -892,7 +892,7 @@ export default function NewChatPage(): JSX.Element {
                                         </div>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-36 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
-                                        <DropdownMenuItem onClick={() => setSelectedModel("MiniMax 2.7")}>MiniMax 2.7</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setSelectedModel("Default")}>Default</DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
 
