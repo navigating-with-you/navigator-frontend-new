@@ -11,6 +11,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { useTokenExpiration } from "@/hooks/useTokenExpiration";
 import { PERMISSIONS } from "@/utils/rbacConfig";
 import { UserProvider } from "@/contexts/UserContext";
+import { TourProvider } from "@/contexts/TourContext";
 import type { JSX } from "react";
 
 // ✅ CODE SPLITTING: Lazy load all route pages
@@ -26,6 +27,9 @@ const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 const InviteAcceptancePage = lazy(() => import("@/pages/InviteAcceptancePage"));
 const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage"));
 const TermsOfServicePage = lazy(() => import("@/pages/TermsOfServicePage"));
+const DataUsagePolicyPage = lazy(() => import("@/pages/DataUsagePolicyPage"));
+const AboutPage = lazy(() => import("@/pages/AboutPage"));
+const ChangelogPage = lazy(() => import("@/pages/ChangelogPage"));
 
 /**
  * Loading fallback component shown while chunks are being loaded
@@ -96,6 +100,14 @@ function AppRoutes(): JSX.Element {
                 element={
                     <PageBoundary>
                         <TermsOfServicePage />
+                    </PageBoundary>
+                }
+            />
+            <Route
+                path="/data-usage-policy"
+                element={
+                    <PageBoundary>
+                        <DataUsagePolicyPage />
                     </PageBoundary>
                 }
             />
@@ -188,6 +200,24 @@ function AppRoutes(): JSX.Element {
                     />
 
                     <Route
+                        path="/about"
+                        element={
+                            <PageBoundary>
+                                <AboutPage />
+                            </PageBoundary>
+                        }
+                    />
+
+                    <Route
+                        path="/changelog"
+                        element={
+                            <PageBoundary>
+                                <ChangelogPage />
+                            </PageBoundary>
+                        }
+                    />
+
+                    <Route
                         path="/chatnew"
                         element={<Navigate to="/chat" replace />}
                     />
@@ -217,8 +247,10 @@ function App(): JSX.Element {
         <div className="App">
             <BrowserRouter>
                 <UserProvider>
-                    <AuthInitializer />
-                    <AppRoutes />
+                    <TourProvider>
+                        <AuthInitializer />
+                        <AppRoutes />
+                    </TourProvider>
                 </UserProvider>
             </BrowserRouter>
 
