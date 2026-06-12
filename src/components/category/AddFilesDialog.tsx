@@ -363,7 +363,7 @@ export default function AddFilesDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-[700px] w-[calc(100vw-32px)] sm:w-full p-0 bg-[#FEFFFA] dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-[0_8px_30px_#0000001A] overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[600px]">
+            <DialogContent className="max-w-[700px] w-[calc(100vw-32px)] sm:w-full p-0 bg-surface-page dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-[0_8px_30px_#0000001A] overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[600px]">
                 <DialogHeader className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
                     <DialogTitle className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
                         Add Files to Category
@@ -439,7 +439,7 @@ export default function AddFilesDialog({
                     {/* Table Area */}
                     <div className="flex-1 overflow-auto flex flex-col px-6">
                         {/* Table Header */}
-                        <div className="sticky top-0 z-10 flex items-center gap-4 bg-[#FEFFFA] dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 rounded-t-lg px-4 py-3 shrink-0">
+                        <div className="sticky top-0 z-10 flex items-center gap-4 bg-surface-page dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 rounded-t-lg px-4 py-3 shrink-0">
                             <div className="w-6" /> {/* Spacer for checkbox */}
                             <span className="text-xs font-semibold text-zinc-650 dark:text-zinc-300 uppercase tracking-wider">
                                 Name
@@ -555,7 +555,7 @@ export default function AddFilesDialog({
                 </div>
 
                 {/* Footer Controls (Pagination & Actions) */}
-                <div className="flex flex-col gap-3 px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 shrink-0 bg-[#FEFFFA] dark:bg-zinc-950">
+                <div className="flex flex-col gap-3 px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 shrink-0 bg-surface-page dark:bg-zinc-950">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-zinc-500 dark:text-zinc-400">
                         <div className="flex items-center gap-2">
                             <span className="whitespace-nowrap">Rows per Page</span>

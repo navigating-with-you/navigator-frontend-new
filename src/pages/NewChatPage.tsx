@@ -4,12 +4,10 @@ import {
     useRef,
     useCallback,
     type JSX,
-    type ReactNode,
 } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { useUserProfile } from "@/contexts/UserContext";
 import { useParams, useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import {
     ArrowUp,
     FileText,
@@ -18,15 +16,8 @@ import {
     RotateCcw,
     Square,
     Cpu,
-    Folder,
     Search,
-    Brain,
-    Layers,
-    Sparkles,
-    Zap,
     BarChart2,
-    RefreshCw,
-    WrenchIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -52,6 +43,9 @@ import {
     type Conversation,
     type ThinkingStep,
 } from "@/lib/api";
+import { ThinkingAccordion, THINKING_STEP_LABELS } from "@/components/chat/ThinkingAccordion";
+import { SourcesPill } from "@/components/chat/SourcesPill";
+import { MessageContent } from "@/components/chat/MessageContent";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -66,649 +60,6 @@ interface Message {
     thinkingSteps?: ThinkingStep[];
 }
 
-// ── Thinking steps display text ───────────────────────────────────────────────
-const THINKING_STEP_LABELS: Record<string, string> = {
-    understanding: "Understanding your question...",
-    planning: "Planning my approach...",
-    decomposing: "Breaking down the query...",
-    searching: "Searching knowledge base...",
-    evaluating: "Evaluating results...",
-    reranking: "Ranking relevant sources...",
-    refining: "Refining the answer...",
-    synthesizing: "Synthesizing information...",
-    answering: "Generating response...",
-};
-
-// ── Step icon helper ──────────────────────────────────────────────────────────
-function getStepIcon(step: string): ReactNode {
-    switch (step) {
-        case "understanding":  return <Brain      className="h-2 w-2 shrink-0 mt-0.5 text-violet-500" />;
-        case "planning":       return <Layers     className="h-2 w-2 shrink-0 mt-0.5 text-blue-500"   />;
-        case "decomposing":    return <RefreshCw  className="h-2 w-2 shrink-0 mt-0.5 text-amber-500"  />;
-        case "searching":
-        case "searching_kb":
-        case "searching_web":  return <Search     className="h-2 w-2 shrink-0 mt-0.5 text-zinc-500"   />;
-        case "evaluating":     return <BarChart2  className="h-2 w-2 shrink-0 mt-0.5 text-zinc-500"   />;
-        case "reranking":      return <Sparkles   className="h-2 w-2 shrink-0 mt-0.5 text-emerald-500"/>;
-        case "synthesizing":   return <Layers     className="h-2 w-2 shrink-0 mt-0.5 text-teal-500"   />;
-        case "answering":      return <Zap        className="h-2 w-2 shrink-0 mt-0.5 text-amber-500"  />;
-        case "tool_call":
-        case "tool_result":    return <WrenchIcon className="h-2 w-2 shrink-0 mt-0.5 text-zinc-400"   />;
-        default:               return <div className="h-1 w-1 rounded-full bg-zinc-400 dark:bg-zinc-500 shrink-0 mt-1" />;
-    }
-}
-
-// ── Typing dots component ─────────────────────────────────────────────────────
-function TypingDots() {
-    return (
-        <span className="inline-flex items-center gap-1 py-0.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-[typingDot_1.4s_ease-in-out_0s_infinite]" />
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-[typingDot_1.4s_ease-in-out_0.2s_infinite]" />
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-[typingDot_1.4s_ease-in-out_0.4s_infinite]" />
-        </span>
-    );
-}
-
-// ── Thinking Accordion Component ──────────────────────────────────────────────
-interface ThinkingAccordionProps {
-    isStreaming: boolean;
-    thinkingSteps: ThinkingStep[];
-}
-
-function ThinkingAccordion({ isStreaming, thinkingSteps }: ThinkingAccordionProps) {
-    const [isExpanded, setIsExpanded] = useState(isStreaming);
-
-    useEffect(() => {
-        if (isStreaming) {
-            setIsExpanded(true);
-        }
-    }, [isStreaming]);
-
-    if (!thinkingSteps || thinkingSteps.length === 0) return null;
-
-    const lastStep = thinkingSteps[thinkingSteps.length - 1];
-
-    // Status bullet color - no animation
-    const dotClass = isStreaming
-        ? "bg-blue-500"
-        : "bg-green-600 dark:bg-green-500";
-
-    // Header text
-    let headerText = "";
-    if (isStreaming) {
-        headerText = lastStep?.message || "Thinking...";
-    } else {
-        const hasSearch = thinkingSteps.some(s =>
-            s.step === "searching" ||
-            (s.message || "").toLowerCase().includes("search") ||
-            (s.message || "").toLowerCase().includes("brows")
-        );
-        if (hasSearch) {
-            headerText = "Finished browsing the web and documents";
-        } else if (lastStep?.message && lastStep.message.startsWith("Drafting")) {
-            headerText = lastStep.message.replace("Drafting", "Drafted");
-        } else {
-            headerText = lastStep?.message || "Completed thinking steps";
-        }
-    }
-
-    return (
-        <div className="w-[50%] mb-1.5 select-none bg-[#E7E7E0] dark:bg-[#E7E7E0]/10 rounded-lg transition-all overflow-hidden">
-            {/* Header row */}
-            <div
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center justify-between cursor-pointer px-2.5 py-1.5 hover:bg-[#E7E7E0]/50 dark:hover:bg-[#E7E7E0]/20 transition-colors"
-            >
-                <div className="flex items-center gap-1">
-                    <span className={cn("h-1 w-1 rounded-full shrink-0", dotClass)} />
-                    <span className={cn(
-                        "text-[10px] font-medium",
-                        isStreaming
-                            ? "text-zinc-600 dark:text-zinc-400"
-                            : "text-green-700 dark:text-green-400 font-semibold"
-                    )}>
-                        {headerText}
-                    </span>
-                </div>
-                <button
-                    className="flex items-center gap-0.5 text-[9px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors ml-1.5"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setIsExpanded(!isExpanded);
-                    }}
-                >
-                    {isExpanded
-                        ? <ChevronDown className="h-3 w-3" />
-                        : <ChevronDown className="h-3 w-3 -rotate-90" />
-                    }
-                </button>
-            </div>
-
-            {/* Collapsible list */}
-            {isExpanded && (
-                <>
-                    <div className="h-px bg-zinc-200 dark:bg-zinc-800" />
-                    <div className="space-y-0.5 text-[9px] text-zinc-600 dark:text-zinc-400 px-2.5 py-1.5 max-h-32 overflow-y-auto">
-                        {thinkingSteps.map((step, idx) => {
-                            // Compute inter-step duration from timestamps
-                            const stepMs = idx < thinkingSteps.length - 1
-                                ? Math.round(
-                                    new Date(thinkingSteps[idx + 1].timestamp).getTime() -
-                                    new Date(step.timestamp).getTime()
-                                  )
-                                : null;
-
-                            return (
-                                <div key={idx} className="flex items-center gap-1">
-                                    {getStepIcon(step.step)}
-                                    <span className="leading-tight flex-1">{step.message}</span>
-                                    {stepMs !== null && stepMs > 200 && (
-                                        <span className="text-[8px] text-zinc-400 ml-auto shrink-0 tabular-nums">{stepMs}ms</span>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </>
-            )}
-        </div>
-    );
-}
-
-// ── Citation Reference Lookup Helper ──────────────────────────────────────────
-const getCitationForReference = (
-    refType: "Source" | "Web",
-    index: number,
-    citations?: Citation[]
-): Citation | undefined => {
-    if (!citations) return undefined;
-    if (refType === "Source") {
-        const internalCitations = citations.filter(c => c.file_id !== null && c.file_id !== undefined);
-        return internalCitations[index - 1];
-    } else {
-        const webCitations = citations.filter(c => c.file_id === null || c.file_id === undefined);
-        return webCitations[index - 1];
-    }
-};
-
-// ── Inline Citation Pill Component ─────────────────────────────────────────────
-interface CitationPillProps {
-    citation: Citation;
-    type: "Source" | "Web";
-    onSourceClick?: (citation: Citation) => void;
-}
-
-function CitationPill({ citation, type, onSourceClick }: CitationPillProps) {
-    const isWeb = type === "Web";
-    const [imgError, setImgError] = useState(false);
-
-    const getDomain = (url?: string) => {
-        if (!url) return null;
-        try {
-            return new URL(url).hostname;
-        } catch {
-            return null;
-        }
-    };
-
-    const domain = getDomain(citation.heading_path);
-    const faviconUrl = isWeb && domain ? `https://www.google.com/s2/favicons?sz=64&domain=${domain}` : null;
-
-    const handleClick = () => {
-        if (isWeb && citation.heading_path) {
-            window.open(citation.heading_path, "_blank");
-        } else if (onSourceClick) {
-            // Trigger callback to open file in knowledge base
-            onSourceClick(citation);
-        }
-    };
-
-    return (
-        <span
-            onClick={handleClick}
-            title={citation.content_preview || citation.filename}
-            className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#eae9e4] hover:bg-[#e0dfda] dark:bg-zinc-800 dark:hover:bg-zinc-700/80 border border-zinc-200/40 dark:border-zinc-700/50 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer select-none mx-1 relative -top-[1px]"
-        >
-            <span className="max-w-[150px] truncate">{citation.filename}</span>
-            {isWeb ? (
-                faviconUrl && !imgError ? (
-                    <img
-                        src={faviconUrl}
-                        alt=""
-                        onError={() => setImgError(true)}
-                        className="h-3.5 w-3.5 rounded-full object-contain shrink-0 bg-white"
-                    />
-                ) : (
-                    <span className="h-3.5 w-3.5 rounded-full bg-zinc-300 dark:bg-zinc-650 flex items-center justify-center shrink-0">
-                        <span className="text-[8px] font-bold text-zinc-600 dark:text-zinc-400">W</span>
-                    </span>
-                )
-            ) : (
-                <Folder className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
-            )}
-        </span>
-    );
-}
-
-// ── Sources Pill Stack & Details Dropdown Component ─────────────────────────────
-interface SourcesPillProps {
-    sources: Citation[];
-    onSourceClick?: (citation: Citation) => void;
-}
-
-function SourcesPill({ sources, onSourceClick }: SourcesPillProps) {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    // Close on click outside
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsExpanded(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    // Filter unique sources for the visual logo stack
-    const uniqueSources: { filename: string; isWeb: boolean; domain?: string; citation: Citation }[] = [];
-    const seen = new Set<string>();
-
-    sources.forEach(src => {
-        const isWeb = src.file_id === null || src.file_id === undefined;
-        let domain: string | undefined;
-        if (isWeb && src.heading_path) {
-            try {
-                domain = new URL(src.heading_path).hostname;
-            } catch {
-                domain = undefined;
-            }
-        }
-        const key = isWeb ? (domain || src.filename) : src.filename;
-        if (!seen.has(key)) {
-            seen.add(key);
-            uniqueSources.push({ filename: src.filename, isWeb, domain, citation: src });
-        }
-    });
-
-    const displayedIcons = uniqueSources.slice(0, 3);
-
-    return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="inline-flex items-center gap-2.5 px-3 py-1 bg-[#eae9e4] hover:bg-[#e0dfda] dark:bg-zinc-800 dark:hover:bg-zinc-700/80 border border-zinc-200/40 dark:border-zinc-700/50 rounded-full text-xs font-semibold text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer select-none"
-            >
-                <div className="flex items-center -space-x-1.5 mr-0.5">
-                    {displayedIcons.map((src, idx) => {
-                        if (src.isWeb && src.domain) {
-                            return (
-                                <img
-                                    key={idx}
-                                    src={`https://www.google.com/s2/favicons?sz=64&domain=${src.domain}`}
-                                    alt=""
-                                    className="h-4 w-4 rounded-full object-contain bg-white border border-white dark:border-zinc-800 shrink-0 z-[10]"
-                                    onError={(e) => {
-                                        (e.target as HTMLElement).style.display = "none";
-                                    }}
-                                />
-                            );
-                        } else {
-                            return (
-                                <span
-                                    key={idx}
-                                    className="h-4 w-4 flex items-center justify-center bg-zinc-300 dark:bg-zinc-750 rounded-full border border-white dark:border-zinc-800 shrink-0 z-[10]"
-                                >
-                                    <Folder className="h-2.5 w-2.5 text-zinc-650 dark:text-zinc-350" />
-                                </span>
-                            );
-                        }
-                    })}
-                </div>
-                <span>{sources.length} {sources.length === 1 ? "Source" : "Sources"}</span>
-            </button>
-
-            {isExpanded && (
-                <div className="absolute left-0 bottom-full mb-2 w-64 max-h-60 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg p-2 z-50 space-y-1">
-                    <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-800 mb-1">
-                        Sources Used
-                    </div>
-                    {sources.map((src, idx) => {
-                        const isWeb = src.file_id === null || src.file_id === undefined;
-                        let domain: string | undefined;
-                        if (isWeb && src.heading_path) {
-                            try {
-                                domain = new URL(src.heading_path).hostname;
-                            } catch {
-                                domain = undefined;
-                            }
-                        }
-
-                        return (
-                            <div
-                                key={idx}
-                                onClick={() => {
-                                    if (onSourceClick) {
-                                        onSourceClick(src);
-                                    } else {
-                                        // Fallback behavior
-                                        if (isWeb && src.heading_path) {
-                                            window.open(src.heading_path, "_blank");
-                                        } else {
-                                            toast.info(`Document source: ${src.filename}`);
-                                        }
-                                    }
-                                    setIsExpanded(false);
-                                }}
-                                className="flex items-center gap-2.5 p-2 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-lg cursor-pointer text-xs transition-colors"
-                            >
-                                {isWeb && domain ? (
-                                    <img
-                                        src={`https://www.google.com/s2/favicons?sz=64&domain=${domain}`}
-                                        alt=""
-                                        className="h-4 w-4 rounded-full object-contain shrink-0 bg-white"
-                                    />
-                                ) : (
-                                    <Folder className="h-4 w-4 text-zinc-500 shrink-0" />
-                                )}
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-zinc-700 dark:text-zinc-300 truncate">
-                                        {src.filename}
-                                    </p>
-                                    {src.content_preview && (
-                                        <p className="text-[10px] text-zinc-400 dark:text-zinc-500 truncate mt-0.5">
-                                            {src.content_preview}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ── Markdown pre-processor ────────────────────────────────────────────────────
-// Handles code blocks, GFM tables, and inline code before line-by-line processing.
-type MarkdownSegment =
-    | { type: "text"; value: string }
-    | { type: "code_block"; code: string; lang: string }
-    | { type: "table"; html: string };
-
-function parseMarkdown(text: string): MarkdownSegment[] {
-    const segments: MarkdownSegment[] = [];
-
-    // Split on triple-backtick code blocks first
-    const codeBlockRe = /```([\w]*)\n([\s\S]*?)```/g;
-    // Split on GFM pipe tables
-    const tableRe = /(\|.+\|\n\|[-| :]+\|\n(?:\|.+\|\n?)+)/g;
-
-    // Collect all special regions with their positions
-    interface Region {
-        start: number;
-        end: number;
-        segment: MarkdownSegment;
-    }
-    const regions: Region[] = [];
-
-    let m: RegExpExecArray | null;
-
-    // Find code blocks
-    codeBlockRe.lastIndex = 0;
-    while ((m = codeBlockRe.exec(text)) !== null) {
-        const lang = m[1] || "";
-        const code = m[2];
-        regions.push({ start: m.index, end: m.index + m[0].length, segment: { type: "code_block", code, lang } });
-    }
-
-    // Find tables (only outside of already-found code blocks)
-    tableRe.lastIndex = 0;
-    while ((m = tableRe.exec(text)) !== null) {
-        const start = m.index;
-        const end = start + m[0].length;
-        // Skip if overlapping a code block region
-        const overlaps = regions.some(r => start < r.end && end > r.start);
-        if (overlaps) continue;
-
-        const block = m[0];
-        const rows = block.trim().split("\n").filter(r => !/^\|[-| :]+\|$/.test(r));
-        const cells = (r: string) => r.split("|").slice(1, -1).map(c => c.trim());
-        const [hdr, ...body] = rows;
-        if (!hdr) continue;
-
-        const headerCells = cells(hdr)
-            .map(h => `<th class="border border-zinc-300 dark:border-zinc-600 px-1.5 py-0.5 text-left bg-zinc-100 dark:bg-zinc-800">${h}</th>`)
-            .join("");
-        const bodyRows = body
-            .map(r => `<tr>${cells(r).map(c => `<td class="border border-zinc-300 dark:border-zinc-600 px-1.5 py-0.5">${c}</td>`).join("")}</tr>`)
-            .join("");
-        const html = `<table class="text-xs border-collapse my-1.5 w-full"><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
-
-        regions.push({ start, end, segment: { type: "table", html } });
-    }
-
-    // Sort regions by start position
-    regions.sort((a, b) => a.start - b.start);
-
-    let cursor = 0;
-    for (const region of regions) {
-        if (region.start > cursor) {
-            // Text segment before this region — process inline code within it
-            const raw = text.slice(cursor, region.start);
-            segments.push({ type: "text", value: raw });
-        }
-        segments.push(region.segment);
-        cursor = region.end;
-    }
-
-    // Remaining text
-    if (cursor < text.length) {
-        segments.push({ type: "text", value: text.slice(cursor) });
-    }
-
-    return segments;
-}
-
-// ── Render message markdown-lite ──────────────────────────────────────────────
-function MessageContent({
-    content,
-    citations,
-    isStreaming,
-    onCitationClick,
-}: {
-    content: string;
-    citations?: Citation[];
-    isStreaming?: boolean;
-    onCitationClick?: (citation: Citation) => void;
-}): JSX.Element {
-    if (!content && isStreaming) {
-        return <TypingDots />;
-    }
-
-    const segments = parseMarkdown(content);
-
-    // Render a text segment line-by-line (existing logic)
-    const renderTextSegment = (text: string, segIdx: number) => {
-        const lines = text.split("\n");
-        return lines.map((line, idx) => {
-            const trimmed = line.trim();
-            if (!trimmed) return <div key={`${segIdx}-${idx}`} className="h-1" />;
-
-            // H3: ###
-            if (trimmed.startsWith("### ")) {
-                return (
-                    <p key={`${segIdx}-${idx}`} className="font-bold text-zinc-900 dark:text-zinc-100 mt-4 first:mt-0 text-[14px] leading-snug">
-                        {formatInline(trimmed.slice(4), citations, onCitationClick)}
-                    </p>
-                );
-            }
-
-            // H2: ##
-            if (trimmed.startsWith("## ")) {
-                return (
-                    <p key={`${segIdx}-${idx}`} className="font-bold text-zinc-900 dark:text-zinc-100 mt-5 first:mt-0 text-[16px] leading-snug">
-                        {formatInline(trimmed.slice(3), citations, onCitationClick)}
-                    </p>
-                );
-            }
-
-            // Bold line: **text**
-            if (trimmed.startsWith("**") && trimmed.endsWith("**") && trimmed.length > 4) {
-                return (
-                    <p key={`${segIdx}-${idx}`} className="font-semibold text-zinc-900 dark:text-zinc-100 mt-4 first:mt-0 text-[15px] leading-snug">
-                        {formatInline(trimmed.slice(2, -2), citations, onCitationClick)}
-                    </p>
-                );
-            }
-
-            // Arrow line: → or ->
-            const arrowMatch = trimmed.match(/^(→|->)\s*(.+)/);
-            if (arrowMatch) {
-                return (
-                    <div key={`${segIdx}-${idx}`} className="flex items-start gap-2 pl-2 text-zinc-800 dark:text-zinc-200">
-                        <span className="shrink-0 text-zinc-500 dark:text-zinc-400 select-none">→</span>
-                        <span className="leading-relaxed">{formatInline(arrowMatch[2], citations, onCitationClick)}</span>
-                    </div>
-                );
-            }
-
-            // Bullet: * or -
-            const bulletMatch = line.match(/^(\s*)[*\-]\s+(.+)/);
-            if (bulletMatch) {
-                const indent = bulletMatch[1].length;
-                return (
-                    <div key={`${segIdx}-${idx}`} className={cn("flex items-start gap-2 text-zinc-800 dark:text-zinc-200", indent > 0 ? "pl-6" : "pl-2")}>
-                        <span className="shrink-0 text-zinc-400 dark:text-zinc-500 select-none font-semibold">•</span>
-                        <span className="leading-relaxed">{formatInline(bulletMatch[2], citations, onCitationClick)}</span>
-                    </div>
-                );
-            }
-
-            // Numbered list: 1. text
-            const numMatch = line.match(/^\s*(\d+)\.\s+(.+)/);
-            if (numMatch) {
-                return (
-                    <div key={`${segIdx}-${idx}`} className="flex items-start gap-2 pl-2">
-                        <span className="shrink-0 text-xs font-semibold text-zinc-400 mt-0.5 w-4">{numMatch[1]}.</span>
-                        <span className="text-zinc-800 dark:text-zinc-155">{formatInline(numMatch[2], citations, onCitationClick)}</span>
-                    </div>
-                );
-            }
-
-            // Plain paragraph
-            return (
-                <p key={`${segIdx}-${idx}`} className="text-zinc-800 dark:text-zinc-200 leading-relaxed">
-                    {formatInline(trimmed, citations, onCitationClick)}
-                </p>
-            );
-        });
-    };
-
-    return (
-        <div className="space-y-3.5 text-sm leading-relaxed">
-            {segments.map((seg, segIdx) => {
-                if (seg.type === "code_block") {
-                    return (
-                        <pre key={segIdx} className="bg-zinc-100 dark:bg-zinc-800 rounded p-2 my-1.5 overflow-x-auto text-xs font-mono whitespace-pre">
-                            {seg.code
-                                .replace(/&/g, "&amp;")
-                                .replace(/</g, "&lt;")
-                                .replace(/>/g, "&gt;")}
-                        </pre>
-                    );
-                }
-                if (seg.type === "table") {
-                    return (
-                        <div
-                            key={segIdx}
-                            className="overflow-x-auto my-1.5"
-                            dangerouslySetInnerHTML={{ __html: seg.html }}
-                        />
-                    );
-                }
-                // text segment — render line-by-line
-                return <span key={segIdx} className="contents">{renderTextSegment(seg.value, segIdx)}</span>;
-            })}
-            {isStreaming && content && <TypingDots />}
-        </div>
-    );
-}
-
-/** Apply bold/italic/inline-code formatting + citation pill replacements */
-function formatInline(text: string, citations?: Citation[], onCitationClick?: (citation: Citation) => void): JSX.Element {
-    const parts = text.split(/(`[^`\n]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[Source \d+\]|\[Web \d+\]|\[[^\]]+\])/g);
-    return (
-        <>
-            {parts.map((part, i) => {
-                // Inline code: `code`
-                if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
-                    return (
-                        <code key={i} className="bg-zinc-100 dark:bg-zinc-800 rounded px-1 text-xs font-mono">
-                            {part.slice(1, -1)}
-                        </code>
-                    );
-                }
-                if (part.startsWith("**") && part.endsWith("**")) {
-                    return (
-                        <strong key={i} className="font-semibold text-zinc-900 dark:text-zinc-100">
-                            {formatInline(part.slice(2, -2), citations, onCitationClick)}
-                        </strong>
-                    );
-                }
-                if (part.startsWith("*") && part.endsWith("*")) {
-                    return <em key={i}>{formatInline(part.slice(1, -1), citations, onCitationClick)}</em>;
-                }
-
-                const citationMatch = part.match(/^\[(Source|Web) (\d+)\]$/);
-                if (citationMatch) {
-                    const type = citationMatch[1] as "Source" | "Web";
-                    const index = parseInt(citationMatch[2], 10);
-                    const citation = getCitationForReference(type, index, citations);
-
-                    if (citation) {
-                        return <CitationPill key={i} citation={citation} type={type} onSourceClick={onCitationClick} />;
-                    }
-                }
-
-                // Check for numeric citations (e.g. [1] or [^1])
-                const numericMatch = part.match(/^\[\^?(\d+)\]$/);
-                if (numericMatch) {
-                    const index = parseInt(numericMatch[1], 10);
-                    if (citations && index > 0 && index <= citations.length) {
-                        const citation = citations[index - 1];
-                        const type = (citation.file_id !== null && citation.file_id !== undefined) ? "Source" : "Web";
-                        return <CitationPill key={i} citation={citation} type={type} onSourceClick={onCitationClick} />;
-                    }
-                }
-
-                // Check for filename-based citations (e.g. [Volunteer_Guidelines.docx, Section])
-                const genericMatch = part.match(/^\[([^\]]+)\]$/);
-                if (genericMatch) {
-                    const content = genericMatch[1].trim();
-                    const firstPart = content.split(",")[0].trim();
-
-                    const foundCitation = citations?.find(c => {
-                        const fname = (c.filename || "").toLowerCase();
-                        const contentLower = content.toLowerCase();
-                        const firstPartLower = firstPart.toLowerCase();
-
-                        return fname === contentLower || fname === firstPartLower || contentLower.includes(fname);
-                    });
-
-                    if (foundCitation) {
-                        const type = (foundCitation.file_id !== null && foundCitation.file_id !== undefined) ? "Source" : "Web";
-                        return <CitationPill key={i} citation={foundCitation} type={type} onSourceClick={onCitationClick} />;
-                    }
-                }
-
-                return <span key={i}>{part}</span>;
-            })}
-        </>
-    );
-}
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
@@ -722,7 +73,10 @@ export default function NewChatPage(): JSX.Element {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isResponding, setIsResponding] = useState(false);
     const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-    const [greeting, setGreeting] = useState("Good Morning");
+    const [greeting] = useState(() => {
+        const h = new Date().getHours();
+        return h < 12 ? "Good Morning" : h < 18 ? "Good Afternoon" : "Good Evening";
+    });
     const [selectedModel, setSelectedModel] = useState("MiniMax 2.7");
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [thinkingLabel, setThinkingLabel] = useState("Thinking...");
@@ -879,11 +233,6 @@ export default function NewChatPage(): JSX.Element {
     }, [conversationId, isResponding, getToken]);
 
     // ── Profile / greeting ────────────────────────────────────────────────────
-
-    useEffect(() => {
-        const h = new Date().getHours();
-        setGreeting(h < 12 ? "Good Morning" : h < 18 ? "Good Afternoon" : "Good Evening");
-    }, []);
 
     const displayName =
         profile?.display_name ||
@@ -1254,16 +603,16 @@ export default function NewChatPage(): JSX.Element {
     const showEmptyState = !id && messages.length === 0 && !isLoadingMessages;
 
     const suggestions = [
-        { text: "Summarize the Spanish communication pilot program's feedback." },
-        { text: "Evaluate new policy changes in California and their impact on our operations." },
-        { text: "Identify grants that we can apply for to fund our organic nutrition programs." },
+        { text: "Summarize the Spanish communication pilot program's feedback.", icon: FileText },
+        { text: "Evaluate new policy changes in California and their impact on our operations.", icon: BarChart2 },
+        { text: "Identify grants that we can apply for to fund our organic nutrition programs.", icon: Search },
     ];
 
     // ── Render ────────────────────────────────────────────────────────────────
 
     return (
         <div
-            className="flex flex-col h-full overflow-hidden bg-[#FEFFFA] dark:bg-zinc-950"
+            className="flex flex-col h-full overflow-hidden bg-surface-page dark:bg-zinc-950"
             data-testid="new-chat-page"
             data-tour="chat-page"
         >
@@ -1346,24 +695,22 @@ export default function NewChatPage(): JSX.Element {
 
                         {/* Suggestions Cards Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 w-full max-w-5xl">
-                            {suggestions.map((s, idx) => (
-                                <button
-                                    key={idx}
-                                    type="button"
-                                    onClick={() => handleSendMessage(s.text)}
-                                    className="relative flex flex-col items-start text-left bg-zinc-50/50 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800/80 hover:border-blue-200 dark:hover:border-blue-800/60 hover:bg-blue-50/10 dark:hover:bg-blue-950/10 rounded-2xl p-4 sm:p-5 cursor-pointer transition-all hover:scale-[1.01] shadow-sm group min-h-[110px] md:min-h-[140px]"
-                                >
-
-
-                                    {/* Card Icon */}
-                                    <FileText className="h-5 w-5 text-zinc-400 dark:text-zinc-500 mb-3 shrink-0" />
-
-                                    {/* Card Text */}
-                                    <p className="text-[12px] font-medium leading-relaxed text-zinc-600 dark:text-zinc-300 group-hover:text-zinc-950 dark:group-hover:text-zinc-100 transition-colors">
-                                        {s.text}
-                                    </p>
-                                </button>
-                            ))}
+                            {suggestions.map((s, idx) => {
+                                const Icon = s.icon;
+                                return (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => handleSendMessage(s.text)}
+                                        className="relative flex flex-col items-start text-left bg-zinc-50/50 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800/80 hover:border-blue-200 dark:hover:border-blue-800/60 hover:bg-blue-50/10 dark:hover:bg-blue-950/10 rounded-2xl p-4 sm:p-5 cursor-pointer transition-all hover:scale-[1.01] shadow-sm group"
+                                    >
+                                        <Icon className="h-5 w-5 text-zinc-400 dark:text-zinc-500 mb-3 shrink-0" />
+                                        <p className="text-[12px] font-medium leading-relaxed text-zinc-600 dark:text-zinc-300 group-hover:text-zinc-950 dark:group-hover:text-zinc-100 transition-colors">
+                                            {s.text}
+                                        </p>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 ) : isLoadingMessages ? (
@@ -1435,14 +782,14 @@ export default function NewChatPage(): JSX.Element {
 
                                                     {/* Thinking step label fallback — while streaming and no steps array yet */}
                                                     {m.isStreaming && (!m.thinkingSteps || m.thinkingSteps.length === 0) && (
-                                                        <div className="w-[60%] mb-1 flex items-center gap-2 px-3 py-2 bg-[#E7E7E0] dark:bg-[#E7E7E0]/10 border border-[#E7E7E0]/50 dark:border-[#E7E7E0]/20 rounded-xl text-xs text-zinc-700 dark:text-zinc-300 animate-pulse">
+                                                        <div className="w-full max-w-[90%] sm:max-w-[75%] md:max-w-[60%] mb-1 flex items-center gap-2 px-3 py-2 bg-surface-sidebar dark:bg-surface-sidebar border border-surface-sidebar/50 dark:border-surface-sidebar/20 rounded-xl text-xs text-zinc-700 dark:text-zinc-300 animate-pulse">
                                                             <span>{thinkingLabel}</span>
                                                         </div>
                                                     )}
 
                                                     {/* Message content - 60% max width, clean layout without bubble background */}
                                                     {(m.content || m.isStreaming) && (
-                                                        <div className="max-w-[60%] text-zinc-800 dark:text-zinc-200 select-text">
+                                                        <div className="w-full max-w-[90%] sm:max-w-[75%] md:max-w-[60%] text-zinc-800 dark:text-zinc-200 select-text">
                                                             <MessageContent
                                                                 content={m.content}
                                                                 citations={m.sources}
@@ -1507,7 +854,7 @@ export default function NewChatPage(): JSX.Element {
 
             {/* ── Fixed Bottom Input Bar ────────────────────────────────── */}
             {!showEmptyState && (
-                <div className="shrink-0 px-3 sm:px-6 pb-[calc(12px+env(safe-area-inset-bottom))] sm:pb-5 pt-2 bg-[#FEFFFA] dark:bg-zinc-950">
+                <div className="shrink-0 px-3 sm:px-6 pb-[calc(12px+env(safe-area-inset-bottom))] sm:pb-5 pt-2 bg-surface-page dark:bg-zinc-950">
                     <div
                         data-tour="chat-input"
                         className="max-w-4xl mx-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm focus-within:shadow-md focus-within:border-zinc-300 dark:focus-within:border-zinc-700 transition-all p-2.5 sm:p-3.5 flex flex-col gap-1.5 sm:gap-2"

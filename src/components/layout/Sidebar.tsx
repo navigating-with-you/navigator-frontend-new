@@ -42,6 +42,7 @@ import { useState } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { deleteConversation, updateConversation, type Conversation } from "@/lib/api";
 import { useCachedConversations } from "@/hooks/useCachedConversations";
+import { groupByTime } from "@/utils/conversationUtils";
 
 type NavItemType = {
     to: string;
@@ -62,7 +63,7 @@ type SidebarProps = {
 
 const mainNav: NavItemType[] = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutGrid, permission: PERMISSIONS.EMPLOYEE_VIEW }, // Restricted to Admin/Editor/Super-Admin, not Members
-    { to: "/employees", label: "Employees", icon: Users, permission: PERMISSIONS.EMPLOYEE_EDIT }, // Restricted to Admin/Editor/Super-Admin, not Members
+    { to: "/employees", label: "Employees", icon: Users, permission: PERMISSIONS.EMPLOYEE_VIEW },
     { to: "/teams", label: "Categories", icon: ListTree, permission: PERMISSIONS.GROUP_VIEW },
     { to: "/knowledge-base", label: "Knowledge Base", icon: FileStack, permission: PERMISSIONS.FOLDER_VIEW },
     { to: "/integration", label: "Integration", icon: Plug }, // Visible to all roles (Member, Editor, Admin, Super-Admin)
@@ -134,8 +135,8 @@ function NavItem({
                 cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                     isActive
-                        ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                        : "text-zinc-600 dark:text-zinc-400 hover:bg-[#E7E7E0] dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"
+                        ? "bg-surface-sidebar dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                        : "text-zinc-600 dark:text-zinc-400 hover:bg-surface-sidebar dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"
                 )
             }
         >
@@ -147,47 +148,6 @@ function NavItem({
     );
 }
 
-function groupByTime(conversations: Conversation[]) {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today.getTime() - 86400000);
-    const sevenDaysAgo = new Date(today.getTime() - 7 * 86400000);
-    const thirtyDaysAgo = new Date(today.getTime() - 30 * 86400000);
-
-    const groups: { label: string; items: Conversation[] }[] = [
-        { label: "Today", items: [] },
-        { label: "Yesterday", items: [] },
-        { label: "Previous 7 Days", items: [] },
-        { label: "Previous 30 Days", items: [] },
-        { label: "Older", items: [] },
-    ];
-
-    for (const conv of conversations) {
-        const date = new Date(conv.updated_at || conv.created_at);
-        if (date >= today) {
-            groups[0].items.push(conv);
-        } else if (date >= yesterday) {
-            groups[1].items.push(conv);
-        } else if (date >= sevenDaysAgo) {
-            groups[2].items.push(conv);
-        } else if (date >= thirtyDaysAgo) {
-            groups[3].items.push(conv);
-        } else {
-            groups[4].items.push(conv);
-        }
-    }
-
-    // Sort each group by date (newest first)
-    groups.forEach(group => {
-        group.items.sort((a, b) => {
-            const dateA = new Date(a.updated_at || a.created_at).getTime();
-            const dateB = new Date(b.updated_at || b.created_at).getTime();
-            return dateB - dateA; // Newest first
-        });
-    });
-
-    return groups.filter(g => g.items.length > 0);
-}
 
 /** Compact chat history list for the expanded sidebar */
 function ChatHistoryList({ onConversationDeleted }: { onConversationDeleted?: () => void }) {
@@ -309,14 +269,16 @@ function ChatHistoryList({ onConversationDeleted }: { onConversationDeleted?: ()
                         const isActive = activeId === conv.id;
                         const isEditing = editingId === conv.id;
                         return (
-                            <div
+                            <button
+                                type="button"
                                 key={conv.id}
                                 onClick={() => !isEditing && handleOpenConversation(conv)}
                                 data-testid={`chat-history-${conv.id}`}
+                                aria-label={`Open conversation: ${conv.title}`}
                                 className={cn(
                                     "group w-full flex items-center gap-2 py-2 px-3 text-left text-sm transition-all cursor-pointer shrink-0 relative rounded-lg",
                                     isActive
-                                        ? "bg-[#E7E7E0] text-zinc-900 dark:bg-[#E7E7E0]/10 dark:text-zinc-100 font-semibold"
+                                        ? "bg-surface-sidebar text-zinc-900 dark:bg-surface-sidebar dark:text-zinc-100 font-semibold"
                                         : "text-zinc-655 hover:bg-zinc-100/60 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100"
                                 )}
                             >
@@ -373,7 +335,7 @@ function ChatHistoryList({ onConversationDeleted }: { onConversationDeleted?: ()
                                         </div>
                                     </>
                                 )}
-                            </div>
+                            </button>
                         );
                     })}
                 </div>
@@ -466,8 +428,8 @@ export default function Sidebar({
                                                     cn(
                                                         "mx-auto flex items-center justify-center h-10 w-10 rounded-xl transition-all",
                                                         active
-                                                            ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                                                            : "text-zinc-550 dark:text-zinc-400 hover:bg-[#E7E7E0] dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100"
+                                                            ? "bg-surface-sidebar dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                                                            : "text-zinc-550 dark:text-zinc-400 hover:bg-surface-sidebar dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100"
                                                     )
                                                 }
                                             >
@@ -497,7 +459,7 @@ export default function Sidebar({
                                                 type="button"
                                                 onClick={onSearchClick}
                                                 data-testid="nav-search-chats"
-                                                className="mx-auto flex items-center justify-center h-10 w-10 rounded-xl transition-all text-zinc-550 dark:text-zinc-400 hover:bg-[#E7E7E0] dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100 cursor-pointer"
+                                                className="mx-auto flex items-center justify-center h-10 w-10 rounded-xl transition-all text-zinc-550 dark:text-zinc-400 hover:bg-surface-sidebar dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100 cursor-pointer"
                                             >
                                                 <item.icon className="h-4 w-4" />
                                             </button>
@@ -509,8 +471,8 @@ export default function Sidebar({
                                                     cn(
                                                         "mx-auto flex items-center justify-center h-10 w-10 rounded-xl transition-all",
                                                         isItemActive(item.to)
-                                                            ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
-                                                            : "text-zinc-550 dark:text-zinc-400 hover:bg-[#E7E7E0] dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100"
+                                                            ? "bg-surface-sidebar dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
+                                                            : "text-zinc-550 dark:text-zinc-400 hover:bg-surface-sidebar dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100"
                                                     )
                                                 }
                                             >
@@ -584,7 +546,7 @@ export default function Sidebar({
                                     type="button"
                                     onClick={onSearchClick}
                                     data-testid="nav-search-chats"
-                                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-zinc-600 hover:bg-[#E7E7E0] hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 cursor-pointer text-left w-full"
+                                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-zinc-600 hover:bg-surface-sidebar hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 cursor-pointer text-left w-full"
                                 >
                                     <div className="flex h-4 w-4 items-center justify-center shrink-0">
                                         <item.icon className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
@@ -605,8 +567,8 @@ export default function Sidebar({
                                         cn(
                                             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                                             isItemActive(item.to)
-                                                ? "bg-[#E7E7E0] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                                                : "text-zinc-600 dark:text-zinc-400 hover:bg-[#E7E7E0] hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                                                ? "bg-surface-sidebar dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                                                : "text-zinc-600 dark:text-zinc-400 hover:bg-surface-sidebar hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                                         )
                                     }
                                 >

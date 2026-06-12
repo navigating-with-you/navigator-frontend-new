@@ -11,50 +11,17 @@ import { listConversations, type Conversation } from "@/lib/api";
 import OnboardingPage from "@/pages/OnboardingPage";
 import { cn } from "@/lib/utils";
 import { useUserProfile } from "@/contexts/UserContext";
-
-/** Group conversations into time buckets */
-function groupByTime(conversations: Conversation[]) {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today.getTime() - 86400000);
-    const sevenDaysAgo = new Date(today.getTime() - 7 * 86400000);
-    const thirtyDaysAgo = new Date(today.getTime() - 30 * 86400000);
-
-    const groups: { label: string; items: Conversation[] }[] = [
-        { label: "Today", items: [] },
-        { label: "Yesterday", items: [] },
-        { label: "Previous 7 Days", items: [] },
-        { label: "Previous 30 Days", items: [] },
-        { label: "Older", items: [] },
-    ];
-
-    for (const conv of conversations) {
-        const date = new Date(conv.updated_at || conv.created_at);
-        if (date >= today) {
-            groups[0].items.push(conv);
-        } else if (date >= yesterday) {
-            groups[1].items.push(conv);
-        } else if (date >= sevenDaysAgo) {
-            groups[2].items.push(conv);
-        } else if (date >= thirtyDaysAgo) {
-            groups[3].items.push(conv);
-        } else {
-            groups[4].items.push(conv);
-        }
-    }
-
-    return groups.filter(g => g.items.length > 0);
-}
+import { groupByTime } from "@/utils/conversationUtils";
 
 function OnboardingSkeleton({ loadingTime }: { loadingTime: number }) {
     return (
-        <div className="min-h-screen w-full flex flex-col bg-[#FEFFFA] dark:bg-zinc-950 transition-colors duration-300 relative select-none">
+        <div className="min-h-screen w-full flex flex-col bg-surface-page dark:bg-zinc-950 transition-colors duration-300 relative select-none">
             {/* Header / Top Bar Skeleton */}
-            <header className="w-full border-b border-zinc-100 dark:border-zinc-800/80 bg-[#FEFFFA] dark:bg-zinc-950 px-4 sm:px-6 md:px-12 py-4 shrink-0">
+            <header className="w-full border-b border-zinc-100 dark:border-zinc-800/80 bg-surface-page dark:bg-zinc-950 px-4 sm:px-6 md:px-12 py-4 shrink-0">
                 <div className="w-full max-w-7xl mx-auto flex items-center justify-between animate-pulse">
                     {/* Logo placeholder */}
                     <div className="h-8 w-32 bg-zinc-200 dark:bg-zinc-800 rounded-lg" />
-                    
+
                     {/* Controls & Profile placeholder */}
                     <div className="flex items-center gap-4">
                         <div className="h-8 w-8 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
@@ -288,7 +255,7 @@ export default function AppLayout(): JSX.Element {
     // 2. Error state (loading completed/failed/timed out but profile is still null)
     if (hasError || (!isLoadingProfile && !profile)) {
         return (
-            <div className="flex h-screen w-full flex-col items-center justify-center bg-[#FEFFFA] dark:bg-zinc-950 px-4 text-center select-none animate-fade-in">
+            <div className="flex h-screen w-full flex-col items-center justify-center bg-surface-page dark:bg-zinc-950 px-4 text-center select-none animate-fade-in">
                 <div className="max-w-md space-y-6">
                     <div className="flex justify-center">
                         <div className="p-3.5 bg-red-50 dark:bg-red-950/20 rounded-full text-red-500">
@@ -335,187 +302,187 @@ export default function AppLayout(): JSX.Element {
         );
     }
 
-    if (!profile.organization_id) {
+    if (!profile?.organization_id) {
         return (
-            <OnboardingPage 
+            <OnboardingPage
                 onComplete={(newOrgId) => {
                     updateUserProfile({ organization_id: newOrgId });
                     window.dispatchEvent(new Event("navigator_conversation_created"));
                     navigate("/dashboard", { replace: true });
-                }} 
+                }}
             />
         );
     }
 
     return (
-        <div className="w-full bg-[#FEFFFA] dark:bg-zinc-950 flex justify-center">
+        <div className="w-full bg-surface-page dark:bg-zinc-950 flex justify-center">
             <div
-                className="flex h-dvh w-full overflow-hidden bg-[#FEFFFA] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 relative"
+                className="flex h-dvh w-full overflow-hidden bg-surface-page dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 relative"
                 data-testid="app-layout"
             >
-            {/* Sidebar mobile overlay backdrop */}
-            <div
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                    "fixed inset-0 bg-zinc-950/45 backdrop-blur-xs z-30 lg:hidden transition-opacity duration-300",
-                    sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-                )}
-            />
-
-            <Sidebar 
-                open={sidebarOpen} 
-                onClose={() => setSidebarOpen(false)}
-                onSearchClick={() => setSearchOpen(true)}
-            />
-
-            <div className="flex flex-1 flex-col overflow-hidden w-full min-w-0">
-                <TopBar
-                    onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
-                    onProfileClick={() => setProfileOpen(true)}
+                {/* Sidebar mobile overlay backdrop */}
+                <div
+                    onClick={() => setSidebarOpen(false)}
+                    className={cn(
+                        "fixed inset-0 bg-zinc-950/45 backdrop-blur-xs z-30 lg:hidden transition-opacity duration-300",
+                        sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                    )}
                 />
 
-                <main
-                    className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar w-full flex flex-col min-h-0 min-w-0"
-                    data-testid="main-content"
-                >
-                    <Outlet />
-                </main>
-            </div>
+                <Sidebar
+                    open={sidebarOpen}
+                    onClose={() => setSidebarOpen(false)}
+                    onSearchClick={() => setSearchOpen(true)}
+                />
 
-            {/* ── Global Search Modal ── */}
-            {searchOpen && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-955/20 dark:bg-zinc-955/40 backdrop-blur-md transition-opacity duration-300"
-                    onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
-                    data-testid="global-search-modal"
-                >
-                    <div
-                        className="w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col mx-4"
-                        onClick={(e) => e.stopPropagation()}
-                        data-tour="search-modal"
+                <div className="flex flex-1 flex-col overflow-hidden w-full min-w-0">
+                    <TopBar
+                        onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
+                        onProfileClick={() => setProfileOpen(true)}
+                    />
+
+                    <main
+                        className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar w-full flex flex-col min-h-0 min-w-0"
+                        data-testid="main-content"
                     >
-                        {/* Search Input Header */}
-                        <div className="flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-800 px-4 py-3.5">
-                            <Search className="h-4 w-4 text-zinc-400 shrink-0" />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search conversations..."
-                                className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-sm text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 py-1"
-                                autoFocus
-                            />
-                            {searchQuery && (
+                        <Outlet />
+                    </main>
+                </div>
+
+                {/* ── Global Search Modal ── */}
+                {searchOpen && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-955/20 dark:bg-zinc-955/40 backdrop-blur-md transition-opacity duration-300"
+                        onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
+                        data-testid="global-search-modal"
+                    >
+                        <div
+                            className="w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col mx-4"
+                            onClick={(e) => e.stopPropagation()}
+                            data-tour="search-modal"
+                        >
+                            {/* Search Input Header */}
+                            <div className="flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-800 px-4 py-3.5">
+                                <Search className="h-4 w-4 text-zinc-400 shrink-0" />
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search conversations..."
+                                    className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-sm text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 py-1"
+                                    autoFocus
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery("")}
+                                        className="p-1 rounded text-zinc-400 hover:text-zinc-600 transition-colors"
+                                    >
+                                        <X className="h-3.5 w-3.5" />
+                                    </button>
+                                )}
                                 <button
-                                    onClick={() => setSearchQuery("")}
-                                    className="p-1 rounded text-zinc-400 hover:text-zinc-600 transition-colors"
+                                    onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
+                                    className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200 transition-colors"
                                 >
-                                    <X className="h-3.5 w-3.5" />
+                                    <X className="h-4 w-4" />
                                 </button>
-                            )}
-                            <button
-                                onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
-                                className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200 transition-colors"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
-                        </div>
+                            </div>
 
-                        {/* Search Items Body */}
-                        <div className="p-2 space-y-1 overflow-y-auto max-h-[420px]">
-                            {/* New Chat trigger — always visible */}
-                            <button
-                                onClick={() => {
-                                    setSearchOpen(false);
-                                    setSearchQuery("");
-                                    navigate("/chat");
-                                    window.dispatchEvent(new Event("navigator_load_history"));
-                                }}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-xl transition-colors font-semibold"
-                            >
-                                <Pencil className="h-4 w-4 text-zinc-400" />
-                                <span>New Chat</span>
-                            </button>
+                            {/* Search Items Body */}
+                            <div className="p-2 space-y-1 overflow-y-auto max-h-[420px]">
+                                {/* New Chat trigger — always visible */}
+                                <button
+                                    onClick={() => {
+                                        setSearchOpen(false);
+                                        setSearchQuery("");
+                                        navigate("/chat");
+                                        window.dispatchEvent(new Event("navigator_load_history"));
+                                    }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-xl transition-colors font-semibold"
+                                >
+                                    <Pencil className="h-4 w-4 text-zinc-400" />
+                                    <span>New Chat</span>
+                                </button>
 
-                            {/* Loading state */}
-                            {isLoadingConvs && (
-                                <div className="flex items-center justify-center py-8 gap-2 text-zinc-400 text-sm">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span>Loading conversations...</span>
-                                </div>
-                            )}
-
-                            {/* Empty state — no conversations at all */}
-                            {!isLoadingConvs && conversations.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-10 text-center">
-                                    <MessageSquare className="h-8 w-8 text-zinc-200 mb-3" />
-                                    <p className="text-sm font-medium text-zinc-400">No conversations yet</p>
-                                    <p className="text-xs text-zinc-400 mt-1">Start a new chat to get going</p>
-                                </div>
-                            )}
-
-                            {/* No results for query */}
-                            {!isLoadingConvs && conversations.length > 0 && !hasResults && searchQuery && (
-                                <div className="flex flex-col items-center justify-center py-8 text-center">
-                                    <Search className="h-7 w-7 text-zinc-200 mb-3" />
-                                    <p className="text-sm font-medium text-zinc-400">
-                                        No results for <span className="text-zinc-600">"{searchQuery}"</span>
-                                    </p>
-                                    <p className="text-xs text-zinc-400 mt-1">Try a different search term</p>
-                                </div>
-                            )}
-
-                            {/* Grouped results */}
-                            {!isLoadingConvs && groups.map((group) => (
-                                <div key={group.label} className="pt-2 select-none">
-                                    <div className="flex items-center gap-1.5 px-3 pb-1.5">
-                                        <Clock className="h-3 w-3 text-zinc-400" />
-                                        <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
-                                            {group.label}
-                                        </span>
+                                {/* Loading state */}
+                                {isLoadingConvs && (
+                                    <div className="flex items-center justify-center py-8 gap-2 text-zinc-400 text-sm">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        <span>Loading conversations...</span>
                                     </div>
-                                    <div className="space-y-0.5">
-                                        {group.items.map((conv) => (
-                                            <button
-                                                key={conv.id}
-                                                onClick={() => handleSelectConversation(conv)}
-                                                className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-xl transition-colors"
-                                            >
-                                                <MessageSquare className="h-4 w-4 text-zinc-400 shrink-0" />
-                                                <span className="flex-1 truncate font-medium">{conv.title}</span>
-                                                {conv.message_count > 0 && (
-                                                    <span className="text-[10px] text-zinc-400 shrink-0">
-                                                        {conv.message_count} msg{conv.message_count !== 1 ? "s" : ""}
-                                                    </span>
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                )}
 
-                        {/* Footer hint */}
-                        <div className="border-t border-zinc-100 dark:border-zinc-800 px-4 py-2 flex items-center justify-between">
-                            <span className="text-[10px] text-zinc-400">
-                                {conversations.length > 0
-                                    ? `${conversations.length} conversation${conversations.length !== 1 ? "s" : ""}`
-                                    : "No history"}
-                            </span>
-                            <span className="text-[10px] text-zinc-400">
-                                <kbd className="px-1 py-0.5 bg-zinc-100 rounded text-[9px] font-mono">Esc</kbd> to close
-                            </span>
+                                {/* Empty state — no conversations at all */}
+                                {!isLoadingConvs && conversations.length === 0 && (
+                                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                                        <MessageSquare className="h-8 w-8 text-zinc-200 mb-3" />
+                                        <p className="text-sm font-medium text-zinc-400">No conversations yet</p>
+                                        <p className="text-xs text-zinc-400 mt-1">Start a new chat to get going</p>
+                                    </div>
+                                )}
+
+                                {/* No results for query */}
+                                {!isLoadingConvs && conversations.length > 0 && !hasResults && searchQuery && (
+                                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                                        <Search className="h-7 w-7 text-zinc-200 mb-3" />
+                                        <p className="text-sm font-medium text-zinc-400">
+                                            No results for <span className="text-zinc-600">"{searchQuery}"</span>
+                                        </p>
+                                        <p className="text-xs text-zinc-400 mt-1">Try a different search term</p>
+                                    </div>
+                                )}
+
+                                {/* Grouped results */}
+                                {!isLoadingConvs && groups.map((group) => (
+                                    <div key={group.label} className="pt-2 select-none">
+                                        <div className="flex items-center gap-1.5 px-3 pb-1.5">
+                                            <Clock className="h-3 w-3 text-zinc-400" />
+                                            <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                                                {group.label}
+                                            </span>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                            {group.items.map((conv) => (
+                                                <button
+                                                    key={conv.id}
+                                                    onClick={() => handleSelectConversation(conv)}
+                                                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-xl transition-colors"
+                                                >
+                                                    <MessageSquare className="h-4 w-4 text-zinc-400 shrink-0" />
+                                                    <span className="flex-1 truncate font-medium">{conv.title}</span>
+                                                    {conv.message_count > 0 && (
+                                                        <span className="text-[10px] text-zinc-400 shrink-0">
+                                                            {conv.message_count} msg{conv.message_count !== 1 ? "s" : ""}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Footer hint */}
+                            <div className="border-t border-zinc-100 dark:border-zinc-800 px-4 py-2 flex items-center justify-between">
+                                <span className="text-[10px] text-zinc-400">
+                                    {conversations.length > 0
+                                        ? `${conversations.length} conversation${conversations.length !== 1 ? "s" : ""}`
+                                        : "No history"}
+                                </span>
+                                <span className="text-[10px] text-zinc-400">
+                                    <kbd className="px-1 py-0.5 bg-zinc-100 rounded text-[9px] font-mono">Esc</kbd> to close
+                                </span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-            
-            {/* Profile Drawer Overlay */}
-            {profileOpen && (
-                <Suspense fallback={null}>
-                    <ProfilePage onClose={() => setProfileOpen(false)} />
-                </Suspense>
-            )}
+                )}
+
+                {/* Profile Drawer Overlay */}
+                {profileOpen && (
+                    <Suspense fallback={null}>
+                        <ProfilePage onClose={() => setProfileOpen(false)} />
+                    </Suspense>
+                )}
             </div>
         </div>
     );

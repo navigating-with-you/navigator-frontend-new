@@ -165,7 +165,7 @@ export default function InviteAcceptancePage() {
 
     // ── Main Page Layout ──────────────────────────────────────────────────────
     return (
-        <div className="flex min-h-screen w-full flex-col bg-[#FEFFFA] dark:bg-zinc-950">
+        <div className="flex min-h-screen w-full flex-col bg-surface-page dark:bg-zinc-950">
             <main className="flex flex-1 items-center justify-center p-6">
                 {/* ── Verifying ── */}
                 {loading && step === "verify" && (

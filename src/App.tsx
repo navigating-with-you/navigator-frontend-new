@@ -30,10 +30,10 @@ const InviteAcceptancePage = lazy(() => import("@/pages/InviteAcceptancePage"));
  */
 function PageLoader(): JSX.Element {
     return (
-        <div className="flex items-center justify-center h-screen">
+        <div className="flex items-center justify-center h-screen bg-[hsl(var(--background))]">
             <div className="flex flex-col items-center gap-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-                <p className="text-sm text-gray-600">Loading...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]" />
+                <p className="text-sm text-muted-foreground">Loading...</p>
             </div>
         </div>
     );

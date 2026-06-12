@@ -25,7 +25,7 @@ function DrawerThinkingAccordion({ isStreaming, thinkingSteps }: { isStreaming: 
         : "Finished thinking";
 
     return (
-        <div className="w-full mb-1.5 bg-[#E7E7E0] dark:bg-[#E7E7E0]/10 rounded-lg overflow-hidden">
+        <div className="w-full mb-1.5 bg-surface-sidebar dark:bg-surface-sidebar rounded-lg overflow-hidden">
             <div
                 onClick={() => setIsExpanded(v => !v)}
                 className="flex items-center justify-between cursor-pointer px-2.5 py-1.5"
@@ -78,7 +78,7 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [conversationId, setConversationId] = useState<string | null>(null);
-    const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
+    const [_thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
     const scrollRef = useRef<HTMLDivElement>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -192,7 +192,7 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
                             )
                         );
                     },
-                    onToolResult: (toolName, resultCount) => {
+                    onToolResult: (_toolName, resultCount) => {
                         const label = `Found ${resultCount} result${resultCount !== 1 ? "s" : ""}`;
                         setThinkingSteps(prev => [...prev, { step: "tool_result", message: label, timestamp: new Date().toISOString() }]);
                         setMessages(prev =>

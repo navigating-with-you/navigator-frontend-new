@@ -108,33 +108,21 @@ const plans: PlanPriceInfo[] = [
 ];
 
 export default function SubscriptionPage(): JSX.Element {
-    const [currency, setCurrency] = useState<CurrencyConfig>(currencies[0]);
-    const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("yearly");
+    const [currency, setCurrency] = useState<CurrencyConfig>(() => {
+        const saved = localStorage.getItem("subscription-currency");
+        return currencies.find(c => c.code === saved) ?? currencies[0];
+    });
+    const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">(() => {
+        const saved = localStorage.getItem("subscription-billing-cycle");
+        return saved === "monthly" ? "monthly" : "yearly";
+    });
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    // Load preferences from localStorage on mount
-    useEffect(() => {
-        const savedCurrencyCode = localStorage.getItem("subscription-currency");
-        const savedBillingCycle = localStorage.getItem("subscription-billing-cycle") as "monthly" | "yearly" | null;
-
-        if (savedCurrencyCode) {
-            const saved = currencies.find(c => c.code === savedCurrencyCode);
-            if (saved) setCurrency(saved);
-        }
-
-        if (savedBillingCycle && ["monthly", "yearly"].includes(savedBillingCycle)) {
-            setBillingCycle(savedBillingCycle);
-        }
-    }, []);
-
-    // Save preferences to localStorage whenever they change
+    // Persist preferences whenever they change
     useEffect(() => {
         localStorage.setItem("subscription-currency", currency.code);
-    }, [currency]);
-
-    useEffect(() => {
         localStorage.setItem("subscription-billing-cycle", billingCycle);
-    }, [billingCycle]);
+    }, [currency, billingCycle]);
 
     const scroll = (direction: "left" | "right") => {
         if (scrollContainerRef.current) {
@@ -171,14 +159,14 @@ export default function SubscriptionPage(): JSX.Element {
                         <DropdownMenuTrigger asChild>
                             <button
                                 type="button"
-                                className="flex items-center gap-3 px-4 py-2 border border-[#E7E7E0] dark:border-zinc-800 rounded-[10px] text-sm font-medium text-zinc-800 dark:text-zinc-200 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer select-none transition-colors h-10"
+                                className="flex items-center gap-3 px-4 py-2 border border-surface-sidebar dark:border-zinc-800 rounded-[10px] text-sm font-medium text-zinc-800 dark:text-zinc-200 bg-surface-page dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer select-none transition-colors h-10"
                             >
                                 <span className="text-base">{currency.flag}</span>
                                 <span>{currency.label}</span>
                                 <ChevronDown className="h-4 w-4 text-zinc-450 dark:text-zinc-500" />
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-32 bg-[#FEFFFA] dark:bg-zinc-900 border border-[#E7E7E0] dark:border-zinc-800 rounded-xl p-1 shadow-md">
+                        <DropdownMenuContent align="start" className="w-32 bg-surface-page dark:bg-zinc-900 border border-surface-sidebar dark:border-zinc-800 rounded-xl p-1 shadow-md">
                             {currencies.map((curr) => (
                                 <DropdownMenuItem
                                     key={curr.code}
@@ -193,7 +181,7 @@ export default function SubscriptionPage(): JSX.Element {
                     </DropdownMenu>
 
                     {/* Billing Cycle Toggle */}
-                    <div className="flex items-center p-1 bg-[#FEFFFA] dark:bg-zinc-900 border border-[#E7E7E0] dark:border-zinc-800 rounded-[10px] h-10 select-none gap-1">
+                    <div className="flex items-center p-1 bg-surface-page dark:bg-zinc-900 border border-surface-sidebar dark:border-zinc-800 rounded-[10px] h-10 select-none gap-1">
                         <button
                             type="button"
                             onClick={() => setBillingCycle("monthly")}
@@ -228,14 +216,14 @@ export default function SubscriptionPage(): JSX.Element {
                 <div className="hidden md:flex items-center gap-1.5">
                     <button
                         onClick={() => scroll("left")}
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E7E7E0] dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-surface-sidebar dark:border-zinc-800 bg-surface-page dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer"
                         aria-label="Scroll Left"
                     >
                         <ChevronLeft className="h-4 w-4" />
                     </button>
                     <button
                         onClick={() => scroll("right")}
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E7E7E0] dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-surface-sidebar dark:border-zinc-800 bg-surface-page dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer"
                         aria-label="Scroll Right"
                     >
                         <ChevronRight className="h-4 w-4" />
@@ -256,7 +244,7 @@ export default function SubscriptionPage(): JSX.Element {
                     return (
                         <div
                             key={plan.name}
-                            className="relative flex flex-col rounded-[16px] border border-[#E7E7E0] dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900/80 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] w-full max-w-[340px] md:w-[335px] shrink-0 gap-4"
+                            className="relative flex flex-col rounded-[16px] border border-surface-sidebar dark:border-zinc-800 bg-surface-page dark:bg-zinc-900/80 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] w-full max-w-[340px] md:w-[335px] shrink-0 gap-4"
                         >
                             {/* Recommendation Badge */}
                             {plan.recommended && (
@@ -299,7 +287,7 @@ export default function SubscriptionPage(): JSX.Element {
                                 {plan.buttonVariant === "current" ? (
                                     <Button
                                         disabled
-                                        className="w-full flex items-center justify-center gap-2 bg-[#FEFFFA] dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 rounded-[8px] font-medium py-2 h-10 border border-[#E7E7E0] dark:border-zinc-800 select-none cursor-default"
+                                        className="w-full flex items-center justify-center gap-2 bg-surface-page dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 rounded-[8px] font-medium py-2 h-10 border border-surface-sidebar dark:border-zinc-800 select-none cursor-default"
                                     >
                                         <div className="flex h-4 w-4 items-center justify-center rounded-full bg-zinc-400 dark:bg-zinc-650 text-white p-0.5">
                                             <Check className="h-3 w-3 shrink-0" />
@@ -310,7 +298,7 @@ export default function SubscriptionPage(): JSX.Element {
                                     <Button
                                         variant="outline"
                                         onClick={() => handlePlanAction(plan.name, plan.buttonVariant)}
-                                        className="w-full rounded-[8px] font-medium py-2 h-10 border border-[#E7E7E0] dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                                        className="w-full rounded-[8px] font-medium py-2 h-10 border border-surface-sidebar dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 bg-surface-page dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
                                     >
                                         {plan.buttonVariant === "upgrade" ? "Upgrade" : "Downgrade"}
                                     </Button>

@@ -136,8 +136,8 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
         if (!validation.success) {
             // Get the first error from fieldErrors
             const fieldErrorEntries = Object.entries(validation.error.flatten().fieldErrors);
-            const firstError = fieldErrorEntries.length > 0 
-                ? fieldErrorEntries[0][1]?.[0] 
+            const firstError = fieldErrorEntries.length > 0
+                ? fieldErrorEntries[0][1]?.[0]
                 : "Invalid organization details";
             toast.error(firstError || "Invalid organization details");
             return;
@@ -182,14 +182,14 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
         } catch (err: any) {
             console.error(err);
             let errMsg = err.message || "Failed to create organization. Check details and retry.";
-            
+
             // Extract field-specific error messages from backend validation errors
             // If multiple errors joined by comma, take the first one
             if (errMsg.includes(",")) {
                 const errors = errMsg.split(",");
                 errMsg = errors[0].trim();
             }
-            
+
             setSubmitError(errMsg);
             toast.error(errMsg);
         } finally {
@@ -202,9 +202,9 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
     ];
 
     return (
-        <div className="min-h-screen w-full flex flex-col bg-[#FEFFFA] dark:bg-zinc-950 transition-colors duration-300 relative">
+        <div className="min-h-screen w-full flex flex-col bg-surface-page dark:bg-zinc-950 transition-colors duration-300 relative">
             {/* Header / Top Bar */}
-            <header className="w-full border-b border-zinc-100 dark:border-zinc-800/80 bg-[#FEFFFA] dark:bg-zinc-950 px-4 sm:px-6 md:px-12 py-4 shrink-0">
+            <header className="w-full border-b border-zinc-100 dark:border-zinc-800/80 bg-surface-page dark:bg-zinc-950 px-4 sm:px-6 md:px-12 py-4 shrink-0">
                 <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
                     {/* Logo */}
                     <div className="flex items-center">
@@ -381,11 +381,11 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                                 />
                                 {touched.name && fieldErrors.name && (
-                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
-                                         <AlertCircle className="h-3.5 w-3.5" />
-                                         <span>{fieldErrors.name[0]}</span>
-                                     </div>
-                                 )}
+                                    <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                        <span>{fieldErrors.name[0]}</span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Contact Email */}
@@ -403,11 +403,11 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                                 />
                                 {touched.email && fieldErrors.email && (
-                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
-                                         <AlertCircle className="h-3.5 w-3.5" />
-                                         <span>{fieldErrors.email[0]}</span>
-                                     </div>
-                                 )}
+                                    <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                        <span>{fieldErrors.email[0]}</span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Contact Phone Number */}
@@ -444,11 +444,11 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     />
                                 </div>
                                 {touched.contactNumber && fieldErrors.contactNumber && (
-                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
-                                         <AlertCircle className="h-3.5 w-3.5" />
-                                         <span>{fieldErrors.contactNumber[0]}</span>
-                                     </div>
-                                 )}
+                                    <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                        <span>{fieldErrors.contactNumber[0]}</span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Address Line 1 */}
@@ -466,11 +466,11 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                                 />
                                 {touched.address && fieldErrors.address && (
-                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
-                                         <AlertCircle className="h-3.5 w-3.5" />
-                                         <span>{fieldErrors.address[0]}</span>
-                                     </div>
-                                 )}
+                                    <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                        <span>{fieldErrors.address[0]}</span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* City */}
@@ -488,11 +488,11 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                                 />
                                 {touched.city && fieldErrors.city && (
-                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
-                                         <AlertCircle className="h-3.5 w-3.5" />
-                                         <span>{fieldErrors.city[0]}</span>
-                                     </div>
-                                 )}
+                                    <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                        <span>{fieldErrors.city[0]}</span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* State or Province */}
@@ -510,11 +510,11 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                                 />
                                 {touched.stateProvince && fieldErrors.stateProvince && (
-                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
-                                         <AlertCircle className="h-3.5 w-3.5" />
-                                         <span>{fieldErrors.stateProvince[0]}</span>
-                                     </div>
-                                 )}
+                                    <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                        <span>{fieldErrors.stateProvince[0]}</span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Country */}
@@ -554,11 +554,11 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     className="h-11 rounded-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                                 />
                                 {touched.postalCode && fieldErrors.postalCode && (
-                                     <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
-                                         <AlertCircle className="h-3.5 w-3.5" />
-                                         <span>{fieldErrors.postalCode[0]}</span>
-                                     </div>
-                                 )}
+                                    <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                        <span>{fieldErrors.postalCode[0]}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

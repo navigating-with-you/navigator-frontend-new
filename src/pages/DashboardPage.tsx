@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type JSX } from "react";
+import { useState, useRef, useEffect, useCallback, type JSX } from "react";
 import {
     Users,
     FileText,
@@ -60,25 +60,17 @@ function generateChartData(subscriptionSummary: any): Record<string, DataPoint[]
         };
     }
 
-    // Distribute usage across days with realistic variance
-
-    // Generate data with realistic distribution
+    // Distribute usage evenly across days (no randomness)
     const generateData = (daysBack: number, dayCount: number): DataPoint[] => {
         const data: DataPoint[] = [];
-        const avgSimplePerDay = simpleUsed / dayCount;
-        const avgComplexPerDay = complexUsed / dayCount;
+        const avgSimplePerDay = parseFloat((simpleUsed / dayCount).toFixed(2));
+        const avgComplexPerDay = parseFloat((complexUsed / dayCount).toFixed(2));
 
         for (let i = dayCount - 1; i >= 0; i--) {
             const date = new Date(today);
             date.setDate(date.getDate() - (daysBack + i));
-
-            // Add realistic variance (±40%)
-            const variance = 0.6 + Math.random() * 0.8;
-            const simple = parseFloat((avgSimplePerDay * variance).toFixed(2));
-            const complex = parseFloat((avgComplexPerDay * variance).toFixed(2));
-
             const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            data.push({ date: dateStr, simple, complex });
+            data.push({ date: dateStr, simple: avgSimplePerDay, complex: avgComplexPerDay });
         }
         return data;
     };
@@ -409,20 +401,18 @@ export default function DashboardPage(): JSX.Element {
         }
     }, [subscriptionSummary]);
 
-    const fetchLiveStats = async () => {
+    const fetchLiveStats = useCallback(async () => {
         try {
             const token = await getToken();
             if (!token) return;
 
-            // Parallel fetches
+            // Parallel fetches — subscription included so nothing waits in series
             const [empData, rootData, notifData] = await Promise.all([
                 listEmployees(token).catch(() => ({ employees: [] })),
                 getRootContents(token).catch(() => ({ folders: [], files: [] })),
-                getNotifications(token).catch(() => ({ notifications: [] }))
+                getNotifications(token).catch(() => ({ notifications: [] })),
+                refetchSubscription().catch(() => undefined),
             ]);
-
-            // Refetch subscription data
-            await refetchSubscription();
 
             // 1. Calculate proper employees count (members only, no invites)
             const activeEmployees = empData?.employees || (Array.isArray(empData) ? empData : []);
@@ -476,7 +466,7 @@ export default function DashboardPage(): JSX.Element {
         } catch (e) {
             console.warn("Failed to retrieve live stats for dashboard:", e);
         }
-    };
+    }, [getToken, refetchSubscription]);
 
     useEffect(() => {
         if (!isAuthenticated) return;
@@ -491,8 +481,7 @@ export default function DashboardPage(): JSX.Element {
 
         // Cleanup interval on unmount or when auth changes
         return () => clearInterval(interval);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated]);
+    }, [isAuthenticated, fetchLiveStats]);
 
     // Refresh dashboard when user switches back to the window
     useEffect(() => {
@@ -504,8 +493,7 @@ export default function DashboardPage(): JSX.Element {
 
         window.addEventListener("focus", handleFocus);
         return () => window.removeEventListener("focus", handleFocus);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated]);
+    }, [isAuthenticated, fetchLiveStats]);
 
     const handleRefresh = async () => {
         setIsRefreshed(true);
@@ -528,310 +516,310 @@ export default function DashboardPage(): JSX.Element {
         <div className="p-3 sm:p-6 md:p-8 pb-8 flex flex-col w-full bg-transparent animate-fade-in" data-testid="dashboard-page">
             {/* Header - Fixed */}
             <div className="shrink-0 flex flex-col gap-1">
-                <div className="flex flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-                            Dashboard
-                        </h1>
+                    <div className="flex flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                                Dashboard
+                            </h1>
+                        </div>
+                        <div className="flex items-center">
+                            <Button
+                                variant="outline"
+                                onClick={handleRefresh}
+                                disabled={isRefreshed}
+                                className="gap-2 rounded-lg border-surface-sidebar bg-surface-page hover:bg-[#F5F5F0] dark:border-zinc-700 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold"
+                            >
+                                <RefreshCw className={`h-4 w-4 text-zinc-500 dark:text-zinc-400 ${isRefreshed ? "animate-spin" : ""}`} />
+                                <span className="hidden sm:inline">{isRefreshed ? "Refreshing..." : "Refresh"}</span>
+                            </Button>
+                        </div>
                     </div>
-                    <div className="flex items-center">
-                        <Button
-                            variant="outline"
-                            onClick={handleRefresh}
-                            disabled={isRefreshed}
-                            className="gap-2 rounded-lg border-[#E7E7E0] bg-[#FEFFFA] hover:bg-[#F5F5F0] dark:border-zinc-700 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold"
-                        >
-                            <RefreshCw className={`h-4 w-4 text-zinc-500 dark:text-zinc-400 ${isRefreshed ? "animate-spin" : ""}`} />
-                            <span className="hidden sm:inline">{isRefreshed ? "Refreshing..." : "Refresh"}</span>
-                        </Button>
-                    </div>
-                </div>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    Overview of your organization's members, files usage, subscription limits, and recent activity logs.
-                </p>
-            </div>
-
-            {/* Statistics Row */}
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 w-full shrink-0">
-                {/* Total Employees */}
-                <div className="flex items-center justify-between rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900/80 p-5 shadow-sm transition-all hover:shadow">
-                    <div className="space-y-2.5">
-                        <p className="text-xs font-medium text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Total Employees</p>
-                        <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                            {new Intl.NumberFormat().format(employeesCount)}
-                        </h3>
-                        <p className="text-[11px] font-medium text-zinc-450 dark:text-zinc-500">
-                            Active members only
-                        </p>
-                    </div>
-                    <div className="h-12 w-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm shrink-0">
-                        <Users className="h-5 w-5" />
-                    </div>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                        Overview of your organization's members, files usage, subscription limits, and recent activity logs.
+                    </p>
                 </div>
 
-                {/* Total Files Size (dynamic KB/MB/GB label) */}
-                <div className="flex items-center justify-between rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900/80 p-5 shadow-sm transition-all hover:shadow">
-                    <div className="space-y-2.5">
-                        <p className="text-xs font-medium text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Total Files Size</p>
-                        <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                            {formatSize(kbSizeBytes)}
-                        </h3>
-                        <p className="text-[11px] font-medium text-zinc-450 dark:text-zinc-500">
-                            Across all folders & files
-                        </p>
+                {/* Statistics Row */}
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 w-full shrink-0">
+                    {/* Total Employees */}
+                    <div className="flex items-center justify-between rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-surface-page dark:bg-zinc-900/80 p-5 shadow-sm transition-all hover:shadow">
+                        <div className="space-y-2.5">
+                            <p className="text-xs font-medium text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Total Employees</p>
+                            <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">
+                                {new Intl.NumberFormat().format(employeesCount)}
+                            </h3>
+                            <p className="text-[11px] font-medium text-zinc-450 dark:text-zinc-500">
+                                Active members only
+                            </p>
+                        </div>
+                        <div className="h-12 w-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm shrink-0">
+                            <Users className="h-5 w-5" />
+                        </div>
                     </div>
-                    <div className="h-12 w-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm shrink-0">
-                        <FileText className="h-5 w-5" />
+
+                    {/* Total Files Size (dynamic KB/MB/GB label) */}
+                    <div className="flex items-center justify-between rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-surface-page dark:bg-zinc-900/80 p-5 shadow-sm transition-all hover:shadow">
+                        <div className="space-y-2.5">
+                            <p className="text-xs font-medium text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Total Files Size</p>
+                            <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">
+                                {formatSize(kbSizeBytes)}
+                            </h3>
+                            <p className="text-[11px] font-medium text-zinc-450 dark:text-zinc-500">
+                                Across all folders & files
+                            </p>
+                        </div>
+                        <div className="h-12 w-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm shrink-0">
+                            <FileText className="h-5 w-5" />
+                        </div>
                     </div>
-                </div>
 
-                {/* Usage Limit */}
-                <div className="flex items-center justify-between rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900/80 p-5 shadow-sm transition-all hover:shadow">
-                    <div className="space-y-2.5 flex-1 pr-3">
-                        <p className="text-xs font-medium text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Usage Limit</p>
-                        <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{usageLimit}%</h3>
+                    {/* Usage Limit */}
+                    <div className="flex items-center justify-between rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-surface-page dark:bg-zinc-900/80 p-5 shadow-sm transition-all hover:shadow">
+                        <div className="space-y-2.5 flex-1 pr-3">
+                            <p className="text-xs font-medium text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Usage Limit</p>
+                            <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{usageLimit}%</h3>
 
-                        <div className="space-y-1 pt-1">
-                            <div className="h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-                                <div
-                                    className="h-full rounded-full bg-blue-600 transition-all duration-500"
-                                    style={{ width: `${usageLimit}%` }}
-                                />
+                            <div className="space-y-1 pt-1">
+                                <div className="h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                                        style={{ width: `${usageLimit}%` }}
+                                    />
+                                </div>
+                                <p className="text-[11px] text-zinc-400 font-medium">Overall Usage</p>
                             </div>
-                            <p className="text-[11px] text-zinc-400 font-medium">Overall Usage</p>
                         </div>
-                    </div>
-                    <div className="h-12 w-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm shrink-0">
-                        <BarChart3 className="h-5 w-5" />
-                    </div>
-                </div>
-
-                {/* Subscription */}
-                <div className="flex items-center justify-between rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900/80 p-5 shadow-sm transition-all hover:shadow">
-                    <div className="space-y-2.5">
-                        <p className="text-xs font-medium text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Subscription</p>
-                        <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 capitalize">{plan}</h3>
-                        <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
-                            Credits: <span className="text-zinc-700 dark:text-zinc-300 font-bold">{credits} / {subscriptionSummary?.credits.total || 50}</span>
-                        </p>
-                    </div>
-                    <div className="h-12 w-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm shrink-0">
-                        <CreditCard className="h-5 w-5" />
-                    </div>
-                </div>
-            </div>
-
-            {/* Bottom Grid Layout (Chart + Recent Activities) */}
-            <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
-                {/* Interaction Usage Line Chart Card */}
-                <div className="lg:col-span-2 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900/80 p-5 shadow-sm flex flex-col gap-4 h-[480px] lg:h-[580px]">
-                    <div className="flex items-center justify-between w-full pb-1 border-b border-zinc-100 dark:border-zinc-800/60">
-                        <div className="space-y-0.5">
-                            <h2 className="text-base font-bold text-zinc-900 dark:text-white">Interaction Usage</h2>
-                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">Monthly billing overage metrics</p>
-                        </div>
-
-                        {/* Interactive dropdown */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors h-8">
-                                    <span>{getTimelineLabel()}</span>
-                                    <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-32 bg-white dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 rounded-lg p-1.5 shadow-md">
-                                <DropdownMenuItem
-                                    onClick={() => setTimeframe("this-month")}
-                                    className="px-2.5 py-1.5 rounded-md text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer"
-                                >
-                                    This Month
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => setTimeframe("last-month")}
-                                    className="px-2.5 py-1.5 rounded-md text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer"
-                                >
-                                    Last Month
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => setTimeframe("last-7-days")}
-                                    className="px-2.5 py-1.5 rounded-md text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer"
-                                >
-                                    Last 7 Days
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-
-                    {/* Chart Legend */}
-                    <div className="flex items-center gap-4 text-xs font-medium self-end px-2">
-                        <div className="flex items-center gap-1.5">
-                            <span className="h-3 w-3 rounded bg-blue-600 block shrink-0" />
-                            <span className="text-zinc-900 dark:text-white">Simple Interaction</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <span className="h-3 w-3 rounded bg-orange-600 block shrink-0" />
-                            <span className="text-zinc-900 dark:text-white">Complex Interaction</span>
+                        <div className="h-12 w-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm shrink-0">
+                            <BarChart3 className="h-5 w-5" />
                         </div>
                     </div>
 
-                    {/* Chart Canvas */}
-                    <div className="flex-1 w-full min-h-[220px] flex items-center justify-center">
-                        <div className="w-full h-full min-h-[220px]">
-                            <InteractionChart data={chartData[timeframe]} />
-                        </div>
-                    </div>
-
-                    {/* Chart Footer Indicator */}
-                    <div className="flex items-center justify-center gap-1 py-1 bg-zinc-50/50 dark:bg-zinc-800/20 border border-zinc-100 dark:border-zinc-800/60 rounded-xl">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                            Dollar / Monthly
-                        </p>
-                    </div>
-                </div>
-
-                {/* Recent Activities Card */}
-                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900/80 p-5 shadow-sm flex flex-col gap-4 h-[480px] lg:h-[580px]">
-                    <div className="flex items-center justify-between w-full pb-1 border-b border-zinc-100 dark:border-zinc-800/60">
-                        <div className="space-y-0.5">
-                            <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">Recent Activities</h2>
-                            <p className="text-[11px] text-zinc-400 font-medium">Activity updates across categories</p>
-                        </div>
-
-                        <button
-                            onClick={() => setIsActivitiesModalOpen(true)}
-                            className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-all cursor-pointer"
-                        >
-                            View All
-                        </button>
-                    </div>
-
-                    {/* Activities List */}
-                    {recentActivities.length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-                            <svg
-                                className="w-14 h-14 text-zinc-300 dark:text-zinc-700 mb-3"
-                                viewBox="0 0 48 48"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M10 4C7.79086 4 6 5.79086 6 8V40C6 42.2091 7.79086 44 10 44H38C40.2091 44 42 42.2091 42 40V16L30 4H10Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M30 4V16H42L30 4Z"
-                                    fill="currentColor"
-                                    fillOpacity="0.2"
-                                />
-                                <rect x="14" y="24" width="20" height="4" rx="2" fill="#FEFFFA" className="dark:fill-zinc-900" />
-                                <rect x="14" y="32" width="12" height="4" rx="2" fill="#FEFFFA" className="dark:fill-zinc-900" />
-                            </svg>
-                            <h3 className="text-sm font-semibold text-zinc-750 dark:text-zinc-300">
-                                No Data Found
-                            </h3>
-                            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-                                No interactions available yet.
+                    {/* Subscription */}
+                    <div className="flex items-center justify-between rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-surface-page dark:bg-zinc-900/80 p-5 shadow-sm transition-all hover:shadow">
+                        <div className="space-y-2.5">
+                            <p className="text-xs font-medium text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Subscription</p>
+                            <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 capitalize">{plan}</h3>
+                            <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                                Credits: <span className="text-zinc-700 dark:text-zinc-300 font-bold">{credits} / {subscriptionSummary?.credits.total || 50}</span>
                             </p>
                         </div>
-                    ) : (
-                        <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-3 pr-1 min-h-0 scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent hover:scrollbar-thumb-zinc-400 dark:hover:scrollbar-thumb-zinc-600">
-                            {recentActivities.map((act) => {
-                                const IconComp = act.icon;
-                                return (
-                                    <div
-                                        key={act.id}
-                                        className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition-colors border border-transparent hover:border-zinc-100/50 dark:hover:border-zinc-800/40"
-                                    >
-                                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border shadow-xs ${act.iconColor}`}>
-                                            <IconComp className="h-4.5 w-4.5" />
-                                        </div>
-                                        <div className="min-w-0 flex-1 space-y-1">
-                                            <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 leading-normal break-all">
-                                                {act.title}
-                                            </p>
-                                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-zinc-400 dark:text-zinc-500 font-medium min-w-0">
-                                                <span className="break-all">{act.subtitle}</span>
-                                                <span className="h-1 w-1 rounded-full bg-zinc-300 dark:bg-zinc-700 shrink-0" />
-                                                <span className="shrink-0">{act.time}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                        <div className="h-12 w-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm shrink-0">
+                            <CreditCard className="h-5 w-5" />
                         </div>
-                    )}
+                    </div>
                 </div>
-            </div>
 
-            {/* View All Activities Popup Modal */}
-            <Dialog open={isActivitiesModalOpen} onOpenChange={setIsActivitiesModalOpen}>
-                <DialogContent className="max-w-xl bg-[#FEFFFA] dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col max-h-[85vh]">
-                    <DialogHeader className="pb-3 border-b border-zinc-150 dark:border-zinc-800">
-                        <DialogTitle className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                            Recent Activities
-                        </DialogTitle>
-                        <DialogDescription className="text-xs text-zinc-500 dark:text-zinc-400">
-                            A complete log of category actions and file operations.
-                        </DialogDescription>
-                    </DialogHeader>
+                {/* Bottom Grid Layout (Chart + Recent Activities) */}
+                <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
+                    {/* Interaction Usage Line Chart Card */}
+                    <div className="lg:col-span-2 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-surface-page dark:bg-zinc-900/80 p-5 shadow-sm flex flex-col gap-4 h-[480px] lg:h-[580px]">
+                        <div className="flex items-center justify-between w-full pb-1 border-b border-zinc-100 dark:border-zinc-800/60">
+                            <div className="space-y-0.5">
+                                <h2 className="text-base font-bold text-zinc-900 dark:text-white">Interaction Usage</h2>
+                                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">Monthly billing overage metrics</p>
+                            </div>
 
-                    {/* Scrollable list inside modal */}
-                    {recentActivities.length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-                            <svg
-                                className="w-14 h-14 text-zinc-300 dark:text-zinc-700 mb-3"
-                                viewBox="0 0 48 48"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M10 4C7.79086 4 6 5.79086 6 8V40C6 42.2091 7.79086 44 10 44H38C40.2091 44 42 42.2091 42 40V16L30 4H10Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M30 4V16H42L30 4Z"
-                                    fill="currentColor"
-                                    fillOpacity="0.2"
-                                />
-                                <rect x="14" y="24" width="20" height="4" rx="2" fill="#FEFFFA" className="dark:fill-zinc-900" />
-                                <rect x="14" y="32" width="12" height="4" rx="2" fill="#FEFFFA" className="dark:fill-zinc-900" />
-                            </svg>
-                            <h3 className="text-sm font-semibold text-zinc-750 dark:text-zinc-300">
-                                No Data Found
-                            </h3>
-                            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-                                No interactions available yet.
+                            {/* Interactive dropdown */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-surface-page dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors h-8">
+                                        <span>{getTimelineLabel()}</span>
+                                        <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-32 bg-white dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 rounded-lg p-1.5 shadow-md">
+                                    <DropdownMenuItem
+                                        onClick={() => setTimeframe("this-month")}
+                                        className="px-2.5 py-1.5 rounded-md text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer"
+                                    >
+                                        This Month
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={() => setTimeframe("last-month")}
+                                        className="px-2.5 py-1.5 rounded-md text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer"
+                                    >
+                                        Last Month
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={() => setTimeframe("last-7-days")}
+                                        className="px-2.5 py-1.5 rounded-md text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer"
+                                    >
+                                        Last 7 Days
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+
+                        {/* Chart Legend */}
+                        <div className="flex items-center gap-4 text-xs font-medium self-end px-2">
+                            <div className="flex items-center gap-1.5">
+                                <span className="h-3 w-3 rounded bg-blue-600 block shrink-0" />
+                                <span className="text-zinc-900 dark:text-white">Simple Interaction</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="h-3 w-3 rounded bg-orange-600 block shrink-0" />
+                                <span className="text-zinc-900 dark:text-white">Complex Interaction</span>
+                            </div>
+                        </div>
+
+                        {/* Chart Canvas */}
+                        <div className="flex-1 w-full min-h-[220px] flex items-center justify-center">
+                            <div className="w-full h-full min-h-[220px]">
+                                <InteractionChart data={chartData[timeframe]} />
+                            </div>
+                        </div>
+
+                        {/* Chart Footer Indicator */}
+                        <div className="flex items-center justify-center gap-1 py-1 bg-zinc-50/50 dark:bg-zinc-800/20 border border-zinc-100 dark:border-zinc-800/60 rounded-xl">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                                Dollar / Monthly
                             </p>
                         </div>
-                    ) : (
-                        <div className="flex-1 overflow-y-auto pr-1 py-2 space-y-3 no-scrollbar min-h-0">
-                            {recentActivities.map((act) => {
-                                const IconComp = act.icon;
-                                return (
-                                    <div
-                                        key={act.id}
-                                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition-colors border border-transparent hover:border-zinc-100/50 dark:hover:border-zinc-800/40 min-w-0"
-                                    >
-                                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border shadow-xs ${act.iconColor}`}>
-                                            <IconComp className="h-4.5 w-4.5" />
-                                        </div>
-                                        <div className="min-w-0 flex-1 space-y-1">
-                                            <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 leading-normal break-all">
-                                                {act.title}
-                                            </p>
-                                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-zinc-400 dark:text-zinc-500 font-medium min-w-0">
-                                                <span className="break-all">{act.subtitle}</span>
-                                                <span className="h-1 w-1 rounded-full bg-zinc-300 dark:bg-zinc-700 shrink-0" />
-                                                <span className="shrink-0">{act.time}</span>
+                    </div>
+
+                    {/* Recent Activities Card */}
+                    <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-surface-page dark:bg-zinc-900/80 p-5 shadow-sm flex flex-col gap-4 h-[480px] lg:h-[580px]">
+                        <div className="flex items-center justify-between w-full pb-1 border-b border-zinc-100 dark:border-zinc-800/60">
+                            <div className="space-y-0.5">
+                                <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">Recent Activities</h2>
+                                <p className="text-[11px] text-zinc-400 font-medium">Activity updates across categories</p>
+                            </div>
+
+                            <button
+                                onClick={() => setIsActivitiesModalOpen(true)}
+                                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-all cursor-pointer"
+                            >
+                                View All
+                            </button>
+                        </div>
+
+                        {/* Activities List */}
+                        {recentActivities.length === 0 ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
+                                <svg
+                                    className="w-14 h-14 text-zinc-300 dark:text-zinc-700 mb-3"
+                                    viewBox="0 0 48 48"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <path
+                                        d="M10 4C7.79086 4 6 5.79086 6 8V40C6 42.2091 7.79086 44 10 44H38C40.2091 44 42 42.2091 42 40V16L30 4H10Z"
+                                        fill="currentColor"
+                                    />
+                                    <path
+                                        d="M30 4V16H42L30 4Z"
+                                        fill="currentColor"
+                                        fillOpacity="0.2"
+                                    />
+                                    <rect x="14" y="24" width="20" height="4" rx="2" fill="#FEFFFA" className="dark:fill-zinc-900" />
+                                    <rect x="14" y="32" width="12" height="4" rx="2" fill="#FEFFFA" className="dark:fill-zinc-900" />
+                                </svg>
+                                <h3 className="text-sm font-semibold text-zinc-750 dark:text-zinc-300">
+                                    No Data Found
+                                </h3>
+                                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                                    No interactions available yet.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-3 pr-1 min-h-0 scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent hover:scrollbar-thumb-zinc-400 dark:hover:scrollbar-thumb-zinc-600">
+                                {recentActivities.map((act) => {
+                                    const IconComp = act.icon;
+                                    return (
+                                        <div
+                                            key={act.id}
+                                            className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition-colors border border-transparent hover:border-zinc-100/50 dark:hover:border-zinc-800/40"
+                                        >
+                                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border shadow-xs ${act.iconColor}`}>
+                                                <IconComp className="h-4.5 w-4.5" />
+                                            </div>
+                                            <div className="min-w-0 flex-1 space-y-1">
+                                                <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 leading-normal break-all">
+                                                    {act.title}
+                                                </p>
+                                                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-zinc-400 dark:text-zinc-500 font-medium min-w-0">
+                                                    <span className="break-all">{act.subtitle}</span>
+                                                    <span className="h-1 w-1 rounded-full bg-zinc-300 dark:bg-zinc-700 shrink-0" />
+                                                    <span className="shrink-0">{act.time}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
-        </div>
-    );
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* View All Activities Popup Modal */}
+                <Dialog open={isActivitiesModalOpen} onOpenChange={setIsActivitiesModalOpen}>
+                    <DialogContent className="max-w-xl bg-surface-page dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col max-h-[85vh]">
+                        <DialogHeader className="pb-3 border-b border-zinc-150 dark:border-zinc-800">
+                            <DialogTitle className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                                Recent Activities
+                            </DialogTitle>
+                            <DialogDescription className="text-xs text-zinc-500 dark:text-zinc-400">
+                                A complete log of category actions and file operations.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        {/* Scrollable list inside modal */}
+                        {recentActivities.length === 0 ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
+                                <svg
+                                    className="w-14 h-14 text-zinc-300 dark:text-zinc-700 mb-3"
+                                    viewBox="0 0 48 48"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <path
+                                        d="M10 4C7.79086 4 6 5.79086 6 8V40C6 42.2091 7.79086 44 10 44H38C40.2091 44 42 42.2091 42 40V16L30 4H10Z"
+                                        fill="currentColor"
+                                    />
+                                    <path
+                                        d="M30 4V16H42L30 4Z"
+                                        fill="currentColor"
+                                        fillOpacity="0.2"
+                                    />
+                                    <rect x="14" y="24" width="20" height="4" rx="2" fill="#FEFFFA" className="dark:fill-zinc-900" />
+                                    <rect x="14" y="32" width="12" height="4" rx="2" fill="#FEFFFA" className="dark:fill-zinc-900" />
+                                </svg>
+                                <h3 className="text-sm font-semibold text-zinc-750 dark:text-zinc-300">
+                                    No Data Found
+                                </h3>
+                                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                                    No interactions available yet.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="flex-1 overflow-y-auto pr-1 py-2 space-y-3 no-scrollbar min-h-0">
+                                {recentActivities.map((act) => {
+                                    const IconComp = act.icon;
+                                    return (
+                                        <div
+                                            key={act.id}
+                                            className="flex items-start gap-3 p-3 rounded-xl hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition-colors border border-transparent hover:border-zinc-100/50 dark:hover:border-zinc-800/40 min-w-0"
+                                        >
+                                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border shadow-xs ${act.iconColor}`}>
+                                                <IconComp className="h-4.5 w-4.5" />
+                                            </div>
+                                            <div className="min-w-0 flex-1 space-y-1">
+                                                <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 leading-normal break-all">
+                                                    {act.title}
+                                                </p>
+                                                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-zinc-400 dark:text-zinc-500 font-medium min-w-0">
+                                                    <span className="break-all">{act.subtitle}</span>
+                                                    <span className="h-1 w-1 rounded-full bg-zinc-300 dark:bg-zinc-700 shrink-0" />
+                                                    <span className="shrink-0">{act.time}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
+            </div>
+            );
 }

@@ -330,7 +330,7 @@ export default function CategoryDrawer({
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className="flex w-full flex-col gap-0 p-0 sm:max-w-[1000px] bg-[#FEFFFA] dark:bg-zinc-900"
+                className="flex w-full flex-col gap-0 p-0 sm:max-w-[1000px] bg-surface-page dark:bg-zinc-900"
                 hideClose
                 data-testid="category-drawer"
             >
@@ -366,7 +366,7 @@ export default function CategoryDrawer({
                 <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
 
                     {/* LEFT PANEL: Form parameters */}
-                    <div className="w-full md:w-1/2 border-r border-zinc-150 dark:border-zinc-800 p-8 space-y-6 overflow-y-auto min-h-0 bg-[#FEFFFA] dark:bg-zinc-900">
+                    <div className="w-full md:w-1/2 border-r border-zinc-150 dark:border-zinc-800 p-8 space-y-6 overflow-y-auto min-h-0 bg-surface-page dark:bg-zinc-900">
                         {/* Category Name */}
                         <div className="space-y-1.5">
                             <Label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
@@ -410,7 +410,7 @@ export default function CategoryDrawer({
                                     placeholder="Enter category description"
                                     maxLength={200}
                                     rows={6}
-                                    className="rounded-lg border-zinc-200 dark:border-zinc-700 bg-[#FEFFFA] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 resize-none leading-relaxed pr-16"
+                                    className="rounded-lg border-zinc-200 dark:border-zinc-700 bg-surface-page dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 resize-none leading-relaxed pr-16"
                                     data-testid="category-description-input"
                                 />
                                 <span className={cn(
@@ -433,9 +433,9 @@ export default function CategoryDrawer({
                     </div>
 
                     {/* RIGHT PANEL: Files and Employees Tabs with Lists */}
-                    <div className="w-full md:w-1/2 flex flex-col bg-[#FEFFFA] dark:bg-zinc-900 min-h-0">
+                    <div className="w-full md:w-1/2 flex flex-col bg-surface-page dark:bg-zinc-900 min-h-0">
                         {/* Tabs Bar */}
-                        <div className="flex items-center justify-between px-8 py-4 shrink-0 select-none bg-[#FEFFFA] dark:bg-zinc-900">
+                        <div className="flex items-center justify-between px-8 py-4 shrink-0 select-none bg-surface-page dark:bg-zinc-900">
                             <div className="flex bg-zinc-100/80 dark:bg-zinc-800 p-0.5 rounded-lg border border-zinc-200/50 dark:border-zinc-700/50" role="tablist">
                                 <button
                                     type="button"
@@ -528,7 +528,7 @@ export default function CategoryDrawer({
                         </div>
 
                         {/* Search Sub-Header inside Drawer tabs */}
-                        <div className="px-8 py-3 bg-[#FEFFFA] dark:bg-zinc-900 shrink-0">
+                        <div className="px-8 py-3 bg-surface-page dark:bg-zinc-900 shrink-0">
                             <div className="relative">
                                 <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
                                 <Input
@@ -554,11 +554,11 @@ export default function CategoryDrawer({
                         </div>
 
                         {/* Active list container */}
-                        <div className="flex-1 overflow-y-auto bg-[#FEFFFA] dark:bg-zinc-900 min-h-0 flex flex-col" role="tabpanel" id={activeTab === "employees" && !isMember ? "employees-panel" : "files-panel"} aria-labelledby={activeTab === "employees" && !isMember ? "tab-employees-btn" : "tab-files-btn"}>
+                        <div className="flex-1 overflow-y-auto bg-surface-page dark:bg-zinc-900 min-h-0 flex flex-col" role="tabpanel" id={activeTab === "employees" && !isMember ? "employees-panel" : "files-panel"} aria-labelledby={activeTab === "employees" && !isMember ? "tab-employees-btn" : "tab-files-btn"}>
                             {activeTab === "employees" && !isMember ? (
                                 paginatedEmployees.length === 0 ? (
                                     /* Employees Empty State */
-                                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#FEFFFA] dark:bg-zinc-900">
+                                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-surface-page dark:bg-zinc-900">
                                         <div className="h-14 w-14 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 mb-4 animate-pulse">
                                             <Users className="h-7 w-7" />
                                         </div>
@@ -571,7 +571,7 @@ export default function CategoryDrawer({
                                     </div>
                                 ) : (
                                     /* Employees Table List */
-                                    <div className="flex-1 bg-[#FEFFFA] dark:bg-zinc-900 flex flex-col justify-between">
+                                    <div className="flex-1 bg-surface-page dark:bg-zinc-900 flex flex-col justify-between">
                                         <div className="w-full pb-4">
                                             <div className="flex items-center gap-3 px-4 py-3 bg-zinc-50/80 dark:bg-zinc-800/40 rounded-lg text-xs font-semibold text-zinc-600 dark:text-zinc-300 mx-8 mb-2">
                                                 {!isReadOnly && <Checkbox checked={false} disabled className="border-zinc-300 dark:border-zinc-600 shadow-none" />}
@@ -623,7 +623,7 @@ export default function CategoryDrawer({
                             ) : (
                                 paginatedFiles.length === 0 ? (
                                     /* Files Empty State */
-                                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#FEFFFA] dark:bg-zinc-900">
+                                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-surface-page dark:bg-zinc-900">
                                         <div className="h-14 w-14 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-505 mb-4 animate-pulse">
                                             <FileText className="h-7 w-7" />
                                         </div>
@@ -636,7 +636,7 @@ export default function CategoryDrawer({
                                     </div>
                                 ) : (
                                     /* Files Table List */
-                                    <div className="flex-1 bg-[#FEFFFA] dark:bg-zinc-900 flex flex-col justify-between">
+                                    <div className="flex-1 bg-surface-page dark:bg-zinc-900 flex flex-col justify-between">
                                         <div className="w-full pb-4">
                                             <div className="flex items-center gap-3 px-4 py-3 bg-zinc-50/80 dark:bg-zinc-800/40 rounded-lg text-xs font-semibold text-zinc-600 dark:text-zinc-300 mx-8 mb-2">
                                                 {!isReadOnly && <Checkbox checked={false} disabled className="border-zinc-300 dark:border-zinc-600 shadow-none" />}
@@ -727,7 +727,7 @@ export default function CategoryDrawer({
 
                         {/* Pagination Footer inside drawer tabs */}
                         {activeTab === "employees" && !isMember && empTotal > 0 && (
-                            <div className="px-8 py-3 bg-[#FEFFFA] dark:bg-zinc-900 flex items-center justify-between text-xs text-zinc-555 select-none shrink-0">
+                            <div className="px-8 py-3 bg-surface-page dark:bg-zinc-900 flex items-center justify-between text-xs text-zinc-555 select-none shrink-0">
                                 <div className="flex items-center gap-1">
                                     <span>Rows per Page:</span>
                                     <span className="font-semibold text-zinc-700 dark:text-zinc-300">50</span>
@@ -762,7 +762,7 @@ export default function CategoryDrawer({
                         )}
 
                         {activeTab === "files" && fileTotal > 0 && (
-                            <div className="px-8 py-3 bg-[#FEFFFA] dark:bg-zinc-900 flex items-center justify-between text-xs text-zinc-555 select-none shrink-0">
+                            <div className="px-8 py-3 bg-surface-page dark:bg-zinc-900 flex items-center justify-between text-xs text-zinc-555 select-none shrink-0">
                                 <div className="flex items-center gap-1">
                                     <span>Rows per Page:</span>
                                     <span className="font-semibold text-zinc-700 dark:text-zinc-300">50</span>
@@ -800,7 +800,7 @@ export default function CategoryDrawer({
 
                 {/* Footer buttons */}
                 {!isReadOnly && (
-                    <div className="flex items-center justify-end gap-3 bg-[#FEFFFA] dark:bg-zinc-900 px-8 py-4 shrink-0 select-none">
+                    <div className="flex items-center justify-end gap-3 bg-surface-page dark:bg-zinc-900 px-8 py-4 shrink-0 select-none">
                         <Button
                             variant="ghost"
                             onClick={() => {

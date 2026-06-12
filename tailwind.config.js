@@ -43,6 +43,12 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Named surface tokens — maps CSS vars defined in index.css
+        surface: {
+          page:    "var(--surface-page)",
+          sidebar: "var(--surface-sidebar)",
+          "hover-muted": "var(--surface-hover-muted)",
+        },
         // Custom extended colors
         red: {
           650: "#dc3545",

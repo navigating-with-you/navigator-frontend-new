@@ -35,7 +35,7 @@ export function PageActionButton({
         "inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs",
         "sm:gap-3 sm:px-5 sm:py-3 sm:rounded-xl sm:text-sm",
         // Border & background
-        "border border-[#E7E7E0] dark:border-zinc-700 bg-[#FEFFFA] dark:bg-zinc-900",
+        "border border-surface-sidebar dark:border-zinc-700 bg-surface-page dark:bg-zinc-900",
         // Text — responsive weight
         "font-normal text-zinc-600 dark:text-zinc-400",
         // Transitions

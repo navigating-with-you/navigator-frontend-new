@@ -485,6 +485,7 @@ export default function EmployeesPage() {
                 createdDate: new Date().toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }),
                 isActive: false,
                 employeeCode: newEmp.employeeCode || null,
+                groups: [],
             };
             return [...prev, newEmployeeItem];
         });
@@ -549,7 +550,7 @@ export default function EmployeesPage() {
                         <div className="flex items-center">
                             <Button
                                 variant="outline"
-                                className="gap-2 rounded-lg border-[#E7E7E0] bg-[#FEFFFA] hover:bg-[#F5F5F0] dark:border-zinc-700 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold"
+                                className="gap-2 rounded-lg border-surface-sidebar bg-surface-page hover:bg-[#F5F5F0] dark:border-zinc-700 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold"
                                 onClick={() => fetchEmployees()}
                                 disabled={isLoading}
                             >
@@ -669,7 +670,7 @@ export default function EmployeesPage() {
                             setSearch(e.target.value)
                         }
                         placeholder="Search employees by name or email..."
-                        className="h-10 rounded-lg border-[#E7E7E0] dark:border-zinc-700 bg-[#FEFFFA] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 pr-10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-blue-500/20"
+                        className="h-10 rounded-lg border-surface-sidebar dark:border-zinc-700 bg-surface-page dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 pl-11 pr-10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-blue-500/20"
                     />
                     {search && (
                         <button
@@ -696,7 +697,7 @@ export default function EmployeesPage() {
                                     size="sm"
                                     disabled={isBatchProcessing}
                                     onClick={() => setConfirmBatchDelete(true)}
-                                    className="h-6 px-2.5 border-[#E7E7E0] dark:border-zinc-700 text-red-650 hover:text-red-700 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
+                                    className="h-6 px-2.5 border-surface-sidebar dark:border-zinc-700 text-red-650 hover:text-red-700 dark:text-red-400 bg-surface-page dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
                                 >
                                     <Trash2 className="h-3.5 w-3.5 text-red-500" />
                                     Delete
@@ -709,7 +710,7 @@ export default function EmployeesPage() {
                                     size="sm"
                                     disabled={isBatchProcessing}
                                     onClick={() => setBatchTeamPickerOpen(true)}
-                                    className="h-6 px-2.5 border-[#E7E7E0] dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
+                                    className="h-6 px-2.5 border-surface-sidebar dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-surface-page dark:bg-zinc-900 hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
                                 >
                                     <FolderPlus className="h-3.5 w-3.5 text-zinc-500" />
                                     Add to Category
@@ -727,7 +728,7 @@ export default function EmployeesPage() {
                                             size="sm"
                                             disabled={isBatchProcessing}
                                             onClick={handleBatchResend}
-                                            className="h-6 px-2.5 border-[#E7E7E0] dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
+                                            className="h-6 px-2.5 border-surface-sidebar dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-surface-page dark:bg-zinc-900 hover:bg-[#F5F5F0] dark:hover:bg-zinc-800 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
                                         >
                                             <Mail className="h-3.5 w-3.5 text-zinc-500" />
                                             Resend Invite
@@ -743,7 +744,7 @@ export default function EmployeesPage() {
                                             size="sm"
                                             disabled={isBatchProcessing}
                                             onClick={() => setConfirmBatchRevoke(true)}
-                                            className="h-6 px-2.5 border-[#E7E7E0] dark:border-zinc-700 text-red-650 dark:text-red-400 bg-[#FEFFFA] dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
+                                            className="h-6 px-2.5 border-surface-sidebar dark:border-zinc-700 text-red-650 dark:text-red-400 bg-surface-page dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-normal rounded-md shadow-sm flex items-center justify-center gap-1.5"
                                         >
                                             <X className="h-3.5 w-3.5 text-zinc-500" />
                                             Revoke
@@ -753,7 +754,7 @@ export default function EmployeesPage() {
                             )}
                         </div>
                         {/* Right side selection badge */}
-                        <div className="flex items-center gap-1.5 px-2.5 h-6 border border-[#E7E7E0] dark:border-zinc-800 bg-[#FEFFFA] dark:bg-zinc-900 rounded-md text-xs text-zinc-650 dark:text-zinc-300 font-normal shadow-sm">
+                        <div className="flex items-center gap-1.5 px-2.5 h-6 border border-surface-sidebar dark:border-zinc-800 bg-surface-page dark:bg-zinc-900 rounded-md text-xs text-zinc-650 dark:text-zinc-300 font-normal shadow-sm">
                             <span>{selected.size} selected</span>
                             <button
                                 type="button"
