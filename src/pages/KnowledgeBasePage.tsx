@@ -118,7 +118,7 @@ function rawFileToEntry(file: any, ocrStatusMap?: Record<string, string>): KBEnt
 }
 
 // Hoisted to module level — these are static constants with no component dependencies.
-const OCR_STATUS_OPTIONS = ["Queued", "Processing", "Indexed", "Failed", "Cancelled"] as const;
+const OCR_STATUS_OPTIONS = ["Queued", "Processing", "Indexed", "Failed", "Cancelled"];
 const OCR_STATUS_FILTER_MAP: Record<string, string> = {
     "queued": "pending",
     "processing": "processing",
