@@ -52,12 +52,23 @@ export default {
         // Custom extended colors
         red: {
           650: "#dc3545",
+          750: "#b91c1c",
+        },
+        purple: {
+          650: "#7c3aed",
+        },
+        green: {
+          650: "#16a34a",
         },
         zinc: {
           450: "#a1a1aa",
           505: "#717179",
+          550: "#71717a",
           650: "#52525b",
+          655: "#4f4f56",
           750: "#3f3f46",
+          850: "#27272a",
+          955: "#09090b",
         },
       },
       borderRadius: {

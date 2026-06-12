@@ -105,7 +105,7 @@ const Integration: React.FC<IntegrationProps> = ({ variant = "populated" }) => {
                     </button>
                 </div>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    Connect your existing work tools and external apps to sync data.
+                    Connect your existing work tools and external apps to sync data. Integrations are coming soon — <a href="mailto:support@navigatorapp.ai" className="text-blue-600 dark:text-blue-400 hover:underline">contact us</a> to request a specific integration.
                 </p>
             </div>
 
@@ -138,8 +138,8 @@ const Integration: React.FC<IntegrationProps> = ({ variant = "populated" }) => {
             <div className="mt-4 flex-1 min-h-0 overflow-y-auto hover-scrollbar pb-2">
                 {isEmpty || filtered.length === 0 ? (
                     <UnifiedEmptyState
-                        title={isEmpty ? "No Data Found" : `No results found for "${query}"`}
-                        description={isEmpty ? "No integrations have been added yet." : "Try adjusting your search terms."}
+                        title={isEmpty ? "Integrations Coming Soon" : `No results found for "${query}"`}
+                        description={isEmpty ? "We're building integrations with popular tools. Check back soon or contact us to request one." : "Try adjusting your search terms."}
                         icon={<EmptyPlugIcon className="h-8 w-8 text-neutral-600" />}
                         testId="integration-empty-state"
                     />

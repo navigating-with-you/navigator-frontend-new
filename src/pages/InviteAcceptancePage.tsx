@@ -279,9 +279,9 @@ export default function InviteAcceptancePage() {
                                         aria-label={showPassword ? "Hide password" : "Show password"}
                                     >
                                         {showPassword ? (
-                                            <EyeOff className="w-4.5 h-4.5" />
+                                            <EyeOff className="w-4 h-4" />
                                         ) : (
-                                            <Eye className="w-4.5 h-4.5" />
+                                            <Eye className="w-4 h-4" />
                                         )}
                                     </button>
                                 </div>
@@ -308,9 +308,9 @@ export default function InviteAcceptancePage() {
                                         aria-label={showConfirm ? "Hide password" : "Show password"}
                                     >
                                         {showConfirm ? (
-                                            <EyeOff className="w-4.5 h-4.5" />
+                                            <EyeOff className="w-4 h-4" />
                                         ) : (
-                                            <Eye className="w-4.5 h-4.5" />
+                                            <Eye className="w-4 h-4" />
                                         )}
                                     </button>
                                 </div>

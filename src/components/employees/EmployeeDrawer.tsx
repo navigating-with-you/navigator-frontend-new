@@ -255,14 +255,14 @@ export default function EmployeeDetailsDrawer({
                     
                     {!isEditing && canEdit && (
                         <PermissionGate permission={PERMISSIONS.EMPLOYEE_EDIT} fallback={null}>
-                            <button
+                            <Button
                                 type="button"
                                 onClick={() => setIsEditing(true)}
-                                className="flex items-center gap-1.5 bg-[#1A56DB] hover:bg-blue-750 text-white px-3.5 py-1 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                                className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium gap-1.5 flex items-center"
                             >
-                                <Pencil className="h-3.5 w-3.5" />
+                                <Pencil className="h-4 w-4" />
                                 <span>Edit</span>
-                            </button>
+                            </Button>
                         </PermissionGate>
                     )}
                 </div>
@@ -501,19 +501,27 @@ export default function EmployeeDetailsDrawer({
                 {/* Footer (Only in Edit Mode) */}
                 {isEditing && (
                     <div className="flex items-center justify-end px-6 py-4 shrink-0 bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800">
-                        <button
+                        <Button
                             type="button"
+                            variant="ghost"
                             onClick={handleCancel}
-                            className="text-[#1A56DB] hover:text-blue-750 font-semibold text-sm transition-colors cursor-pointer mr-6"
+                            className="rounded-lg text-sm text-zinc-600 dark:text-zinc-400"
                         >
                             Cancel
-                        </button>
+                        </Button>
                         <Button
                             onClick={handleSave}
                             disabled={!canSave || isSaving}
-                            className="rounded-lg bg-[#1A56DB] hover:bg-blue-750 text-white font-semibold text-sm px-6 py-2.5 cursor-pointer shadow-none h-10"
+                            className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-5 flex items-center gap-2"
                         >
-                            Save
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span>Saving…</span>
+                                </>
+                            ) : (
+                                "Save"
+                            )}
                         </Button>
                     </div>
                 )}

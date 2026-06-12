@@ -354,9 +354,9 @@ export default function CategoryDrawer({
                         <Button
                             type="button"
                             onClick={() => setCurrentMode("edit")}
-                            className="flex items-center gap-1.5 bg-[#1A56DB] hover:bg-blue-750 text-white px-3.5 py-1.2 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                            className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium gap-1.5 flex items-center"
                         >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <Pencil className="h-4 w-4" />
                             <span>Edit</span>
                         </Button>
                     )}
@@ -802,6 +802,7 @@ export default function CategoryDrawer({
                 {!isReadOnly && (
                     <div className="flex items-center justify-end gap-3 bg-surface-page dark:bg-zinc-900 px-8 py-4 shrink-0 select-none">
                         <Button
+                            type="button"
                             variant="ghost"
                             onClick={() => {
                                 if (currentMode === "edit") {
@@ -810,7 +811,7 @@ export default function CategoryDrawer({
                                     onOpenChange(false);
                                 }
                             }}
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 text-sm font-semibold h-10 px-4"
+                            className="rounded-lg text-sm text-zinc-600 dark:text-zinc-400"
                         >
                             Cancel
                         </Button>
@@ -818,7 +819,7 @@ export default function CategoryDrawer({
                             disabled={!canSave || isSubmitting}
                             onClick={handleSave}
                             data-testid="save-category-btn"
-                            className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold h-10 px-6 shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                            className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {isSubmitting ? (
                                 <>

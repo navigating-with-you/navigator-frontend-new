@@ -397,7 +397,7 @@ export default function AddFilesDrawer({
                         disabled={!canAdd}
                         onClick={handleSubmit}
                         data-testid="add-files-submit-btn"
-                        className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-8 font-semibold flex items-center justify-center gap-2"
+                        className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-5 font-medium flex items-center justify-center gap-2"
                     >
                         {isUploading ? (
                             <>

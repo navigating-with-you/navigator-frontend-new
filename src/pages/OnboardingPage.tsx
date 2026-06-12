@@ -298,24 +298,6 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
             {/* Main Form Container */}
             <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-6 sm:py-10 md:py-12 transition-all">
 
-                {/* Steps Horizontal Progress Indicator */}
-                <div className="w-full mb-10">
-                    {/* Progress Bar Line */}
-                    <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mb-3">
-                        <div
-                            className="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all duration-500 ease-out"
-                            style={{ width: "100%" }}
-                        />
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-500 uppercase tracking-wider">
-                            Step 1 of 1
-                        </span>
-                        <span className="text-xs font-medium text-zinc-400">
-                            {steps[currentStep - 1].label}
-                        </span>
-                    </div>
-                </div>
 
                 {/* STEP 1: Let's Get Your Company Set Up */}
                 {currentStep === 1 && (

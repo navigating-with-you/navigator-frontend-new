@@ -337,7 +337,7 @@ export default function ChangePasswordDrawer({
                         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-6">
                             {/* Sent confirmation banner */}
                             <div className="rounded-xl border border-emerald-500/20 dark:border-emerald-500/10 bg-emerald-500/10 dark:bg-emerald-500/5 p-3 flex items-center gap-2.5">
-                                <CheckCircle2 className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                 <p className="text-xs text-emerald-800 dark:text-emerald-400">
                                     Code sent to&nbsp;
                                     <span className="font-semibold">{sentEmail}</span>.
@@ -458,7 +458,7 @@ export default function ChangePasswordDrawer({
                                     return (
                                         <div key={req.label} className="flex items-center gap-2.5">
                                             <div
-                                                className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border transition-all duration-200 ${
+                                                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-all duration-200 ${
                                                     showReq && met
                                                         ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                                                         : "border-zinc-300 dark:border-zinc-600 bg-transparent text-transparent"
@@ -492,7 +492,7 @@ export default function ChangePasswordDrawer({
                                 onClick={handleSubmit}
                                 disabled={!canSubmit}
                                 data-testid="change-password-submit-btn"
-                                className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50 transition-colors px-5 h-10 min-w-[140px]"
+                                className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50 transition-colors px-5"
                             >
                                 {isSubmitting ? (
                                     <>

@@ -337,13 +337,13 @@ export default function OrganizationProfileDrawer({
                             Organization Details
                         </SheetTitle>
                         {!isEditing && canEditOrg && (
-                            <button
+                            <Button
                                 onClick={() => setIsEditing(true)}
-                                className="ml-auto bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-3 py-1 h-auto text-sm rounded-lg transition-colors"
+                                className="ml-auto h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium gap-1.5 flex items-center"
                             >
                                 <Edit2 className="h-4 w-4" />
                                 Edit
-                            </button>
+                            </Button>
                         )}
                     </div>
 
@@ -381,7 +381,7 @@ export default function OrganizationProfileDrawer({
                                 <div className="space-y-2 pt-2">
                                     <label
                                         htmlFor="logo-input"
-                                        className="block px-3 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer text-center transition-colors w-fit"
+                                        className="inline-flex items-center h-9 px-4 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer transition-colors select-none"
                                     >
                                         Choose File
                                     </label>

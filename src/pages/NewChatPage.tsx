@@ -11,21 +11,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
     ArrowUp,
     FileText,
-    ChevronDown,
     Copy,
     RotateCcw,
     Square,
-    Cpu,
     Search,
     BarChart2,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-    DropdownMenu,
-    DropdownMenuTrigger,
-    DropdownMenuContent,
-    DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
 import {
     Tooltip,
     TooltipContent,
@@ -78,7 +70,6 @@ export default function NewChatPage(): JSX.Element {
         const h = new Date().getHours();
         return h < 12 ? "Good Morning" : h < 18 ? "Good Afternoon" : "Good Evening";
     });
-    const [selectedModel, setSelectedModel] = useState("Default");
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [thinkingLabel, setThinkingLabel] = useState("Thinking...");
 
@@ -262,12 +253,13 @@ export default function NewChatPage(): JSX.Element {
 
     const handleCitationClick = useCallback((citation: Citation) => {
         if (citation.file_id) {
-            // Internal document - open file preview or navigate to knowledge base
-            toast.success(`Opening: ${citation.filename}`);
-            // TODO: Navigate to file viewer or open preview modal
-            // Example: openFilePreview(citation.file_id)
+            // Internal document — direct user to Knowledge Base
+            toast.info(`"${citation.filename}" is in your Knowledge Base`, {
+                description: "Navigate to Knowledge Base to view this document.",
+                duration: 4000,
+            });
         } else {
-            // Web source - open in new tab
+            // Web source — open in new tab
             if (citation.heading_path) {
                 safeOpen(citation.heading_path);
             }
@@ -604,9 +596,9 @@ export default function NewChatPage(): JSX.Element {
     const showEmptyState = !id && messages.length === 0 && !isLoadingMessages;
 
     const suggestions = [
-        { text: "Summarize the Spanish communication pilot program's feedback.", icon: FileText },
-        { text: "Evaluate new policy changes in California and their impact on our operations.", icon: BarChart2 },
-        { text: "Identify grants that we can apply for to fund our organic nutrition programs.", icon: Search },
+        { text: "Summarize the most recently uploaded document in the Knowledge Base.", icon: FileText },
+        { text: "What files were added this week, and what do they cover?", icon: BarChart2 },
+        { text: "Find documents related to a specific topic or keyword.", icon: Search },
     ];
 
     // ── Render ────────────────────────────────────────────────────────────────
@@ -661,21 +653,7 @@ export default function NewChatPage(): JSX.Element {
                                     className="w-full sm:flex-1 bg-transparent border-none outline-none focus:ring-0 text-base sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 resize-none min-h-[24px] max-h-[80px] leading-relaxed py-1.5"
                                 />
 
-                                <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t border-zinc-100 dark:border-zinc-800 sm:border-none">
-                                    {/* Model selector */}
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-full text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200/70 dark:border-zinc-700/50 cursor-pointer select-none">
-                                                <Cpu className="h-3.5 w-3.5 text-zinc-400" />
-                                                <span>{selectedModel}</span>
-                                                <ChevronDown className="h-2.5 w-2.5 text-zinc-400" />
-                                            </div>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
-                                            <DropdownMenuItem onClick={() => setSelectedModel("Default")}>Default</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-
+                                <div className="flex items-center justify-end gap-2 shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t border-zinc-100 dark:border-zinc-800 sm:border-none">
                                     {/* Send button */}
                                     <button
                                         type="button"
@@ -848,7 +826,7 @@ export default function NewChatPage(): JSX.Element {
                                 );
                             })}
                         </div>
-                        <div ref={messagesEndRef} className="h-32" />
+                        <div ref={messagesEndRef} className="h-20" />
                     </div>
                 )}
             </div>
@@ -879,25 +857,8 @@ export default function NewChatPage(): JSX.Element {
                             className="w-full bg-transparent border-none outline-none focus:ring-0 text-base sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 resize-none min-h-[28px] max-h-[200px] leading-relaxed disabled:opacity-60"
                         />
 
-                        {/* Bottom row: model selector + attach + send */}
-                        <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5">
-                                {/* Model selector */}
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-lg text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors border border-zinc-200/70 dark:border-zinc-700/50 cursor-pointer select-none">
-                                            <Cpu className="h-3 w-3 text-zinc-400" />
-                                            <span>{selectedModel}</span>
-                                            <ChevronDown className="h-2.5 w-2.5 text-zinc-400" />
-                                        </div>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-36 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
-                                        <DropdownMenuItem onClick={() => setSelectedModel("Default")}>Default</DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-
-                            </div>
-
+                        {/* Bottom row: send / stop */}
+                        <div className="flex items-center justify-end gap-2">
                             {/* Send / Stop button */}
                             {isResponding ? (
                                 <button

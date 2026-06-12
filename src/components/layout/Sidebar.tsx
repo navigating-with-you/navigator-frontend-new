@@ -447,7 +447,7 @@ export default function Sidebar({
                         {/* Divider */}
                         <div className="w-8 border-t border-zinc-200 dark:border-zinc-800 my-2" />
                         {/* Chat Label */}
-                        <span className="text-[9px] font-semibold text-zinc-450 dark:text-zinc-550 uppercase tracking-widest mb-1 select-none">Chat</span>
+                        <span className="text-[9px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1 select-none">Chat</span>
 
                         {/* Chat Nav */}
                         {chatNav.map((item) => (
@@ -533,7 +533,7 @@ export default function Sidebar({
                 <div className="my-2 border-t border-zinc-200 dark:border-zinc-800 shrink-0" />
 
                 {/* Chat Section */}
-                <div className="px-5 pb-1 pt-1 text-[11px] font-bold text-zinc-450 dark:text-zinc-550 uppercase tracking-widest shrink-0 select-none">
+                <div className="px-5 pb-1 pt-1 text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 select-none">
                     Chat
                 </div>
 
@@ -551,7 +551,8 @@ export default function Sidebar({
                                     <div className="flex h-4 w-4 items-center justify-center shrink-0">
                                         <item.icon className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
                                     </div>
-                                    <span>{item.label}</span>
+                                    <span className="flex-1">{item.label}</span>
+                                    <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-medium text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 select-none">⌘ + K</kbd>
                                 </button>
                             );
                         }
@@ -591,7 +592,7 @@ export default function Sidebar({
                 <div className="my-2 border-t border-zinc-200 dark:border-zinc-800 shrink-0" />
 
                 {/* Chat History */}
-                <div className="px-5 pb-1 text-sm font-medium text-zinc-500 shrink-0">
+                <div className="px-5 pb-1 text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 select-none">
                     Chat History
                 </div>
 

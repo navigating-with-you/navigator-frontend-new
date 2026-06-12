@@ -556,9 +556,9 @@ export default function KnowledgeBaseDetailDrawer({
                         <Button
                             type="button"
                             onClick={() => setMode("edit")}
-                            className="flex items-center gap-1.5 bg-[#1A56DB] hover:bg-blue-750 text-white px-3.5 py-1 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                            className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium gap-1.5 flex items-center"
                         >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <Pencil className="h-4 w-4" />
                             <span>Edit</span>
                         </Button>
                     )}
@@ -829,7 +829,7 @@ export default function KnowledgeBaseDetailDrawer({
 
                                 {/* Search bar */}
                                 <div className="relative mt-5">
-                                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-zinc-400" />
+                                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                                     <Input
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -934,22 +934,23 @@ export default function KnowledgeBaseDetailDrawer({
 
                 {entry.type !== "file" && mode === "edit" && (
                     <div className="flex items-center justify-end gap-3 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/40 px-8 py-4">
-                        <button
+                        <Button
                             type="button"
+                            variant="ghost"
                             onClick={handleCancel}
-                            className="text-[#1A56DB] hover:text-blue-750 font-semibold text-sm transition-colors cursor-pointer mr-6"
+                            className="rounded-lg text-sm text-zinc-600 dark:text-zinc-400"
                         >
                             Cancel
-                        </button>
+                        </Button>
                         <Button
                             onClick={handleSave}
                             disabled={isLoading || nameDraft.trim().length === 0}
-                            className="rounded-lg bg-blue-600 hover:bg-blue-750 text-white font-semibold h-10 px-6 shadow-sm disabled:opacity-50"
+                            className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {isLoading ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Saving...
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span>Saving...</span>
                                 </>
                             ) : (
                                 "Save"

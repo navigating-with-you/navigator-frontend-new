@@ -1,4 +1,4 @@
-import { PanelLeft, Settings } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 import type { JSX } from "react";
 import { Button } from "@/components/ui/button";
 import { NotificationsDropdown } from "./NotificationsDropdown";
@@ -27,20 +27,8 @@ export default function TopBar({ onToggleSidebar, onProfileClick }: TopBarProps)
                 </Button>
             </div>
 
-            <div className="flex items-center gap-3" data-tour="topbar-actions">
+            <div className="flex items-center gap-2" data-tour="topbar-actions">
                 <NotificationsDropdown />
-
-                <button
-                    type="button"
-                    onClick={onProfileClick}
-                    className="hidden sm:block rounded-full p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-700 transition-colors cursor-pointer"
-                    data-testid="settings-btn"
-                    aria-label="Settings"
-                    data-tour="settings"
-                >
-                    <Settings className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
-                </button>
-
                 <UserMenuDropdown onProfileClick={onProfileClick} />
             </div>
         </header>

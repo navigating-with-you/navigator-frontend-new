@@ -163,7 +163,7 @@ function InteractionChart({ data }: { data: DataPoint[] }): JSX.Element {
     // Chart Dimensions
     const width = dimensions.width;
     const height = dimensions.height;
-    const paddingLeft = 45;
+    const paddingLeft = 40;
     const paddingRight = 20;
     const paddingTop = 25;
     const paddingBottom = 40;
@@ -171,11 +171,13 @@ function InteractionChart({ data }: { data: DataPoint[] }): JSX.Element {
     const chartWidth = width - paddingLeft - paddingRight;
     const chartHeight = height - paddingTop - paddingBottom;
 
-    // Y Axis labels
-    const yMax = 15;
-    const yTicks = [0, 3, 6, 9, 12, 15];
+    // Y Axis labels — dynamic scale based on actual data
+    const dataMax = data.length > 0 ? Math.max(...data.map(d => Math.max(d.simple, d.complex))) : 0;
+    const yMax = Math.max(Math.ceil(dataMax * 1.25), 10);
+    const yStep = Math.ceil(yMax / 5);
+    const yTicks = Array.from({ length: 6 }, (_, i) => Math.min(i * yStep, yMax));
 
-    const getTickValue = (tick: number) => `$${tick}`;
+    const getTickValue = (tick: number) => tick.toString();
 
     // Calculate coordinates
     const getCoords = (d: DataPoint, idx: number) => {
@@ -358,6 +360,20 @@ function InteractionChart({ data }: { data: DataPoint[] }): JSX.Element {
     );
 }
 
+// ─── SHARED EMPTY STATE ──────────────────────────────────────────────────────
+
+function NoActivitiesState(): JSX.Element {
+    return (
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-10">
+            <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
+                <Activity className="h-5 w-5 text-zinc-400 dark:text-zinc-500" />
+            </div>
+            <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">No activity yet</h3>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Actions like file uploads and team changes will appear here.</p>
+        </div>
+    );
+}
+
 // ─── MAIN COMPONENT ─────────────────────────────────────────────────────────
 
 export default function DashboardPage(): JSX.Element {
@@ -380,6 +396,7 @@ export default function DashboardPage(): JSX.Element {
     const [isRefreshed, setIsRefreshed] = useState(false);
     const [timeframe, setTimeframe] = useState<string>("this-month");
     const [isActivitiesModalOpen, setIsActivitiesModalOpen] = useState(false);
+    const [allActivities, setAllActivities] = useState<any[]>([]);
 
     // Update usage from subscription when it loads
     useEffect(() => {
@@ -392,8 +409,7 @@ export default function DashboardPage(): JSX.Element {
             // Use the highest usage percentage
             const overallPct = Math.max(creditsPercentage, pagesPercentage, simplePercentage, complexPercentage);
             setUsageLimit(overallPct);
-            setCredits(subscriptionSummary.credits.total);
-            setPlan("Demo Plan");
+            setCredits(subscriptionSummary.credits.used);
 
             // Generate and update chart data from subscription summary
             const newChartData = generateChartData(subscriptionSummary);
@@ -426,7 +442,7 @@ export default function DashboardPage(): JSX.Element {
 
             // 3. Map notifications to recent activities
             const rawNotifs = notifData?.notifications || [];
-            const mapped = rawNotifs.slice(0, 10).map((n: any) => {
+            const mapped = rawNotifs.slice(0, 20).map((n: any) => {
                 let icon = Activity;
                 let iconColor = "text-zinc-600 bg-zinc-50 dark:bg-zinc-800/40 border-zinc-150 dark:border-zinc-800";
 
@@ -462,7 +478,8 @@ export default function DashboardPage(): JSX.Element {
                     iconColor
                 };
             });
-            setRecentActivities(mapped);
+            setAllActivities(mapped);
+            setRecentActivities(mapped.slice(0, 5));
         } catch (e) {
             console.warn("Failed to retrieve live stats for dashboard:", e);
         }
@@ -524,13 +541,14 @@ export default function DashboardPage(): JSX.Element {
                         </div>
                         <div className="flex items-center">
                             <Button
-                                variant="outline"
+                                variant="ghost"
+                                size="icon"
                                 onClick={handleRefresh}
                                 disabled={isRefreshed}
-                                className="gap-2 rounded-lg border-surface-sidebar bg-surface-page hover:bg-[#F5F5F0] dark:border-zinc-700 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold"
+                                aria-label="Refresh dashboard"
+                                className="rounded-lg text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
                             >
-                                <RefreshCw className={`h-4 w-4 text-zinc-500 dark:text-zinc-400 ${isRefreshed ? "animate-spin" : ""}`} />
-                                <span className="hidden sm:inline">{isRefreshed ? "Refreshing..." : "Refresh"}</span>
+                                <RefreshCw className={`h-4 w-4 ${isRefreshed ? "animate-spin" : ""}`} />
                             </Button>
                         </div>
                     </div>
@@ -600,7 +618,7 @@ export default function DashboardPage(): JSX.Element {
                             <p className="text-xs font-medium text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Subscription</p>
                             <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 capitalize">{plan}</h3>
                             <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
-                                Credits: <span className="text-zinc-700 dark:text-zinc-300 font-bold">{credits} / {subscriptionSummary?.credits.total || 50}</span>
+                                Credits used: <span className="text-zinc-700 dark:text-zinc-300 font-bold">{credits} / {subscriptionSummary?.credits.total ?? 50}</span>
                             </p>
                         </div>
                         <div className="h-12 w-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm shrink-0">
@@ -650,18 +668,6 @@ export default function DashboardPage(): JSX.Element {
                             </DropdownMenu>
                         </div>
 
-                        {/* Chart Legend */}
-                        <div className="flex items-center gap-4 text-xs font-medium self-end px-2">
-                            <div className="flex items-center gap-1.5">
-                                <span className="h-3 w-3 rounded bg-blue-600 block shrink-0" />
-                                <span className="text-zinc-900 dark:text-white">Simple Interaction</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <span className="h-3 w-3 rounded bg-orange-600 block shrink-0" />
-                                <span className="text-zinc-900 dark:text-white">Complex Interaction</span>
-                            </div>
-                        </div>
-
                         {/* Chart Canvas */}
                         <div className="flex-1 w-full min-h-[220px] flex items-center justify-center">
                             <div className="w-full h-full min-h-[220px]">
@@ -669,11 +675,18 @@ export default function DashboardPage(): JSX.Element {
                             </div>
                         </div>
 
-                        {/* Chart Footer Indicator */}
-                        <div className="flex items-center justify-center gap-1 py-1 bg-zinc-50/50 dark:bg-zinc-800/20 border border-zinc-100 dark:border-zinc-800/60 rounded-xl">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                                Dollar / Monthly
-                            </p>
+                        {/* Chart Legend + Footer */}
+                        <div className="flex items-center justify-center gap-5 py-1.5 text-xs font-medium border-t border-zinc-100 dark:border-zinc-800/60">
+                            <div className="flex items-center gap-1.5">
+                                <span className="h-2.5 w-2.5 rounded-sm bg-blue-600 block shrink-0" />
+                                <span className="text-zinc-500 dark:text-zinc-400">Simple</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="h-2.5 w-2.5 rounded-sm bg-orange-600 block shrink-0" />
+                                <span className="text-zinc-500 dark:text-zinc-400">Complex</span>
+                            </div>
+                            <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                            <span className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-wider font-semibold">Interactions / Day</span>
                         </div>
                     </div>
 
@@ -685,44 +698,21 @@ export default function DashboardPage(): JSX.Element {
                                 <p className="text-[11px] text-zinc-400 font-medium">Activity updates across categories</p>
                             </div>
 
-                            <button
-                                onClick={() => setIsActivitiesModalOpen(true)}
-                                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-all cursor-pointer"
-                            >
-                                View All
-                            </button>
+                            {allActivities.length > 5 && (
+                                <button
+                                    onClick={() => setIsActivitiesModalOpen(true)}
+                                    className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-all cursor-pointer"
+                                >
+                                    View All ({allActivities.length})
+                                </button>
+                            )}
                         </div>
 
                         {/* Activities List */}
                         {recentActivities.length === 0 ? (
-                            <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-                                <svg
-                                    className="w-14 h-14 text-zinc-300 dark:text-zinc-700 mb-3"
-                                    viewBox="0 0 48 48"
-                                    fill="none"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                >
-                                    <path
-                                        d="M10 4C7.79086 4 6 5.79086 6 8V40C6 42.2091 7.79086 44 10 44H38C40.2091 44 42 42.2091 42 40V16L30 4H10Z"
-                                        fill="currentColor"
-                                    />
-                                    <path
-                                        d="M30 4V16H42L30 4Z"
-                                        fill="currentColor"
-                                        fillOpacity="0.2"
-                                    />
-                                    <rect x="14" y="24" width="20" height="4" rx="2" fill="#FEFFFA" className="dark:fill-zinc-900" />
-                                    <rect x="14" y="32" width="12" height="4" rx="2" fill="#FEFFFA" className="dark:fill-zinc-900" />
-                                </svg>
-                                <h3 className="text-sm font-semibold text-zinc-750 dark:text-zinc-300">
-                                    No Data Found
-                                </h3>
-                                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-                                    No interactions available yet.
-                                </p>
-                            </div>
+                            <NoActivitiesState />
                         ) : (
-                            <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-3 pr-1 min-h-0 scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent hover:scrollbar-thumb-zinc-400 dark:hover:scrollbar-thumb-zinc-600">
+                            <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 pr-1 min-h-0 hover-scrollbar">
                                 {recentActivities.map((act) => {
                                     const IconComp = act.icon;
                                     return (
@@ -730,8 +720,8 @@ export default function DashboardPage(): JSX.Element {
                                             key={act.id}
                                             className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition-colors border border-transparent hover:border-zinc-100/50 dark:hover:border-zinc-800/40"
                                         >
-                                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border shadow-xs ${act.iconColor}`}>
-                                                <IconComp className="h-4.5 w-4.5" />
+                                            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${act.iconColor}`}>
+                                                <IconComp className="h-4 w-4" />
                                             </div>
                                             <div className="min-w-0 flex-1 space-y-1">
                                                 <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 leading-normal break-all">
@@ -764,44 +754,19 @@ export default function DashboardPage(): JSX.Element {
                         </DialogHeader>
 
                         {/* Scrollable list inside modal */}
-                        {recentActivities.length === 0 ? (
-                            <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-                                <svg
-                                    className="w-14 h-14 text-zinc-300 dark:text-zinc-700 mb-3"
-                                    viewBox="0 0 48 48"
-                                    fill="none"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                >
-                                    <path
-                                        d="M10 4C7.79086 4 6 5.79086 6 8V40C6 42.2091 7.79086 44 10 44H38C40.2091 44 42 42.2091 42 40V16L30 4H10Z"
-                                        fill="currentColor"
-                                    />
-                                    <path
-                                        d="M30 4V16H42L30 4Z"
-                                        fill="currentColor"
-                                        fillOpacity="0.2"
-                                    />
-                                    <rect x="14" y="24" width="20" height="4" rx="2" fill="#FEFFFA" className="dark:fill-zinc-900" />
-                                    <rect x="14" y="32" width="12" height="4" rx="2" fill="#FEFFFA" className="dark:fill-zinc-900" />
-                                </svg>
-                                <h3 className="text-sm font-semibold text-zinc-750 dark:text-zinc-300">
-                                    No Data Found
-                                </h3>
-                                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-                                    No interactions available yet.
-                                </p>
-                            </div>
+                        {allActivities.length === 0 ? (
+                            <NoActivitiesState />
                         ) : (
                             <div className="flex-1 overflow-y-auto pr-1 py-2 space-y-3 no-scrollbar min-h-0">
-                                {recentActivities.map((act) => {
+                                {allActivities.map((act) => {
                                     const IconComp = act.icon;
                                     return (
                                         <div
                                             key={act.id}
                                             className="flex items-start gap-3 p-3 rounded-xl hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition-colors border border-transparent hover:border-zinc-100/50 dark:hover:border-zinc-800/40 min-w-0"
                                         >
-                                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border shadow-xs ${act.iconColor}`}>
-                                                <IconComp className="h-4.5 w-4.5" />
+                                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${act.iconColor}`}>
+                                                <IconComp className="h-4 w-4" />
                                             </div>
                                             <div className="min-w-0 flex-1 space-y-1">
                                                 <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 leading-normal break-all">

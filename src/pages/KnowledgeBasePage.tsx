@@ -24,7 +24,7 @@ import ColumnSettings from "@/components/ui/ColumnSettings";
 
 const KB_COLUMNS = [
     { key: "name", label: "Knowledge Base Name" },
-    { key: "folder", label: "Size / Description" },
+    { key: "folder", label: "Details" },
     { key: "owner", label: "Creator" },
     { key: "createdDate", label: "Created Date" },
     { key: "ocr_status", label: "Processing Status" },
@@ -819,15 +819,15 @@ export default function KnowledgeBasePage() {
             {/* Header / Breadcrumbs */}
             <div className="flex-shrink-0 flex flex-col gap-1">
                 <div className="flex flex-row items-center justify-between gap-4">
-                    <div className="flex items-center flex-wrap gap-2 text-2xl tracking-tight min-w-0 flex-1">
+                    <div className="flex items-center flex-wrap gap-2 tracking-tight min-w-0 flex-1">
                         <div className="flex items-center gap-2.5">
                             <button
                                 onClick={() => folderStack.length > 0 && navigateTo(-1)}
                                 disabled={folderStack.length === 0}
                                 className={
                                     folderStack.length === 0
-                                        ? "text-zinc-900 dark:text-zinc-100 font-bold cursor-default"
-                                        : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors font-medium cursor-pointer"
+                                        ? "text-2xl text-zinc-900 dark:text-zinc-100 font-bold cursor-default"
+                                        : "text-2xl text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors font-medium cursor-pointer"
                                 }
                             >
                                 Knowledge Base
@@ -845,7 +845,7 @@ export default function KnowledgeBasePage() {
                                 return (
                                     <div key={item.id} className="flex items-center gap-2.5 min-w-0">
                                         <span className="text-zinc-300 dark:text-zinc-700 font-normal">/</span>
-                                        <span className="text-zinc-900 dark:text-zinc-100 font-bold truncate max-w-[120px] sm:max-w-xs" title={item.name}>
+                                        <span className="text-2xl text-zinc-900 dark:text-zinc-100 font-bold truncate max-w-[120px] sm:max-w-xs" title={item.name}>
                                             {item.name}
                                         </span>
                                         {!isLoading && (
@@ -861,7 +861,7 @@ export default function KnowledgeBasePage() {
                                     <span className="text-zinc-300 dark:text-zinc-700 font-normal">/</span>
                                     <button
                                         onClick={() => navigateTo(idx)}
-                                        className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors font-medium cursor-pointer truncate max-w-[120px] sm:max-w-xs"
+                                        className="text-2xl text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors font-medium cursor-pointer truncate max-w-[120px] sm:max-w-xs"
                                         title={item.name}
                                     >
                                         {item.name}
@@ -1028,7 +1028,7 @@ export default function KnowledgeBasePage() {
                     <SkeletonTable
                         gridCols="[2fr_1fr_1fr_56px]"
                         mobileGridCols="[1fr_56px]"
-                        headers={["Name", "Size / Description", "Creator", ""]}
+                        headers={["Name", "Details", "Creator", ""]}
                         columns={[
                             {
                                 width: "w-40",

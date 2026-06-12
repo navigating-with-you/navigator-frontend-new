@@ -93,7 +93,7 @@ export default function LandingPage() {
                                 className="flex flex-col gap-3 p-6 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]"
                             >
                                 <div className="h-9 w-9 rounded-lg bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center shrink-0">
-                                    <Icon className="h-4.5 w-4.5 text-blue-600 dark:text-blue-400" />
+                                    <Icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-sm font-semibold text-[hsl(var(--foreground))]">{f.title}</p>

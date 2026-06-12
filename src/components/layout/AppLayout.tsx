@@ -337,10 +337,9 @@ export default function AppLayout(): JSX.Element {
 
     return (
         <div className="w-full bg-surface-page dark:bg-zinc-950 flex justify-center">
-            {/* Terms acceptance gate — temporarily hidden; re-enable by restoring the condition below */}
-            {/* {termsAccepted === false && (
+            {termsAccepted === false && (
                 <TermsAcceptanceModal onAccepted={() => setTermsAccepted(true)} />
-            )} */}
+            )}
 
             <div
                 className="flex h-dvh w-full overflow-hidden bg-surface-page dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 relative"
