@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Sparkles, X, FileText } from "lucide-react";
+import { safeOpen } from "@/utils/safeUrl";
 import {
     Sheet,
     SheetContent,
@@ -387,7 +388,7 @@ export default function AskAiDrawer({ open, onOpenChange, folderId }: AskAiDrawe
                                                         toast.info(`Document: ${c.filename}\nRelevance: ${Math.round((c.relevance_score || 0) * 100)}%`);
                                                         // TODO: Open file preview or navigate to file
                                                     } else if (c.heading_path) {
-                                                        window.open(c.heading_path, "_blank");
+                                                        safeOpen(c.heading_path);
                                                     }
                                                 }}
                                                 className="group flex items-center gap-1.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-md text-[10px] font-medium text-slate-700 transition-colors cursor-pointer"

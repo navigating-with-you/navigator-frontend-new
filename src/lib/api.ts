@@ -677,3 +677,38 @@ export async function updateUserSettings(payload: Record<string, any>, token: st
 export async function updateThemePreference(theme: string, token: string): Promise<UserSettings> {
     return apiClient.patch<UserSettings>("/api/settings/theme", { theme }, { token });
 }
+
+// ── Compliance ────────────────────────────────────────────────────────────────
+
+export interface TermsStatus {
+    tos_accepted: boolean;
+    tos_accepted_at: string | null;
+    tos_version: string | null;
+    privacy_accepted: boolean;
+    privacy_accepted_at: string | null;
+    privacy_version: string | null;
+}
+
+export async function getTermsStatus(token: string): Promise<TermsStatus> {
+    return apiClient.get<TermsStatus>("/api/compliance/terms-status", { token, cache: false });
+}
+
+export async function acceptTerms(token: string, tosVersion = "1.0", privacyVersion = "1.0") {
+    return apiClient.post<{ status: string; accepted_at: string }>(
+        "/api/compliance/accept-terms",
+        { tos_version: tosVersion, privacy_version: privacyVersion },
+        { token },
+    );
+}
+
+export async function requestDataExport(token: string) {
+    return apiClient.get<Record<string, unknown>>("/api/compliance/data-export", { token, cache: false });
+}
+
+export async function requestAccountDeletion(token: string) {
+    return apiClient.post<{ status: string; request_id: string; message: string }>(
+        "/api/compliance/deletion-request",
+        undefined,
+        { token },
+    );
+}

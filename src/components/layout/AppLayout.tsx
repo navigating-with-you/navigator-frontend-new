@@ -7,8 +7,9 @@ const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-import { listConversations, type Conversation } from "@/lib/api";
+import { listConversations, getTermsStatus, type Conversation } from "@/lib/api";
 import OnboardingPage from "@/pages/OnboardingPage";
+import { TermsAcceptanceModal } from "@/components/compliance/TermsAcceptanceModal";
 import { cn } from "@/lib/utils";
 import { useUserProfile } from "@/contexts/UserContext";
 import { groupByTime } from "@/utils/conversationUtils";
@@ -109,6 +110,7 @@ export default function AppLayout(): JSX.Element {
     const [loadingTime, setLoadingTime] = useState<number>(0);
     const [hasError, setHasError] = useState<boolean>(false);
     const [retryCount, setRetryCount] = useState<number>(0);
+    const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
 
     useEffect(() => {
         if (profile) {
@@ -117,6 +119,25 @@ export default function AppLayout(): JSX.Element {
             setRetryCount(0);
         }
     }, [profile]);
+
+    // Check terms acceptance once profile is loaded
+    useEffect(() => {
+        if (!profile) return;
+        let cancelled = false;
+        const checkTerms = async () => {
+            try {
+                const token = await getToken();
+                if (!token || cancelled) return;
+                const status = await getTermsStatus(token);
+                if (!cancelled) setTermsAccepted(status.tos_accepted && status.privacy_accepted);
+            } catch {
+                // If check fails, default to accepted so we don't block the user
+                if (!cancelled) setTermsAccepted(true);
+            }
+        };
+        checkTerms();
+        return () => { cancelled = true; };
+    }, [profile, getToken]);
 
     useEffect(() => {
         const handleSyncFailed = () => {
@@ -316,6 +337,11 @@ export default function AppLayout(): JSX.Element {
 
     return (
         <div className="w-full bg-surface-page dark:bg-zinc-950 flex justify-center">
+            {/* Terms acceptance gate — shown until user accepts ToS + Privacy Policy */}
+            {termsAccepted === false && (
+                <TermsAcceptanceModal onAccepted={() => setTermsAccepted(true)} />
+            )}
+
             <div
                 className="flex h-dvh w-full overflow-hidden bg-surface-page dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 relative"
                 data-testid="app-layout"

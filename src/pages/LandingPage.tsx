@@ -107,9 +107,25 @@ export default function LandingPage() {
 
             {/* ── Footer ─────────────────────────────────────────────── */}
             <footer className="px-6 sm:px-10 py-5 border-t border-[hsl(var(--border))]">
-                <p className="text-xs text-[hsl(var(--muted-foreground))] text-center">
-                    © {new Date().getFullYear()} Navigator. All rights reserved.
-                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                        © {new Date().getFullYear()} Navigator. All rights reserved.
+                    </p>
+                    <div className="flex items-center gap-4">
+                        <a
+                            href="/privacy-policy"
+                            className="text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+                        >
+                            Privacy Policy
+                        </a>
+                        <a
+                            href="/terms"
+                            className="text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+                        >
+                            Terms of Service
+                        </a>
+                    </div>
+                </div>
             </footer>
         </div>
     );

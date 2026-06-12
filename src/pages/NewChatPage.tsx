@@ -46,6 +46,7 @@ import {
 import { ThinkingAccordion, THINKING_STEP_LABELS } from "@/components/chat/ThinkingAccordion";
 import { SourcesPill } from "@/components/chat/SourcesPill";
 import { MessageContent } from "@/components/chat/MessageContent";
+import { safeOpen } from "@/utils/safeUrl";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -268,7 +269,7 @@ export default function NewChatPage(): JSX.Element {
         } else {
             // Web source - open in new tab
             if (citation.heading_path) {
-                window.open(citation.heading_path, "_blank");
+                safeOpen(citation.heading_path);
             }
         }
     }, []);

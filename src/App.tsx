@@ -24,6 +24,8 @@ const SubscriptionPage = lazy(() => import("@/pages/SubscriptionPage"));
 const ChatPage = lazy(() => import("@/pages/NewChatPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 const InviteAcceptancePage = lazy(() => import("@/pages/InviteAcceptancePage"));
+const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage"));
+const TermsOfServicePage = lazy(() => import("@/pages/TermsOfServicePage"));
 
 /**
  * Loading fallback component shown while chunks are being loaded
@@ -76,6 +78,24 @@ function AppRoutes(): JSX.Element {
                 element={
                     <PageBoundary>
                         <InviteAcceptancePage />
+                    </PageBoundary>
+                }
+            />
+
+            {/* Public Legal Pages */}
+            <Route
+                path="/privacy-policy"
+                element={
+                    <PageBoundary>
+                        <PrivacyPolicyPage />
+                    </PageBoundary>
+                }
+            />
+            <Route
+                path="/terms"
+                element={
+                    <PageBoundary>
+                        <TermsOfServicePage />
                     </PageBoundary>
                 }
             />

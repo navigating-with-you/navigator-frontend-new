@@ -13,6 +13,8 @@ import {
     Building2,
     LogOut,
     Check,
+    Shield,
+    FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -307,6 +309,26 @@ export function UserMenuDropdown({ onProfileClick }: UserMenuDropdownProps): JSX
                         >
                             <HelpCircle className="h-4 w-4 text-zinc-500" />
                             <span className="font-medium">Help</span>
+                        </DropdownMenuItem>
+                    </div>
+
+                    <div className="space-y-0.5">
+                        <div className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-2.5 pb-1">
+                            Legal
+                        </div>
+                        <DropdownMenuItem
+                            onClick={() => window.open("/privacy-policy", "_blank", "noopener,noreferrer")}
+                            className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-700 dark:text-zinc-300 hover:bg-[#60646B1A] dark:hover:bg-zinc-800 focus:bg-[#60646B1A] dark:focus:bg-zinc-800 cursor-pointer"
+                        >
+                            <Shield className="h-4 w-4 text-zinc-500" />
+                            <span className="font-medium">Privacy Policy</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => window.open("/terms", "_blank", "noopener,noreferrer")}
+                            className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-700 dark:text-zinc-300 hover:bg-[#60646B1A] dark:hover:bg-zinc-800 focus:bg-[#60646B1A] dark:focus:bg-zinc-800 cursor-pointer"
+                        >
+                            <FileText className="h-4 w-4 text-zinc-500" />
+                            <span className="font-medium">Terms of Service</span>
                         </DropdownMenuItem>
                     </div>
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Folder } from "lucide-react";
 import type { Citation } from "@/lib/api";
+import { safeOpen } from "@/utils/safeUrl";
 
 export const getCitationForReference = (
     refType: "Source" | "Web",
@@ -41,7 +42,7 @@ export function CitationPill({ citation, type, onSourceClick }: CitationPillProp
 
     const handleClick = () => {
         if (isWeb && citation.heading_path) {
-            window.open(citation.heading_path, "_blank");
+            safeOpen(citation.heading_path);
         } else if (onSourceClick) {
             onSourceClick(citation);
         }

@@ -3,6 +3,15 @@ export type MarkdownSegment =
     | { type: "code_block"; code: string; lang: string }
     | { type: "table"; html: string };
 
+function escapeHtml(text: string): string {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 export function parseMarkdown(text: string): MarkdownSegment[] {
     const segments: MarkdownSegment[] = [];
 
@@ -39,10 +48,10 @@ export function parseMarkdown(text: string): MarkdownSegment[] {
         if (!hdr) continue;
 
         const headerCells = cells(hdr)
-            .map(h => `<th class="border border-zinc-300 dark:border-zinc-600 px-1.5 py-0.5 text-left bg-zinc-100 dark:bg-zinc-800">${h}</th>`)
+            .map(h => `<th class="border border-zinc-300 dark:border-zinc-600 px-1.5 py-0.5 text-left bg-zinc-100 dark:bg-zinc-800">${escapeHtml(h)}</th>`)
             .join("");
         const bodyRows = body
-            .map(r => `<tr>${cells(r).map(c => `<td class="border border-zinc-300 dark:border-zinc-600 px-1.5 py-0.5">${c}</td>`).join("")}</tr>`)
+            .map(r => `<tr>${cells(r).map(c => `<td class="border border-zinc-300 dark:border-zinc-600 px-1.5 py-0.5">${escapeHtml(c)}</td>`).join("")}</tr>`)
             .join("");
         const html = `<table class="text-xs border-collapse my-1.5 w-full"><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
 

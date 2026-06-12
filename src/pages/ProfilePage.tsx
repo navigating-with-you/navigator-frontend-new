@@ -1,13 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { useNavigate } from "react-router-dom";
-import { uploadAvatar, deleteAvatar, updateProfile, syncUser } from "@/lib/api";
+import { uploadAvatar, deleteAvatar, updateProfile, syncUser, requestDataExport, requestAccountDeletion } from "@/lib/api";
 import { useUserProfile } from "@/contexts/UserContext";
 import { toast } from "sonner";
 import {
     X,
     Loader2,
     Pencil,
+    Download,
+    Trash2,
+    Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +24,8 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
     const [profile, setProfile] = useState<any>(contextProfile);
     const [isSaving, setIsSaving] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+    const [isDeletionRequesting, setIsDeletionRequesting] = useState(false);
     const [tempFile, setTempFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isAvatarDeleted, setIsAvatarDeleted] = useState(false);
@@ -204,6 +209,45 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
             } else {
                 navigate(-1);
             }
+        }
+    };
+
+    const handleDataExport = async () => {
+        setIsExporting(true);
+        try {
+            const token = await getToken();
+            if (!token) throw new Error("Not authenticated");
+            const data = await requestDataExport(token);
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `navigator-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast.success("Data export downloaded successfully.");
+        } catch {
+            toast.error("Failed to export data. Please try again.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handleDeletionRequest = async () => {
+        const confirmed = window.confirm(
+            "Are you sure you want to request account deletion? Your request will be logged and processed within 45 days as required by CCPA. You will be contacted at your registered email."
+        );
+        if (!confirmed) return;
+        setIsDeletionRequesting(true);
+        try {
+            const token = await getToken();
+            if (!token) throw new Error("Not authenticated");
+            const res = await requestAccountDeletion(token);
+            toast.success(res.message || "Deletion request submitted.");
+        } catch {
+            toast.error("Failed to submit deletion request. Please try again.");
+        } finally {
+            setIsDeletionRequesting(false);
         }
     };
 
@@ -511,6 +555,69 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
                                     readOnly
                                     className="bg-[#F9FAFB] dark:bg-zinc-800/40 text-zinc-550 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 rounded-xl h-11 px-3.5 cursor-not-allowed shadow-none"
                                 />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Data & Privacy (CCPA rights — view mode only) */}
+                    {!isEditing && (
+                        <div className="pt-2 pb-2 border-t border-zinc-100 dark:border-zinc-800">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Shield className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
+                                <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                                    Data &amp; Privacy
+                                </span>
+                            </div>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed mb-4">
+                                Under applicable US privacy law (CCPA), you have the right to access
+                                a copy of your personal data and to request its deletion.
+                            </p>
+                            <div className="flex flex-col gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={handleDataExport}
+                                    disabled={isExporting}
+                                    className="flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/40 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 cursor-pointer"
+                                >
+                                    {isExporting ? (
+                                        <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
+                                    ) : (
+                                        <Download className="h-4 w-4 text-zinc-500" />
+                                    )}
+                                    {isExporting ? "Generating export..." : "Download My Data"}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleDeletionRequest}
+                                    disabled={isDeletionRequesting}
+                                    className="flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-lg border border-red-200 dark:border-red-900/50 bg-white dark:bg-zinc-800/40 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors disabled:opacity-50 cursor-pointer"
+                                >
+                                    {isDeletionRequesting ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Trash2 className="h-4 w-4" />
+                                    )}
+                                    {isDeletionRequesting ? "Submitting request..." : "Request Account Deletion"}
+                                </button>
+                            </div>
+                            <div className="mt-3 flex items-center gap-3">
+                                <a
+                                    href="/privacy-policy"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                                >
+                                    Privacy Policy
+                                </a>
+                                <span className="text-zinc-300 dark:text-zinc-600">·</span>
+                                <a
+                                    href="/terms"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                                >
+                                    Terms of Service
+                                </a>
                             </div>
                         </div>
                     )}

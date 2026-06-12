@@ -3,6 +3,7 @@ import { Folder } from "lucide-react";
 import { toast } from "sonner";
 import type { Citation } from "@/lib/api";
 import { CitationPill } from "./CitationPill";
+import { safeOpen } from "@/utils/safeUrl";
 
 interface SourcesPillProps {
     sources: Citation[];
@@ -104,7 +105,7 @@ export function SourcesPill({ sources, onSourceClick }: SourcesPillProps) {
                                         onSourceClick(src);
                                     } else {
                                         if (isWeb && src.heading_path) {
-                                            window.open(src.heading_path, "_blank");
+                                            safeOpen(src.heading_path);
                                         } else {
                                             toast.info(`Document source: ${src.filename}`);
                                         }
