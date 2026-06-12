@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { syncUser } from "@/lib/api";
 import { toast } from "sonner";
@@ -11,6 +12,7 @@ export default function AuthInitializer() {
     const { setUserProfile, clearUserProfile } = useUserProfile();
     const syncStarted = useRef(false);
     const wsRetryCount = useRef(0);
+    const queryClient = useQueryClient();
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -28,30 +30,36 @@ export default function AuthInitializer() {
                         apiClient.setToken(token);
                         cacheWebSocket.setToken(token);
 
-                        // Retry WebSocket connection up to 3 times
-                        let wsConnected = false;
-                        for (let i = 0; i < 3; i++) {
-                            try {
-                                await cacheWebSocket.connect();
-                                cacheWebSocket.startHeartbeat();
-                                wsConnected = true;
-                                wsRetryCount.current = 0;
-                                break;
-                            } catch (wsError) {
-                                console.warn(`[WebSocket] Connection attempt ${i + 1} failed:`, wsError);
-                                if (i < 2) {
-                                    await new Promise(resolve => setTimeout(resolve, 1000));
-                                }
-                            }
-                        }
-
-                        if (!wsConnected) {
-                            console.warn("[WebSocket] Cache invalidation WS unavailable after 3 attempts — real-time updates disabled");
-                        }
-
                         const userData = await syncUser(token);
                         setUserProfile(userData);
                         window.dispatchEvent(new Event("navigator_user_synced"));
+
+                        // Connect WebSocket ONLY if user has an organization (onboarding complete)
+                        if (userData && userData.organization_id) {
+                            let wsConnected = false;
+                            for (let i = 0; i < 3; i++) {
+                                try {
+                                    await cacheWebSocket.connect();
+                                    cacheWebSocket.startHeartbeat();
+                                    wsConnected = true;
+                                    wsRetryCount.current = 0;
+                                    break;
+                                } catch (wsError) {
+                                    console.warn(`[WebSocket] Connection attempt ${i + 1} failed:`, wsError);
+                                    if (i < 2) {
+                                        await new Promise(resolve => setTimeout(resolve, 1000));
+                                    }
+                                }
+                            }
+
+                            if (!wsConnected) {
+                                console.warn("[WebSocket] Cache invalidation WS unavailable after 3 attempts — real-time updates disabled");
+                            }
+                        } else {
+                            if (import.meta.env.DEV) {
+                                console.log("[WebSocket] Skipping connection during onboarding (no organization_id)");
+                            }
+                        }
                     }
                 } catch (error: any) {
                     console.error("Failed to sync user:", error);
@@ -75,13 +83,48 @@ export default function AuthInitializer() {
             performSync();
         };
 
+        const handleTermsAccepted = async () => {
+            if (cacheWebSocket.isConnected()) return;
+            try {
+                const token = await getToken();
+                if (token) {
+                    cacheWebSocket.setToken(token);
+                    await cacheWebSocket.connect();
+                    cacheWebSocket.startHeartbeat();
+                }
+            } catch {
+                // Silent — WS is non-critical
+            }
+        };
+
+        const handleOnboardingCompleted = async () => {
+            // Invalidate queries so permissions and user info refetch
+            queryClient.invalidateQueries();
+
+            if (cacheWebSocket.isConnected()) return;
+            try {
+                const token = await getToken();
+                if (token) {
+                    cacheWebSocket.setToken(token);
+                    await cacheWebSocket.connect();
+                    cacheWebSocket.startHeartbeat();
+                }
+            } catch (err) {
+                console.error("[WebSocket] Connection failed after onboarding:", err);
+            }
+        };
+
         window.addEventListener("navigator_retry_sync", handleRetry);
+        window.addEventListener("navigator_terms_accepted", handleTermsAccepted);
+        window.addEventListener("navigator_onboarding_completed", handleOnboardingCompleted);
         performSync();
 
         return () => {
             window.removeEventListener("navigator_retry_sync", handleRetry);
+            window.removeEventListener("navigator_terms_accepted", handleTermsAccepted);
+            window.removeEventListener("navigator_onboarding_completed", handleOnboardingCompleted);
         };
-    }, [isAuthenticated, getToken, user, setUserProfile, clearUserProfile]);
+    }, [isAuthenticated, getToken, user, setUserProfile, clearUserProfile, queryClient]);
 
     useEffect(() => {
         return () => {

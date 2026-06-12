@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { apiClient } from '@/utils/apiClient';
@@ -56,49 +57,49 @@ export function usePermissions() {
    * While loading, returns false (safer than true).
    * On error, returns false (deny access if we can't verify).
    */
-  const hasPermission = (permission: string): boolean => {
+  const hasPermission = useCallback((permission: string): boolean => {
     if (isLoading) return false; // Don't show features while loading
     if (!data?.permissions) return false;
     return data.permissions.includes(permission);
-  };
+  }, [isLoading, data?.permissions]);
 
   /**
    * Check if user has ANY of the provided permissions.
    * Returns false while loading or on error (safe default).
    */
-  const hasAnyPermission = (permissions: string[]): boolean => {
+  const hasAnyPermission = useCallback((permissions: string[]): boolean => {
     if (isLoading) return false;
     if (!data?.permissions) return false;
     return permissions.some(p => data.permissions.includes(p));
-  };
+  }, [isLoading, data?.permissions]);
 
   /**
    * Check if user has ALL of the provided permissions.
    * Returns false while loading or on error (safe default).
    */
-  const hasAllPermissions = (permissions: string[]): boolean => {
+  const hasAllPermissions = useCallback((permissions: string[]): boolean => {
     if (isLoading) return false;
     if (!data?.permissions) return false;
     return permissions.every(p => data.permissions.includes(p));
-  };
+  }, [isLoading, data?.permissions]);
 
   /**
    * Get the current user's role name.
    * Returns null while loading or on error.
    */
-  const getUserRole = (): string | null => {
+  const getUserRole = useCallback((): string | null => {
     if (isLoading || !data) return null;
     return data.role || null;
-  };
+  }, [isLoading, data?.role]);
 
   /**
    * Check if user is a specific role.
    * Returns false while loading or on error.
    */
-  const isRole = (roleName: string): boolean => {
+  const isRole = useCallback((roleName: string): boolean => {
     if (isLoading || !data) return false;
     return data.role === roleName;
-  };
+  }, [isLoading, data?.role]);
 
   return {
     // Data

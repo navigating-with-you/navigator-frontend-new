@@ -17,31 +17,43 @@ const ThemeContext = createContext<ThemeContextValue>({
 });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-    const { getToken } = useKindeAuth();
+    const { getToken, isAuthenticated } = useKindeAuth();
     const [theme, setThemeState] = useState<Theme>(() => {
         const stored = localStorage.getItem("navigator_theme") as Theme | null;
         if (stored === "dark" || stored === "light" || stored === "system") return stored;
         return "system"; // default to system theme
     });
 
-    // Load theme from backend on mount
+    // Load theme after user sync completes (navigator_user_synced fires once
+    // AuthInitializer has called syncUser and the backend knows the user).
+    // Loading earlier races with syncUser and gets a 401 for new sessions.
     useEffect(() => {
+        if (!isAuthenticated) return;
+        let cancelled = false;
+
         const loadThemeFromBackend = async () => {
             try {
                 const token = await getToken();
-                if (token) {
+                if (token && !cancelled) {
                     const settings = await getUserSettings(token);
-                    const backendTheme = (settings.preferences.theme as Theme) || "system";
-                    setThemeState(backendTheme);
+                    if (!cancelled) {
+                        const backendTheme = (settings.preferences.theme as Theme) || "system";
+                        setThemeState(backendTheme);
+                    }
                 }
-            } catch (error) {
-                console.error("Failed to load theme from backend:", error);
-                // Fall back to localStorage
+            } catch {
+                // Fall back to localStorage theme — no need to log, already stored locally
             }
         };
 
-        loadThemeFromBackend();
-    }, []); // load theme once on mount; getToken is functionally stable
+        const handleUserSynced = () => { if (!cancelled) loadThemeFromBackend(); };
+        window.addEventListener("navigator_user_synced", handleUserSynced);
+
+        return () => {
+            cancelled = true;
+            window.removeEventListener("navigator_user_synced", handleUserSynced);
+        };
+    }, [isAuthenticated]); // getToken is functionally stable
 
     useEffect(() => {
         const root = window.document.documentElement;

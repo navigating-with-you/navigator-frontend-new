@@ -208,16 +208,20 @@ export default function KnowledgeBasePage() {
 
     // Employees list for creator filter options
     const [employeesList, setEmployeesList] = useState<any[]>([]);
+    const hasFetchedEmployees = useRef(false);
 
     useEffect(() => {
+        if (isPermissionsLoading || isMember || !hasPermission(PERMISSIONS.EMPLOYEE_VIEW)) return;
+        if (hasFetchedEmployees.current) return;
+
         const fetchEmployeesData = async () => {
-            if (isPermissionsLoading || isMember || !hasPermission(PERMISSIONS.EMPLOYEE_VIEW)) return;
             try {
                 const token = await getToken();
                 if (!token) return;
                 const empData = await listEmployees(token);
                 const list = Array.isArray(empData) ? empData : ((empData as any)?.employees || []);
                 setEmployeesList(list);
+                hasFetchedEmployees.current = true;
             } catch (err) {
                 console.error("Error fetching employees for KNB filter:", err);
             }
@@ -226,6 +230,10 @@ export default function KnowledgeBasePage() {
     }, [getToken, isMember, isPermissionsLoading, hasPermission]);
 
     // ── Data fetching ──────────────────────────────────────────────────────────
+
+    // Use a ref so fetchContents doesn't change identity when permissions load
+    const isMemberRef = useRef(isMember);
+    useEffect(() => { isMemberRef.current = isMember; }, [isMember]);
 
     const fetchContents = useCallback(async (folderId: string | null, showSkeleton = false) => {
         const thisVersion = ++fetchVersionRef.current;
@@ -257,7 +265,7 @@ export default function KnowledgeBasePage() {
 
             const targetFolderId = folderId || data.root_folder_id || rootFolderIdRef.current;
             // Members don't have access to OCR job status — skip the fetch
-            if (targetFolderId && !isMember) {
+            if (targetFolderId && !isMemberRef.current) {
                 try {
                     const jobsData = await listFolderOcrJobs(targetFolderId, token);
                     if (thisVersion === fetchVersionRef.current) {
@@ -275,7 +283,8 @@ export default function KnowledgeBasePage() {
                 setIsLoading(false);
             }
         }
-    }, [getToken, isMember]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [getToken]); // isMember accessed via isMemberRef to keep fetchContents stable
 
     const fileIds = useMemo(() => childFiles.map(f => f.id), [childFiles]);
 

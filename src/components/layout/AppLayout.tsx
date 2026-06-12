@@ -329,6 +329,7 @@ export default function AppLayout(): JSX.Element {
                 onComplete={(newOrgId) => {
                     updateUserProfile({ organization_id: newOrgId });
                     window.dispatchEvent(new Event("navigator_conversation_created"));
+                    window.dispatchEvent(new Event("navigator_onboarding_completed"));
                     navigate("/dashboard", { replace: true });
                 }}
             />

@@ -183,7 +183,11 @@ export default function EmployeesPage() {
 
     const isEmpty = employees.length === 0;
 
+    const isFetchingRef = React.useRef(false);
+
     const fetchEmployees = useCallback(async (showSkeleton = false) => {
+        if (isFetchingRef.current) return;
+        isFetchingRef.current = true;
         try {
             if (showSkeleton) {
                 setIsLoading(true);
@@ -374,6 +378,7 @@ export default function EmployeesPage() {
             setEmployees([]);
         } finally {
             setIsLoading(false);
+            isFetchingRef.current = false;
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);

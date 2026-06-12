@@ -26,6 +26,7 @@ export function TermsAcceptanceModal({ onAccepted }: TermsAcceptanceModalProps) 
             const token = await getToken();
             if (!token) throw new Error("Not authenticated");
             await acceptTerms(token);
+            window.dispatchEvent(new Event("navigator_terms_accepted"));
             onAccepted();
         } catch {
             toast.error("Failed to record acceptance. Please try again.");
