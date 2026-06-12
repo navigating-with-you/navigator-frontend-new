@@ -2,6 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      Content Security Policy (OWASP A05).
+      connect-src uses https:/wss: wildcards because the API URL, Kinde domain,
+      and WebSocket URL are runtime-configurable via env.js.
+      style-src includes 'unsafe-inline' because Tailwind utility classes
+      are applied via className (no inline <style> injection risk).
+    -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self';
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com data:;
+      img-src 'self' data: https://www.google.com https://lh3.googleusercontent.com;
+      connect-src 'self' https: wss:;
+      base-uri 'self';
+      form-action 'self';
+      object-src 'none';
+    " />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
     <script src="/env.js"></script>
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
