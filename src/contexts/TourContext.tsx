@@ -7,7 +7,9 @@ import {
     type ReactNode,
     type JSX,
 } from "react";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 import { TOURS, TOUR_STORAGE_KEY, TOUR_PROGRESS_KEY, type Tour, type TourStep } from "@/tours/tours";
+import { getTourCompletions, saveTourCompletions } from "@/lib/api";
 
 /** A tour with its steps already filtered for the current user's permissions */
 interface ActiveTour extends Tour {
@@ -60,6 +62,8 @@ function loadProgress(): { tourId: string; stepIndex: number } | null {
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 export function TourProvider({ children }: { children: ReactNode }): JSX.Element {
+    const { isAuthenticated, getToken } = useKindeAuth();
+
     // Restore active tour + step from localStorage on mount
     const [activeTour, setActiveTour] = useState<ActiveTour | null>(() => {
         const saved = loadProgress();
@@ -69,6 +73,38 @@ export function TourProvider({ children }: { children: ReactNode }): JSX.Element
         return loadProgress()?.stepIndex ?? 0;
     });
     const [completedTours, setCompletedTours] = useState<Set<string>>(loadCompleted);
+
+    // Hydrate completed tours from backend after login
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        let cancelled = false;
+
+        const loadFromBackend = async () => {
+            try {
+                const token = await getToken();
+                if (token && !cancelled) {
+                    const backendIds = await getTourCompletions(token);
+                    if (!cancelled && backendIds.length > 0) {
+                        setCompletedTours((prev) => {
+                            const merged = new Set([...prev, ...backendIds]);
+                            saveCompleted(merged);
+                            return merged;
+                        });
+                    }
+                }
+            } catch {
+                // localStorage remains authoritative when backend is unavailable
+            }
+        };
+
+        const handleUserSynced = () => { if (!cancelled) loadFromBackend(); };
+        window.addEventListener("navigator_user_synced", handleUserSynced);
+
+        return () => {
+            cancelled = true;
+            window.removeEventListener("navigator_user_synced", handleUserSynced);
+        };
+    }, [isAuthenticated]); // getToken is functionally stable
 
     // Persist active tour progress whenever it changes
     useEffect(() => {
@@ -87,9 +123,18 @@ export function TourProvider({ children }: { children: ReactNode }): JSX.Element
             const next = new Set(prev);
             next.add(tourId);
             saveCompleted(next);
+            // Fire-and-forget save to backend
+            (async () => {
+                try {
+                    const token = await getToken();
+                    if (token) await saveTourCompletions([...next], token);
+                } catch {
+                    // localStorage is the authoritative fallback
+                }
+            })();
             return next;
         });
-    }, []);
+    }, [getToken]);
 
     const startTour = useCallback((tourId: string, filteredSteps?: TourStep[]) => {
         const tour = TOURS.find((t) => t.id === tourId);
@@ -129,7 +174,16 @@ export function TourProvider({ children }: { children: ReactNode }): JSX.Element
         setCompletedTours(new Set());
         setActiveTour(null);
         setStepIndex(0);
-    }, []);
+        // Fire-and-forget reset in backend
+        (async () => {
+            try {
+                const token = await getToken();
+                if (token) await saveTourCompletions([], token);
+            } catch {
+                // Silent — localStorage already cleared
+            }
+        })();
+    }, [getToken]);
 
     const currentStep = activeTour ? (activeTour.steps[stepIndex] ?? null) : null;
 

@@ -723,6 +723,15 @@ export async function updateThemePreference(theme: string, token: string): Promi
     return apiClient.patch<UserSettings>("/api/settings/theme", { theme }, { token });
 }
 
+export async function getTourCompletions(token: string): Promise<string[]> {
+    const settings = await getUserSettings(token);
+    return (settings.preferences.completed_tours as string[] | undefined) ?? [];
+}
+
+export async function saveTourCompletions(completedTourIds: string[], token: string): Promise<UserSettings> {
+    return updateUserSettings({ completed_tours: completedTourIds }, token);
+}
+
 // ── Compliance ────────────────────────────────────────────────────────────────
 
 export interface TermsStatus {
