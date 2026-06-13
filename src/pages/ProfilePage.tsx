@@ -11,7 +11,9 @@ import {
     Download,
     Trash2,
     Shield,
+    Info,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -562,16 +564,22 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
                     {/* Data & Privacy (CCPA rights — view mode only) */}
                     {!isEditing && (
                         <div className="pt-2 pb-2 border-t border-zinc-100 dark:border-zinc-800">
-                            <div className="flex items-center gap-2 mb-3">
+                            <div className="flex items-center gap-2 mb-4">
                                 <Shield className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
                                 <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                                     Data &amp; Privacy
                                 </span>
+                                <TooltipProvider delayDuration={100}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Info className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500 cursor-pointer hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors" />
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top" className="max-w-[260px] text-center text-xs leading-relaxed">
+                                            Under applicable US privacy law (CCPA), you have the right to access a copy of your personal data and to request its deletion.
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                             </div>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed mb-4">
-                                Under applicable US privacy law (CCPA), you have the right to access
-                                a copy of your personal data and to request its deletion.
-                            </p>
                             <div className="flex flex-col gap-2.5">
                                 <button
                                     type="button"
@@ -586,19 +594,21 @@ export default function ProfilePage({ onClose }: { onClose?: () => void }) {
                                     )}
                                     {isExporting ? "Generating export..." : "Download My Data"}
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={handleDeletionRequest}
-                                    disabled={isDeletionRequesting}
-                                    className="flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-lg border border-red-200 dark:border-red-900/50 bg-white dark:bg-zinc-800/40 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors disabled:opacity-50 cursor-pointer"
-                                >
-                                    {isDeletionRequesting ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Trash2 className="h-4 w-4" />
-                                    )}
-                                    {isDeletionRequesting ? "Submitting request..." : "Request Account Deletion"}
-                                </button>
+                                {profile?.role?.name !== "super_admin" && (
+                                    <button
+                                        type="button"
+                                        onClick={handleDeletionRequest}
+                                        disabled={isDeletionRequesting}
+                                        className="flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-lg border border-red-200 dark:border-red-900/50 bg-white dark:bg-zinc-800/40 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors disabled:opacity-50 cursor-pointer"
+                                    >
+                                        {isDeletionRequesting ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Trash2 className="h-4 w-4" />
+                                        )}
+                                        {isDeletionRequesting ? "Submitting request..." : "Request Account Deletion"}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     )}

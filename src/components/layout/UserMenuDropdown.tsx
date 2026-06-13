@@ -175,8 +175,8 @@ export function UserMenuDropdown({ onProfileClick }: UserMenuDropdownProps): JSX
                                     </span>
                                 </div>
                                 <UsageRow label="Pages" used={usage?.pages.used} limit={usage?.pages.limit ?? 500} />
-                                <UsageRow label="Simple Interactions" used={usage?.simple_interactions.used} limit={usage?.simple_interactions.limit ?? 350} />
-                                <UsageRow label="Complex Interactions" used={usage?.complex_interactions.used} limit={usage?.complex_interactions.limit ?? 100} />
+                                <UsageRow label="Simple (0.5 cr)" used={usage?.simple_interactions.used} limit={usage?.simple_interactions.limit ?? 350} />
+                                <UsageRow label="Complex (1.0 cr)" used={usage?.complex_interactions.used} limit={usage?.complex_interactions.limit ?? 100} />
                             </div>
                         </div>
                     )}

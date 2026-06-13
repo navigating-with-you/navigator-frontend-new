@@ -17,8 +17,19 @@ export interface SubscriptionData {
   complex_interactions_limit: number;
   complex_interactions_used: number;
   complex_interactions_remaining: number;
+  extraction_interactions_limit: number;
+  extraction_interactions_used: number;
+  extraction_interactions_remaining: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface InteractionBucket {
+  total: number;
+  used: number;
+  remaining: number;
+  percentage: number;
+  credits_per_interaction?: number;
 }
 
 export interface UsageSummary {
@@ -34,18 +45,9 @@ export interface UsageSummary {
     remaining: number;
     percentage: number;
   };
-  simple_interactions: {
-    total: number;
-    used: number;
-    remaining: number;
-    percentage: number;
-  };
-  complex_interactions: {
-    total: number;
-    used: number;
-    remaining: number;
-    percentage: number;
-  };
+  simple_interactions: InteractionBucket;
+  complex_interactions: InteractionBucket;
+  extraction_interactions: InteractionBucket;
 }
 
 /**

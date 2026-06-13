@@ -604,6 +604,7 @@ export interface UsageData {
     pages: UsageStat;
     simple_interactions: UsageStat;
     complex_interactions: UsageStat;
+    extraction_interactions: UsageStat;
 }
 
 /** Fetch organisation usage statistics (pages, simple & complex interactions) */
@@ -617,6 +618,12 @@ export async function getSubscription(token: string): Promise<any> {
 
 export async function getSubscriptionSummary(token: string): Promise<any> {
     return apiClient.get<any>("/subscription/me/summary", { token, cache: false });
+}
+
+export async function getDailyInteractions(token: string, days = 30): Promise<Array<{
+    date: string; simple: number; complex: number; extraction: number;
+}>> {
+    return apiClient.get<any>(`/subscription/me/daily-interactions?days=${days}`, { token, cache: false });
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────────

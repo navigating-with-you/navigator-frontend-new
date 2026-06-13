@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
-import { listEmployees, getRootContents, getNotifications } from "@/lib/api";
+import { listEmployees, getRootContents, getNotifications, getDailyInteractions } from "@/lib/api";
 import { useSubscriptionSummary } from "@/hooks/useSubscription";
 
 // ─── TYPES & DATA ──────────────────────────────────────────────────────────
@@ -34,73 +34,47 @@ type DataPoint = {
     date: string;
     simple: number;
     complex: number;
+    extraction: number;
 };
 
-// Generate chart data based on subscription usage
-function generateChartData(subscriptionSummary: any): Record<string, DataPoint[]> {
-    if (!subscriptionSummary) {
-        return {
-            "this-month": [],
-            "last-month": [],
-            "last-7-days": [],
-        };
-    }
-
-    const simpleUsed = subscriptionSummary.simple_interactions.used || 0;
-    const complexUsed = subscriptionSummary.complex_interactions.used || 0;
+function buildChartBuckets(
+    raw: Array<{ date: string; simple: number; complex: number; extraction: number }>
+): Record<string, DataPoint[]> {
+    const toLabel = (iso: string) =>
+        new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
     const today = new Date();
+    const thisYear = today.getFullYear();
+    const thisMonth = today.getMonth();
+    const lastMonthDate = new Date(thisYear, thisMonth - 1, 1);
 
-    // If no usage at all, return empty data
-    if (simpleUsed === 0 && complexUsed === 0) {
-        return {
-            "this-month": generateEmptyMonthData(),
-            "last-month": generateEmptyMonthData(),
-            "last-7-days": generateEmptyWeekData(),
-        };
-    }
+    const toDataPoint = (r: { date: string; simple: number; complex: number; extraction: number }): DataPoint => ({
+        date: toLabel(r.date),
+        simple: r.simple,
+        complex: r.complex,
+        extraction: r.extraction,
+    });
 
-    // Distribute usage evenly across days (no randomness)
-    const generateData = (daysBack: number, dayCount: number): DataPoint[] => {
-        const data: DataPoint[] = [];
-        const avgSimplePerDay = parseFloat((simpleUsed / dayCount).toFixed(2));
-        const avgComplexPerDay = parseFloat((complexUsed / dayCount).toFixed(2));
+    const thisMonthData = raw
+        .filter((r) => {
+            const d = new Date(r.date + "T00:00:00");
+            return d.getFullYear() === thisYear && d.getMonth() === thisMonth;
+        })
+        .map(toDataPoint);
 
-        for (let i = dayCount - 1; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - (daysBack + i));
-            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            data.push({ date: dateStr, simple: avgSimplePerDay, complex: avgComplexPerDay });
-        }
-        return data;
-    };
+    const lastMonthData = raw
+        .filter((r) => {
+            const d = new Date(r.date + "T00:00:00");
+            return d.getFullYear() === lastMonthDate.getFullYear() && d.getMonth() === lastMonthDate.getMonth();
+        })
+        .map(toDataPoint);
 
-    function generateEmptyMonthData(): DataPoint[] {
-        const data: DataPoint[] = [];
-        for (let i = 11; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            data.push({ date: dateStr, simple: 0, complex: 0 });
-        }
-        return data;
-    }
-
-    function generateEmptyWeekData(): DataPoint[] {
-        const data: DataPoint[] = [];
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            data.push({ date: dateStr, simple: 0, complex: 0 });
-        }
-        return data;
-    }
+    const last7Data = raw.slice(-7).map(toDataPoint);
 
     return {
-        "this-month": generateData(0, 12),
-        "last-month": generateData(30, 12),
-        "last-7-days": generateData(7, 7),
+        "this-month": thisMonthData,
+        "last-month": lastMonthData,
+        "last-7-days": last7Data,
     };
 }
 
@@ -150,76 +124,45 @@ function InteractionChart({ data }: { data: DataPoint[] }): JSX.Element {
         if (!containerRef.current) return;
         const observer = new ResizeObserver((entries) => {
             if (!entries || entries.length === 0) return;
-            const w = entries[0].contentRect.width;
-            const h = entries[0].contentRect.height;
-            if (w > 0 && h > 0) {
-                setDimensions({ width: w, height: h });
-            }
+            const { width: w, height: h } = entries[0].contentRect;
+            if (w > 0 && h > 0) setDimensions({ width: w, height: h });
         });
         observer.observe(containerRef.current);
         return () => observer.disconnect();
     }, []);
 
-    // Chart Dimensions
-    const width = dimensions.width;
-    const height = dimensions.height;
+    const { width, height } = dimensions;
     const paddingLeft = 40;
     const paddingRight = 20;
     const paddingTop = 25;
     const paddingBottom = 40;
-
     const chartWidth = width - paddingLeft - paddingRight;
     const chartHeight = height - paddingTop - paddingBottom;
 
-    // Y Axis labels — dynamic scale based on actual data
-    const dataMax = data.length > 0 ? Math.max(...data.map(d => Math.max(d.simple, d.complex))) : 0;
+    const dataMax = data.length > 0
+        ? Math.max(...data.map(d => Math.max(d.simple, d.complex, d.extraction)))
+        : 0;
     const yMax = Math.max(Math.ceil(dataMax * 1.25), 10);
     const yStep = Math.ceil(yMax / 5);
     const yTicks = Array.from({ length: 6 }, (_, i) => Math.min(i * yStep, yMax));
 
-    const getTickValue = (tick: number) => tick.toString();
+    const xOf = (idx: number) =>
+        paddingLeft + (idx * chartWidth) / Math.max(data.length - 1, 1);
+    const yOf = (val: number) =>
+        paddingTop + chartHeight - (val / yMax) * chartHeight;
 
-    // Calculate coordinates
-    const getCoords = (d: DataPoint, idx: number) => {
-        const divisor = data.length > 1 ? data.length - 1 : 1;
-        const x = paddingLeft + (idx * chartWidth) / divisor;
-        const y = paddingTop + chartHeight - (d.complex / yMax) * chartHeight;
-        const ySimple = paddingTop + chartHeight - (d.simple / yMax) * chartHeight;
-        return { x, y, ySimple };
-    };
-
-    // Build Paths
-    const simplePoints = data.map((d, i) => {
-        const { x, ySimple } = getCoords(d, i);
-        return `${x},${ySimple}`;
-    }).join(" ");
-
-    const complexPoints = data.map((d, i) => {
-        const { x, y } = getCoords(d, i);
-        return `${x},${y}`;
-    }).join(" ");
+    const toPoints = (key: keyof DataPoint) =>
+        data.map((d, i) => `${xOf(i)},${yOf(d[key] as number)}`).join(" ");
 
     const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-        if (!containerRef.current) return;
         const rect = e.currentTarget.getBoundingClientRect();
-        const physicalMouseX = e.clientX - rect.left;
-
-        // Convert screen coordinates to SVG viewBox coordinates (width = 600)
-        const viewBoxMouseX = (physicalMouseX / rect.width) * width;
-        const percentageX = (viewBoxMouseX - paddingLeft) / chartWidth;
-        const index = Math.round(percentageX * (data.length - 1));
-
-        if (index >= 0 && index < data.length) {
-            setHoveredIdx(index);
-        }
+        const svgX = ((e.clientX - rect.left) / rect.width) * width;
+        const pct = (svgX - paddingLeft) / chartWidth;
+        const idx = Math.round(pct * (data.length - 1));
+        if (idx >= 0 && idx < data.length) setHoveredIdx(idx);
     };
 
-    const handleMouseLeave = () => {
-        setHoveredIdx(null);
-    };
-
-    const hoveredData = hoveredIdx !== null && hoveredIdx < data.length ? data[hoveredIdx] : null;
-    const hoveredCoords = hoveredData && hoveredIdx !== null ? getCoords(hoveredData, hoveredIdx) : null;
+    const hd = hoveredIdx !== null ? data[hoveredIdx] : null;
 
     return (
         <div ref={containerRef} className="relative w-full h-full min-h-[220px]">
@@ -227,132 +170,113 @@ function InteractionChart({ data }: { data: DataPoint[] }): JSX.Element {
                 viewBox={`0 0 ${width} ${height}`}
                 className="w-full h-full overflow-visible select-none"
                 onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseLeave}
+                onMouseLeave={() => setHoveredIdx(null)}
             >
-                {/* Horizontal Grid Lines */}
-                {yTicks.map((tick, i) => {
-                    const y = paddingTop + chartHeight - (tick / yMax) * chartHeight;
-                    return (
-                        <line
-                            key={i}
-                            x1={paddingLeft}
-                            y1={y}
-                            x2={width - paddingRight}
-                            y2={y}
-                            className="stroke-zinc-100 dark:stroke-zinc-800/80 stroke-1"
-                            strokeDasharray="4 4"
-                        />
-                    );
-                })}
+                {/* Grid lines */}
+                {yTicks.map((tick, i) => (
+                    <line
+                        key={i}
+                        x1={paddingLeft} y1={yOf(tick)}
+                        x2={width - paddingRight} y2={yOf(tick)}
+                        className="stroke-zinc-100 dark:stroke-zinc-800/80 stroke-1"
+                        strokeDasharray="4 4"
+                    />
+                ))}
 
-                {/* Y Axis Labels */}
-                {yTicks.map((tick, i) => {
-                    const y = paddingTop + chartHeight - (tick / yMax) * chartHeight;
-                    return (
-                        <text
-                            key={i}
-                            x={paddingLeft - 12}
-                            y={y + 4}
-                            fontSize="10"
-                            fontWeight="500"
-                            fill="currentColor"
-                            className="text-zinc-500 dark:text-zinc-400"
-                            style={{ textAnchor: 'end' }}
-                        >
-                            {getTickValue(tick)}
-                        </text>
-                    );
-                })}
+                {/* Y labels */}
+                {yTicks.map((tick, i) => (
+                    <text
+                        key={i}
+                        x={paddingLeft - 12} y={yOf(tick) + 4}
+                        fontSize="10" fontWeight="500" fill="currentColor"
+                        className="text-zinc-500 dark:text-zinc-400"
+                        style={{ textAnchor: "end" }}
+                    >
+                        {tick}
+                    </text>
+                ))}
 
-                {/* X Axis Labels */}
-                {data.map((d, i) => {
-                    const divisor = data.length > 1 ? data.length - 1 : 1;
-                    const x = paddingLeft + (i * chartWidth) / divisor;
-                    return (
-                        <text
-                            key={i}
-                            x={x}
-                            y={height - 15}
-                            fontSize="10"
-                            fontWeight="500"
-                            fill="currentColor"
-                            className="text-zinc-500 dark:text-zinc-400"
-                            style={{ textAnchor: 'middle' }}
-                        >
-                            {d.date}
-                        </text>
-                    );
-                })}
+                {/* X labels */}
+                {data.map((d, i) => (
+                    <text
+                        key={i}
+                        x={xOf(i)} y={height - 15}
+                        fontSize="10" fontWeight="500" fill="currentColor"
+                        className="text-zinc-500 dark:text-zinc-400"
+                        style={{ textAnchor: "middle" }}
+                    >
+                        {d.date}
+                    </text>
+                ))}
 
-                {/* Simple Interaction Line (Blue) */}
-                <polyline
-                    fill="none"
-                    stroke="#2563eb"
-                    strokeWidth="2"
-                    points={simplePoints}
-                    className="transition-all duration-300"
-                />
+                {/* Extraction line (green) — drawn first so it sits below chat lines */}
+                <polyline fill="none" stroke="#16a34a" strokeWidth="2"
+                    strokeDasharray="5 3" points={toPoints("extraction")} />
 
-                {/* Complex Interaction Line (Orange) */}
-                <polyline
-                    fill="none"
-                    stroke="#ea580c"
-                    strokeWidth="2"
-                    points={complexPoints}
-                    className="transition-all duration-300"
-                />
+                {/* Simple line (blue) */}
+                <polyline fill="none" stroke="#2563eb" strokeWidth="2"
+                    points={toPoints("simple")} />
 
-                {/* Interactive Hover Indicators */}
-                {hoveredCoords && hoveredData && (
+                {/* Complex line (orange) */}
+                <polyline fill="none" stroke="#ea580c" strokeWidth="2"
+                    points={toPoints("complex")} />
+
+                {/* Hover crosshair + dots */}
+                {hd !== null && hoveredIdx !== null && (
                     <g>
                         <line
-                            x1={hoveredCoords.x}
-                            y1={paddingTop}
-                            x2={hoveredCoords.x}
-                            y2={height - paddingBottom}
+                            x1={xOf(hoveredIdx)} y1={paddingTop}
+                            x2={xOf(hoveredIdx)} y2={height - paddingBottom}
                             className="stroke-zinc-400 dark:stroke-zinc-600 stroke-1"
                             strokeDasharray="3 3"
                         />
-                        <circle
-                            cx={hoveredCoords.x}
-                            cy={hoveredCoords.ySimple}
-                            r="6"
-                            className="fill-white dark:fill-zinc-900 stroke-[#2563eb] stroke-2"
-                        />
-                        <circle
-                            cx={hoveredCoords.x}
-                            cy={hoveredCoords.y}
-                            r="6"
-                            className="fill-white dark:fill-zinc-900 stroke-[#ea580c] stroke-2"
-                        />
+                        {(["simple", "complex", "extraction"] as const).map((key) => {
+                            const color = key === "simple" ? "#2563eb" : key === "complex" ? "#ea580c" : "#16a34a";
+                            return (
+                                <circle
+                                    key={key}
+                                    cx={xOf(hoveredIdx)}
+                                    cy={yOf(hd[key])}
+                                    r="5"
+                                    fill="white"
+                                    stroke={color}
+                                    strokeWidth="2"
+                                    className="dark:fill-zinc-900"
+                                />
+                            );
+                        })}
                     </g>
                 )}
             </svg>
 
-            {/* Custom Interactive Tooltip */}
-            {hoveredCoords && hoveredData && (
+            {/* Tooltip */}
+            {hd !== null && hoveredIdx !== null && (
                 <div
-                    className="absolute bg-white dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 rounded-xl p-3 shadow-xl pointer-events-none transition-all duration-150 z-20"
+                    className="absolute bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 shadow-xl pointer-events-none z-20 min-w-[190px]"
                     style={{
-                        left: `${(hoveredCoords.x / width) * 100}%`,
-                        top: `${((hoveredCoords.ySimple + hoveredCoords.y) / 2 / height) * 100 - 15}%`,
-                        transform: 'translate(-50%, -100%)',
+                        left: `${(xOf(hoveredIdx) / width) * 100}%`,
+                        top: `${(yOf(Math.max(hd.simple, hd.complex, hd.extraction)) / height) * 100 - 4}%`,
+                        transform: "translate(-50%, -100%)",
                     }}
                 >
-                    <div className="space-y-1 text-xs">
-                        <div className="flex items-center justify-between gap-5 text-zinc-500 dark:text-zinc-400 font-semibold mb-1">
-                            <span>{hoveredData.date}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="h-2 w-2 rounded-full bg-blue-600" />
-                            <span className="text-zinc-600 dark:text-zinc-400">Simple Interactions:</span>
-                            <span className="font-bold text-zinc-900 dark:text-zinc-100">${hoveredData.simple}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="h-2 w-2 rounded-full bg-orange-600" />
-                            <span className="text-zinc-600 dark:text-zinc-400">Complex Interactions:</span>
-                            <span className="font-bold text-zinc-900 dark:text-zinc-100">${hoveredData.complex}</span>
-                        </div>
+                    <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 mb-2">{hd.date}</p>
+                    <div className="space-y-1.5 text-xs">
+                        {([
+                            { key: "simple" as const, label: "Simple", color: "#2563eb", credits: 0.5 },
+                            { key: "complex" as const, label: "Complex", color: "#ea580c", credits: 1.0 },
+                            { key: "extraction" as const, label: "Extraction", color: "#16a34a", credits: 0.5 },
+                        ]).map(({ key, label, color, credits }) => (
+                            <div key={key} className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
+                                    <span className="text-zinc-600 dark:text-zinc-400">{label}:</span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="font-bold text-zinc-900 dark:text-zinc-100">{hd[key]}</span>
+                                    <span className="text-zinc-400 dark:text-zinc-500 ml-1">({credits}cr)</span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
@@ -405,15 +329,12 @@ export default function DashboardPage(): JSX.Element {
             const pagesPercentage = subscriptionSummary.pages.percentage;
             const simplePercentage = subscriptionSummary.simple_interactions.percentage;
             const complexPercentage = subscriptionSummary.complex_interactions.percentage;
+            const extractionPercentage = subscriptionSummary.extraction_interactions?.percentage ?? 0;
 
-            // Use the highest usage percentage
-            const overallPct = Math.max(creditsPercentage, pagesPercentage, simplePercentage, complexPercentage);
+            // Use the highest usage percentage across all metrics
+            const overallPct = Math.max(creditsPercentage, pagesPercentage, simplePercentage, complexPercentage, extractionPercentage);
             setUsageLimit(overallPct);
             setCredits(subscriptionSummary.credits.used);
-
-            // Generate and update chart data from subscription summary
-            const newChartData = generateChartData(subscriptionSummary);
-            setChartData(newChartData);
         }
     }, [subscriptionSummary]);
 
@@ -423,12 +344,17 @@ export default function DashboardPage(): JSX.Element {
             if (!token) return;
 
             // Parallel fetches — subscription included so nothing waits in series
-            const [empData, rootData, notifData] = await Promise.all([
+            const [empData, rootData, notifData, dailyRaw] = await Promise.all([
                 listEmployees(token).catch(() => ({ employees: [] })),
                 getRootContents(token).catch(() => ({ folders: [], files: [] })),
                 getNotifications(token).catch(() => ({ notifications: [] })),
-                refetchSubscription().catch(() => undefined),
+                getDailyInteractions(token, 60).catch(() => [] as Array<{ date: string; simple: number; complex: number; extraction: number }>),
             ]);
+            refetchSubscription().catch(() => undefined);
+
+            if (Array.isArray(dailyRaw) && dailyRaw.length > 0) {
+                setChartData(buildChartBuckets(dailyRaw));
+            }
 
             // 1. Calculate proper employees count (members only, no invites)
             const activeEmployees = empData?.employees || (Array.isArray(empData) ? empData : []);
@@ -595,16 +521,34 @@ export default function DashboardPage(): JSX.Element {
                     <div className="flex items-center justify-between rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-surface-page dark:bg-zinc-900/80 p-5 shadow-sm transition-all hover:shadow">
                         <div className="space-y-2.5 flex-1 pr-3">
                             <p className="text-xs font-medium text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Usage Limit</p>
-                            <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{usageLimit}%</h3>
+                            <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{Math.round(usageLimit)}%</h3>
 
-                            <div className="space-y-1 pt-1">
+                            <div className="space-y-1.5 pt-1">
                                 <div className="h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
                                     <div
-                                        className="h-full rounded-full bg-blue-600 transition-all duration-500"
-                                        style={{ width: `${usageLimit}%` }}
+                                        className="h-full rounded-full transition-all duration-500"
+                                        style={{
+                                            width: `${Math.round(usageLimit)}%`,
+                                            backgroundColor: usageLimit >= 90 ? '#ef4444' : usageLimit >= 70 ? '#f97316' : '#3b82f6',
+                                        }}
                                     />
                                 </div>
-                                <p className="text-[11px] text-zinc-400 font-medium">Overall Usage</p>
+                                <div className="flex items-center gap-3 pt-0.5">
+                                    {[
+                                        { label: "Credits", pct: subscriptionSummary?.credits.percentage ?? 0 },
+                                        { label: "Pages", pct: subscriptionSummary?.pages.percentage ?? 0 },
+                                        { label: "AI", pct: Math.max(
+                                            subscriptionSummary?.simple_interactions.percentage ?? 0,
+                                            subscriptionSummary?.complex_interactions.percentage ?? 0,
+                                            subscriptionSummary?.extraction_interactions?.percentage ?? 0,
+                                        )},
+                                    ].map(({ label, pct }) => (
+                                        <span key={label} className="text-[10px] text-zinc-400 font-medium whitespace-nowrap">
+                                            {label}{" "}
+                                            <span className="font-bold text-zinc-500 dark:text-zinc-400">{pct}%</span>
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                         <div className="h-12 w-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm shrink-0">
@@ -618,7 +562,10 @@ export default function DashboardPage(): JSX.Element {
                             <p className="text-xs font-medium text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Subscription</p>
                             <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 capitalize">{plan}</h3>
                             <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
-                                Credits used: <span className="text-zinc-700 dark:text-zinc-300 font-bold">{credits} / {subscriptionSummary?.credits.total ?? 50}</span>
+                                Credits used:{' '}
+                                <span className="text-zinc-700 dark:text-zinc-300 font-bold">
+                                    {credits} / {subscriptionSummary?.credits.total ?? 50}
+                                </span>
                             </p>
                         </div>
                         <div className="h-12 w-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm shrink-0">
@@ -676,14 +623,21 @@ export default function DashboardPage(): JSX.Element {
                         </div>
 
                         {/* Chart Legend + Footer */}
-                        <div className="flex items-center justify-center gap-5 py-1.5 text-xs font-medium border-t border-zinc-100 dark:border-zinc-800/60">
+                        <div className="flex flex-wrap items-center justify-center gap-4 py-1.5 text-xs font-medium border-t border-zinc-100 dark:border-zinc-800/60">
                             <div className="flex items-center gap-1.5">
                                 <span className="h-2.5 w-2.5 rounded-sm bg-blue-600 block shrink-0" />
                                 <span className="text-zinc-500 dark:text-zinc-400">Simple</span>
+                                <span className="text-zinc-400 dark:text-zinc-600 text-[10px]">(0.5cr)</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <span className="h-2.5 w-2.5 rounded-sm bg-orange-600 block shrink-0" />
                                 <span className="text-zinc-500 dark:text-zinc-400">Complex</span>
+                                <span className="text-zinc-400 dark:text-zinc-600 text-[10px]">(1.0cr)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="h-2.5 w-2.5 rounded-sm bg-green-600 block shrink-0" style={{ backgroundImage: "repeating-linear-gradient(90deg,#16a34a 0,#16a34a 4px,transparent 4px,transparent 7px)" }} />
+                                <span className="text-zinc-500 dark:text-zinc-400">Extraction</span>
+                                <span className="text-zinc-400 dark:text-zinc-600 text-[10px]">(0.5cr)</span>
                             </div>
                             <span className="text-zinc-300 dark:text-zinc-700">·</span>
                             <span className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-wider font-semibold">Interactions / Day</span>

@@ -495,21 +495,25 @@ export default function NewChatPage(): JSX.Element {
                             });
                         }
                     },
-                    onError: (_errMsg) => {
+                    onError: (errMsg) => {
                         if (convId !== currentConversationIdRef.current) return;
-                        toast.error("Something went wrong. Please try again.");
+                        const isNotFound = errMsg?.includes("Conversation not found") ||
+                            errMsg?.includes("conversation_not_found");
+                        const displayMsg = isNotFound
+                            ? "Conversation not found. Starting a new chat."
+                            : (errMsg || "Something went wrong. Please try again.");
+                        toast.error(displayMsg);
                         setMessages((prev) => {
                             if (!prev.some((m) => m.id === streamingId)) return prev;
                             return prev.map((m) =>
                                 m.id === streamingId
-                                    ? {
-                                        ...m,
-                                        content: "Something went wrong. Please try again.",
-                                        isStreaming: false,
-                                    }
+                                    ? { ...m, content: displayMsg, isStreaming: false }
                                     : m
                             );
                         });
+                        if (isNotFound) {
+                            navigate("/chat", { replace: true });
+                        }
                     },
                 },
                 controller.signal
